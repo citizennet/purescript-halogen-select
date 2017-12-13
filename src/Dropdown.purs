@@ -42,7 +42,7 @@ type Input item o =
 -- We expect the user to use our corresponding helper functions to construct these.
 type Render item o =
   { toggle :: H.HTML Void (Query item o)
-  , item   :: item -> H.HTML Void (Query item o) }
+  , items  :: Array item -> H.HTML Void (Query item o) }
 
 -- All components must allow for emitting the parent's queries back up to the parent.
 -- In addition, the dropdown supports selecting items from the list.
@@ -66,7 +66,7 @@ component =
     render st =
       if not st.open
       then HH.div_ [ st.render.toggle ]
-      else HH.div_ $ st.render.toggle : map st.render.item st.items
+      else HH.div_ [ st.render.toggle, st.render.items st.items ]
 
     eval :: (Query item o) ~> H.ComponentDSL (State item o) (Query item o) (Message item o) _
     eval = case _ of

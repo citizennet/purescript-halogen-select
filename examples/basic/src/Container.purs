@@ -7,7 +7,6 @@ import Control.Monad.Aff.Console (CONSOLE, log)
 import DOM (DOM)
 import Data.Array (difference, (:))
 import Data.Maybe (Maybe(..))
-import Data.Monoid (mempty)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
@@ -145,7 +144,7 @@ correctly.
 -- record, which includes the two render functions and the items.
 dropdownInput :: Dropdown.Input String Query
 dropdownInput =
-  { render: { toggle: renderToggle, item: renderItem }
+  { render: { toggle: renderToggle, items: renderItems }
   , items: testData }
 
 -- Render whatever is going to provide the action for toggling the menu
@@ -161,14 +160,19 @@ renderToggle =
     [ HH.text "Toggle" ]
 
 -- Render the individual items
-renderItem :: String -> H.HTML Void (Dropdown.Query String Query)
-renderItem str =
-  HH.li
-    -- The user doesn't have to provide any properties.
-    ( Dropdown.getItemProps str
-       [ HP.class_ $ HH.ClassName "lh-copy pv2 ba bl-0 bt-0 br-0 b--dotted b--black-30 hover-bg-light-blue" ]
-    )
-    [ HH.text str ]
+renderItems :: Array String -> H.HTML Void (Dropdown.Query String Query)
+renderItems arr =
+  HH.ul
+    [ HP.class_ $ HH.ClassName "list pl0 mt0 measure" ]
+    ( renderItem <$> arr )
+  where
+    renderItem :: String -> H.HTML Void (Dropdown.Query String Query)
+    renderItem str =
+      HH.li
+        ( Dropdown.getItemProps str
+          [ HP.class_ $ HH.ClassName "lh-copy pv2 ba bl-0 bt-0 br-0 b--dotted b--black-30 hover-bg-light-blue" ]
+        )
+        [ HH.text str ]
 
 -- The parent must provide some input data.
 testData :: Array String
