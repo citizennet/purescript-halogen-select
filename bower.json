@@ -1,0 +1,19 @@
+{
+  "private": true,
+  "name": "purescript-halogen-typeahead",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output",
+    "dist"
+  ],
+  "dependencies": {
+    "purescript-console": "^3.0.0",
+    "purescript-halogen": "^3.0.1",
+    "purescript-affjax": "^5.0.0",
+    "purescript-dom": "^4.13.2",
+    "purescript-halogen-css": "^7.0.0",
+    "purescript-css": "^3.3.0"
+  }
+}
