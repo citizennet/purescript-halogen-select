@@ -2,6 +2,7 @@ module Container where
 
 import Prelude
 
+import CSS as CSS
 import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Console (CONSOLE, log)
 import DOM (DOM)
@@ -9,6 +10,7 @@ import Data.Array (difference, (:))
 import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML as HH
+import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Network.HTTP.Affjax (AJAX)
@@ -69,7 +71,6 @@ component =
         ( [ HH.h2
             [ HP.class_ $ HH.ClassName "black-80 f-headline-1" ]
             [ HH.text "Dropdown Component"]
-
           , HH.p_
             [ HH.text "Open the console to view outputs. Mouse over the toggle to trigger an embedded parent query. Click the toggle to open or close the menu. Click an item to select it (and remove it from the available options)." ]
 
@@ -83,7 +84,9 @@ component =
           [ HH.h2
               [ HP.class_ $ HH.ClassName "black-80 mt5 f-headline-1" ]
               [ HH.text "Selected Items"]
-          , HH.ul_ $ map (\i -> HH.li_ [ HH.text i ]) st.selected ]
+          , HH.ul_
+              ( map (\i -> HH.li_ [ HH.text i ]) st.selected )
+          ]
 
     -- Here, Dropdown.Emit recursively calls the parent eval function.
     -- Dropdown.Selected item is handled by removing that item from
@@ -163,7 +166,8 @@ renderToggle =
 renderItems :: Array String -> H.HTML Void (Dropdown.Query String Query)
 renderItems arr =
   HH.ul
-    [ HP.class_ $ HH.ClassName "list pl0 mt0 measure" ]
+    [ HP.class_ $ HH.ClassName "list pl0 mt0 measure overflow-y-scroll"
+    , HC.style $ CSS.maxHeight (CSS.px 200.0) ]
     ( renderItem <$> arr )
   where
     renderItem :: String -> H.HTML Void (Dropdown.Query String Query)

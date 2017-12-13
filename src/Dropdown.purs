@@ -12,8 +12,10 @@ import Halogen.HTML.Events as HE
 
 
 {-
+
 The dropdown is the simplest select component. It consists of a toggle and a list
 of items the user can select.
+
 -}
 
 -- All components require the ParentQuery query in order to allow the parent
