@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "purescript-halogen-typeahead",
+  "name": "purescript-halogen-select",
   "ignore": [
     "**/.*",
     "node_modules",
