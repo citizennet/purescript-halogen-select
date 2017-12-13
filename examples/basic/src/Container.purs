@@ -50,8 +50,7 @@ type State =
   { items :: Array String
   , selected :: Array String }
 
--- This component only renders child components, so its `State` and `Message` types
--- are `Unit` and `Void`. Effect types are elided for convenience.
+
 component :: ∀ e. H.Component HH.HTML Query Unit Void (FX e)
 component =
   H.parentComponent
@@ -152,10 +151,13 @@ dropdownInput =
 -- Render whatever is going to provide the action for toggling the menu
 renderToggle :: H.HTML Void (Dropdown.Query String Query)
 renderToggle =
-  HH.button
+  HH.span
     -- The user can embed their own queries with `embedQuery`; they'll be triggered
     -- with the Emit message.
-    ( Dropdown.getToggleProps [ HE.onMouseOver $ HE.input_ $ Dropdown.embedQuery NoOp ] )
+    ( Dropdown.getToggleProps
+       [ HE.onMouseOver $ HE.input_ $ Dropdown.embedQuery NoOp
+       , HP.class_ $ HH.ClassName "f5 link ba bw1 ph3 pv2 mb2 dib near-black pointer" ]
+    )
     [ HH.text "Toggle" ]
 
 -- Render the individual items
@@ -163,7 +165,9 @@ renderItem :: String -> H.HTML Void (Dropdown.Query String Query)
 renderItem str =
   HH.li
     -- The user doesn't have to provide any properties.
-    ( Dropdown.getItemProps str mempty )
+    ( Dropdown.getItemProps str
+       [ HP.class_ $ HH.ClassName "lh-copy pv2 ba bl-0 bt-0 br-0 b--dotted b--black-30 hover-bg-light-blue" ]
+    )
     [ HH.text str ]
 
 -- The parent must provide some input data.
