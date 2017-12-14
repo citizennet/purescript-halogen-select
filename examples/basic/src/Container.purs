@@ -73,7 +73,7 @@ component =
         [ HP.class_ $ HH.ClassName "mw8 sans-serif center" ]
         ( [ HH.h2
             [ HP.class_ $ HH.ClassName "black-80 f-headline-1"
-            , HE.onKeyDown $ HE.input (\ke -> Log $ KE.code (ke :: KeyboardEvent))
+            , HE.onKeyDown $ HE.input (\ke -> Log $ KE.key (ke :: KeyboardEvent))
             ]
             [ HH.text "Dropdown Component"]
           , HH.p_
@@ -152,7 +152,7 @@ correctly.
 
 renderDropdown :: (Dropdown.State String) -> H.HTML Void (Dropdown.Query String Query)
 renderDropdown st =
-  if st.open
+  if not st.open
     then HH.div_ [ renderToggle ]
     else HH.div_ [ renderToggle, renderItems $ renderItem `mapWithIndex` st.items ]
   where
@@ -160,11 +160,11 @@ renderDropdown st =
     renderToggle :: H.HTML Void (Dropdown.Query String Query)
     renderToggle =
       HH.span
-        [ HE.onMouseOver $ HE.input_ $ Dropdown.embedQuery NoOp
-        , HP.class_      $ HH.ClassName "f5 link ba bw1 ph3 pv2 mb2 dib near-black pointer"
-        , HE.onClick     $ HE.input_ Dropdown.Toggle
-        , HE.onKeyDown   $ HE.input Dropdown.Key
+      ( Dropdown.getToggleProps
+        [ HE.onMouseOver $ HE.input_ $ Dropdown.embedQuery (Log "I'm the parent.")
+        , HP.class_      $ HH.ClassName "f5 link ba bw1 ph3 pv2 mb2 dib near-black pointer outline-0"
         ]
+      )
         [ HH.text "Toggle" ]
 
     -- Render the individual items
@@ -179,12 +179,12 @@ renderDropdown st =
     renderItem :: Int -> String -> H.HTML Void (Dropdown.Query String Query)
     renderItem index item =
       HH.li
-        [ HE.onClick     $ HE.input_ $ Dropdown.Select index
-        , HE.onMouseOver $ HE.input_ $ Dropdown.Highlight (Dropdown.Index index)
-        , HE.onKeyDown   $ HE.input  (\ke -> Dropdown.Key (ke :: KeyboardEvent))
-        , HP.class_ $ HH.ClassName
+      ( Dropdown.getItemProps index
+        [ HP.class_ $ HH.ClassName
             $ "lh-copy pa2 ba bl-0 bt-0 br-0 b--dotted b--black-30"
-            <> if st.highlightedIndex == Just index then " bg-light-blue" else "" ]
+            <> if st.highlightedIndex == Just index then " bg-light-blue" else ""
+        ]
+      )
         [ HH.text item ]
 
 -- The parent must provide some input data.

@@ -13,6 +13,7 @@ import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
+import Halogen.HTML.Properties as HP
 import Network.HTTP.Affjax (AJAX)
 import Select.Utils (augmentHTML)
 
@@ -70,7 +71,7 @@ component :: ∀ item o e
   -> H.Component HH.HTML (Query item o) (Input item) (Message item o) (FX e)
 component render =
   H.component
-    { initialState: \i -> { items: i.items, open: false, highlightedIndex: Nothing, lastIndex: (length i.items) - 1 }
+    { initialState: \i -> { items: i.items, open: false, highlightedIndex: Nothing, lastIndex: length i.items - 1 }
     , render
     , eval
     , receiver: const Nothing
@@ -106,7 +107,7 @@ component render =
             Just i | i /= 0 -> H.modify (_ { highlightedIndex = Just (i - 1) })
             otherwise -> H.modify (_ { highlightedIndex = Just st.lastIndex })
 
-      Key (ev :: KE.KeyboardEvent) a → do
+      Key (ev :: KE.KeyboardEvent) a -> do
         case KE.code ev of
           "Enter" -> do
             H.liftEff $ preventDefault ev
@@ -120,13 +121,13 @@ component render =
 
           "ArrowUp" -> do
             H.liftEff $ preventDefault ev
-            eval $ Highlight Next a
+            eval $ Highlight Prev a
 
           "ArrowDown" -> a <$ do
             H.liftEff $ preventDefault ev
-            eval $ Highlight Prev a
+            eval $ Highlight Next a
 
-          other → a <$ do
+          other -> a <$ do
             H.liftAff $ log $ show other
 
       -- When toggling, the user will lose their highlighted index.
@@ -134,7 +135,7 @@ component render =
         H.modify \st -> st { open = not st.open, highlightedIndex = Nothing }
 
       SetItems arr a -> a <$ do
-        H.modify (_ { items = arr, highlightedIndex = Nothing })
+        H.modify (_ { items = arr, highlightedIndex = Nothing, lastIndex = length arr - 1 })
 
 
 --
@@ -149,13 +150,15 @@ embedQuery = ParentQuery <<< H.action
 -- - Toggle: some clickable region to toggle the menu status
 -- - Item: the user's data rendered into the menu list
 
-getToggleProps :: ∀ item t f
-  . Array (H.IProp ( onClick :: MouseEvent | t ) (Query item f))
- -> Array (H.IProp ( onClick :: MouseEvent | t ) (Query item f))
-getToggleProps = augmentHTML [ HE.onClick $ HE.input_ Toggle ]
+getToggleProps = augmentHTML
+  [ HE.onClick     $ HE.input_ Toggle
+  , HE.onKeyDown   $ HE.input  Key
+  , HP.tabIndex 0
+  ]
 
-getItemProps :: ∀ item t f
-  . Int
- -> Array (H.IProp ( onClick :: MouseEvent | t ) (Query item f))
- -> Array (H.IProp ( onClick :: MouseEvent | t ) (Query item f))
-getItemProps index = augmentHTML [ HE.onClick $ HE.input_ $ Select index ]
+getItemProps index = augmentHTML
+  [ HE.onClick     $ HE.input_ $ Select index
+  , HE.onMouseOver $ HE.input_ $ Highlight (Index index)
+  , HE.onKeyDown   $ HE.input  Key
+  , HP.tabIndex 0
+  ]
