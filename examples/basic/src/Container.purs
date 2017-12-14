@@ -6,7 +6,7 @@ import CSS as CSS
 import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Console (CONSOLE, log)
 import DOM (DOM)
-import Data.Array (difference, (:))
+import Data.Array (difference, mapWithIndex, (:))
 import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML as HH
@@ -75,7 +75,7 @@ component =
             [ HH.text "Open the console to view outputs. Mouse over the toggle to trigger an embedded parent query. Click the toggle to open or close the menu. Click an item to select it (and remove it from the available options)." ]
 
           -- The typeahead can be mounted anywhere
-          , HH.slot unit Dropdown.component dropdownInput (HE.input Handle) ]
+          , HH.slot unit (Dropdown.component renderDropdown) { items: testData } (HE.input Handle) ]
 
           -- Selections are managed outside the component
           <> selected )
@@ -110,13 +110,14 @@ component =
         -- The parent can do whatever they like here.
         Dropdown.Selected item -> do
           H.liftAff $ log ("Selected: " <> item)
-          H.modify \st -> st { selected = (item : st.selected) }
+          H.modify \st -> st { selected = ( item : st.selected ) }
 
           st <- H.get
           _  <- H.query unit
                   $ H.action
                   $ Dropdown.SetItems
                   $ filterItems st.items st.selected
+
           pure a
 
 
@@ -143,40 +144,43 @@ correctly.
 
 -}
 
--- The parent is responsible for constructing this configuration
--- record, which includes the two render functions and the items.
-dropdownInput :: Dropdown.Input String Query
-dropdownInput =
-  { render: { toggle: renderToggle, items: renderItems }
-  , items: testData }
+renderDropdown :: (Dropdown.State String) -> H.HTML Void (Dropdown.Query String Query)
+renderDropdown st =
+  case st.open of
+    false -> HH.div_ [ renderToggle ]
+    true  -> HH.div_ [ renderToggle, renderItems $ renderItem `mapWithIndex` st.items ]
 
--- Render whatever is going to provide the action for toggling the menu
-renderToggle :: H.HTML Void (Dropdown.Query String Query)
-renderToggle =
-  HH.span
-    -- The user can embed their own queries with `embedQuery`; they'll be triggered
-    -- with the Emit message.
-    ( Dropdown.getToggleProps
-       [ HE.onMouseOver $ HE.input_ $ Dropdown.embedQuery NoOp
-       , HP.class_ $ HH.ClassName "f5 link ba bw1 ph3 pv2 mb2 dib near-black pointer" ]
-    )
-    [ HH.text "Toggle" ]
-
--- Render the individual items
-renderItems :: Array String -> H.HTML Void (Dropdown.Query String Query)
-renderItems arr =
-  HH.ul
-    [ HP.class_ $ HH.ClassName "list pl0 mt0 measure overflow-y-scroll"
-    , HC.style $ CSS.maxHeight (CSS.px 200.0) ]
-    ( renderItem <$> arr )
   where
-    renderItem :: String -> H.HTML Void (Dropdown.Query String Query)
-    renderItem str =
+    -- Render whatever is going to provide the action for toggling the menu
+    renderToggle :: H.HTML Void (Dropdown.Query String Query)
+    renderToggle =
+      HH.span
+        [ HE.onMouseOver $ HE.input_ $ Dropdown.embedQuery NoOp
+        , HP.class_      $ HH.ClassName "f5 link ba bw1 ph3 pv2 mb2 dib near-black pointer"
+        , HE.onClick     $ HE.input_ Dropdown.Toggle
+        , HE.onKeyDown   $ HE.input Dropdown.Key
+        ]
+        [ HH.text "Toggle" ]
+
+    -- Render the individual items
+    renderItems :: Array (H.HTML Void (Dropdown.Query String Query))
+                -> H.HTML Void (Dropdown.Query String Query)
+    renderItems html =
+      HH.ul
+        [ HP.class_ $ HH.ClassName "list pl0 mt0 measure ba br1 b--black-30 overflow-y-scroll"
+        , HC.style $ CSS.maxHeight (CSS.px 200.0) ]
+        html
+
+    renderItem :: Int -> String -> H.HTML Void (Dropdown.Query String Query)
+    renderItem index item =
       HH.li
-        ( Dropdown.getItemProps str
-          [ HP.class_ $ HH.ClassName "lh-copy pv2 ba bl-0 bt-0 br-0 b--dotted b--black-30 hover-bg-light-blue" ]
-        )
-        [ HH.text str ]
+        [ HE.onClick     $ HE.input_ $ Dropdown.Select index
+        , HE.onMouseOver $ HE.input_ $ Dropdown.Highlight index
+        , HE.onKeyDown   $ HE.input Dropdown.Key
+        , HP.class_ $ HH.ClassName
+            $ "lh-copy pa2 ba bl-0 bt-0 br-0 b--dotted b--black-30"
+            <> if st.highlightedIndex == Just index then " bg-light-blue" else "" ]
+        [ HH.text item ]
 
 -- The parent must provide some input data.
 testData :: Array String

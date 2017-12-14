@@ -18,7 +18,7 @@ This module exposes shared building blocks for each component.
 --
 -- TODO: Allow multiple event handlers for one event source.
 augmentHTML :: forall t q q' -- q q' represents parent query wrapped by child query
-  . Array (H.IProp t (q q')) -- Our properties
- -> Array (H.IProp t (q q')) -- User properties
+  . Array (H.IProp t (q q')) -- Our query type
+ -> Array (H.IProp t (q q')) -- User query
  -> Array (H.IProp t (q q'))
 augmentHTML = flip (<>)

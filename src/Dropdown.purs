@@ -1,14 +1,20 @@
 module Select.Dropdown where
 
 import Prelude
-import Select.Utils (augmentHTML)
 
-import Data.Array ((:))
+import Control.Monad.Aff (Aff)
+import Control.Monad.Aff.Console (CONSOLE, log)
+import DOM (DOM)
+import DOM.Classy.Event (preventDefault)
+import DOM.Event.KeyboardEvent as KE
 import DOM.Event.Types (MouseEvent)
+import Data.Array ((!!))
 import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
+import Network.HTTP.Affjax (AJAX)
+import Select.Utils (augmentHTML)
 
 
 {-
@@ -18,33 +24,30 @@ of items the user can select.
 
 -}
 
+type FX e = Aff (Effects e)
+type Effects e = ( dom :: DOM, console :: CONSOLE, ajax :: AJAX | e)
+
 -- All components require the ParentQuery query in order to allow the parent
 -- to send in queries in HTML. The parent is responsible for setting data in
 -- this component, so it's necessary to include the item type.
 data Query item o a
-  = ParentQuery (o Unit) a
-  | Select item a
-  | Toggle a
-  | SetItems (Array item) a
+  = ParentQuery (o Unit) a   -- Return an embedded query to the parent
+  | Highlight Int a          -- Change the highlighted item
+  | Select Int a             -- Select a particular item
+  | Key KE.KeyboardEvent a   -- A key has been pressed
+  | Toggle a                 -- Open or close the menu
+  | SetItems (Array item) a  -- Set the data (used by parent)
 
 -- This record should be considered read-only by the child except for the `open`
 -- field. The parent will consistently write the `items` field.
-type State item o =
-  { render :: Render item o
-  , items :: Array item
-  , open :: Boolean }
+type State item =
+  { items :: Array item
+  , open :: Boolean
+  , highlightedIndex :: Maybe Int }
 
--- The configuration required to initialize the component. The user must supply
--- the necessary render functions and a list of their data.
-type Input item o =
-  { render :: Render item o
-  , items :: Array item }
 
--- The render record contains the two functions used by the component for display.
--- We expect the user to use our corresponding helper functions to construct these.
-type Render item o =
-  { toggle :: H.HTML Void (Query item o)
-  , items  :: Array item -> H.HTML Void (Query item o) }
+type Input item =
+  { items :: Array item }
 
 -- All components must allow for emitting the parent's queries back up to the parent.
 -- In addition, the dropdown supports selecting items from the list.
@@ -52,37 +55,70 @@ data Message item o
   = Emit (o Unit)
   | Selected item
 
-component :: ∀ item o. H.Component HH.HTML (Query item o) (Input item o) (Message item o) _
-component =
+-- The component is responsible for behaviors but defers the render completely to the parent.
+-- That render function can be written with the help of our `getProps` helpers, or you can
+-- write it yourself completely.
+component :: ∀ item o e
+   . (State item -> H.ComponentHTML (Query item o))
+  -> H.Component HH.HTML (Query item o) (Input item) (Message item o) (FX e)
+component render =
   H.component
-    { initialState: \i -> { render: i.render, items: i.items, open: false }
+    { initialState: \i -> { items: i.items, open: false, highlightedIndex: Nothing }
     , render
     , eval
     , receiver: const Nothing
     }
   where
-    -- The dropdown component exists purely to trigger the parent's render functions after
-    -- they've been augmented by our helpers. For that reason, we simply need to list out
-    -- their items.
-    render :: (State item o) -> H.ComponentHTML (Query item o)
-    render st =
-      if not st.open
-      then HH.div_ [ st.render.toggle ]
-      else HH.div_ [ st.render.toggle, st.render.items st.items ]
-
-    eval :: (Query item o) ~> H.ComponentDSL (State item o) (Query item o) (Message item o) _
+    eval :: (Query item o) ~> H.ComponentDSL (State item) (Query item o) (Message item o) (FX e)
     eval = case _ of
       ParentQuery o a -> a <$ do
         H.raise $ Emit o
 
-      Select item a -> a <$ do
-        H.raise (Selected item)
+      Select index a -> a <$ do
+        st <- H.get
+        case st.items !! index of
+          Nothing -> H.liftAff $ log $ "No item at that index: " <> show index
+          Just item -> H.raise $ Selected item
 
+      -- We can ignore the case in which we don't want anything highlighted
+      -- as once the highlight becomes active, nothing but closing the menu
+      -- will remove it
+      Highlight index a -> a <$ do
+        H.modify (_ { highlightedIndex = Just index })
+
+      Key ev a → do
+        case KE.code ev of
+          "Enter" -> do
+            H.liftAff $ log $ "Enter pressed"
+            H.liftEff $ preventDefault (KE.keyboardEventToEvent ev)
+            st <- H.get
+            case st.highlightedIndex of
+              Nothing -> pure a
+              Just index -> eval (Select index a)
+
+          "Escape" -> a <$ do
+            H.modify (_ { open = false })
+
+          "ArrowUp" -> a <$ do
+            H.liftAff $ log $ "Arrow up pressed"
+            H.liftEff $ preventDefault (KE.keyboardEventToEvent ev)
+            -- TODO: Replace with query that validate in bounds (Next) and cycle to top
+            H.modify \st -> st { highlightedIndex = (\i -> i - 1) <$> st.highlightedIndex }
+
+          "ArrowDown" -> a <$ do
+            H.liftEff $ preventDefault (KE.keyboardEventToEvent ev)
+            -- TODO: Replace with queries that validate in bounds (Prev)
+            H.modify \st -> st { highlightedIndex = (\i -> i + 1) <$> st.highlightedIndex }
+
+          other → a <$ do
+            H.liftAff $ log $ "Invalid key press: " <> show other
+
+      -- When toggling, the user will lose their highlighted index.
       Toggle a -> a <$ do
-        H.modify \st -> st { open = not st.open }
+        H.modify \st -> st { open = not st.open, highlightedIndex = Nothing }
 
       SetItems arr a -> a <$ do
-        H.modify \st -> st { items = arr }
+        H.modify (_ { items = arr, highlightedIndex = Nothing })
 
 
 --
@@ -103,7 +139,7 @@ getToggleProps :: ∀ item t f
 getToggleProps = augmentHTML [ HE.onClick $ HE.input_ Toggle ]
 
 getItemProps :: ∀ item t f
-  . item
+  . Int
  -> Array (H.IProp ( onClick :: MouseEvent | t ) (Query item f))
  -> Array (H.IProp ( onClick :: MouseEvent | t ) (Query item f))
-getItemProps item = augmentHTML [ HE.onClick $ HE.input_ $ Select item ]
+getItemProps index = augmentHTML [ HE.onClick $ HE.input_ $ Select index ]
