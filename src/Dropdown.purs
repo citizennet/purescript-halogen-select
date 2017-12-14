@@ -8,7 +8,7 @@ import DOM (DOM)
 import DOM.Classy.Event (preventDefault)
 import DOM.Event.KeyboardEvent as KE
 import DOM.Event.Types (MouseEvent)
-import Data.Array ((!!))
+import Data.Array (length, (!!))
 import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML as HH
@@ -32,18 +32,25 @@ type Effects e = ( dom :: DOM, console :: CONSOLE, ajax :: AJAX | e)
 -- this component, so it's necessary to include the item type.
 data Query item o a
   = ParentQuery (o Unit) a   -- Return an embedded query to the parent
-  | Highlight Int a          -- Change the highlighted item
+  | Highlight Target a       -- Change the highlighted item
   | Select Int a             -- Select a particular item
   | Key KE.KeyboardEvent a   -- A key has been pressed
   | Toggle a                 -- Open or close the menu
   | SetItems (Array item) a  -- Set the data (used by parent)
+
+
+data Target
+  = Next
+  | Prev
+  | Index Int
 
 -- This record should be considered read-only by the child except for the `open`
 -- field. The parent will consistently write the `items` field.
 type State item =
   { items :: Array item
   , open :: Boolean
-  , highlightedIndex :: Maybe Int }
+  , highlightedIndex :: Maybe Int
+  , lastIndex :: Int }
 
 
 type Input item =
@@ -63,7 +70,7 @@ component :: ∀ item o e
   -> H.Component HH.HTML (Query item o) (Input item) (Message item o) (FX e)
 component render =
   H.component
-    { initialState: \i -> { items: i.items, open: false, highlightedIndex: Nothing }
+    { initialState: \i -> { items: i.items, open: false, highlightedIndex: Nothing, lastIndex: (length i.items) - 1 }
     , render
     , eval
     , receiver: const Nothing
@@ -83,8 +90,21 @@ component render =
       -- We can ignore the case in which we don't want anything highlighted
       -- as once the highlight becomes active, nothing but closing the menu
       -- will remove it
-      Highlight index a -> a <$ do
-        H.modify (_ { highlightedIndex = Just index })
+      Highlight target a -> a <$ case target of
+        Index i -> do
+          H.modify (_ { highlightedIndex = Just i })
+
+        Next    -> do
+          st <- H.get
+          case st.highlightedIndex of
+            Just i | i /= st.lastIndex -> H.modify (_ { highlightedIndex = Just (i + 1) })
+            otherwise -> H.modify (_ { highlightedIndex = Just 0 })
+
+        Prev    -> do
+          st <- H.get
+          case st.highlightedIndex of
+            Just i | i /= 0 -> H.modify (_ { highlightedIndex = Just (i - 1) })
+            otherwise -> H.modify (_ { highlightedIndex = Just st.lastIndex })
 
       Key ev a → do
         case KE.code ev of
@@ -99,19 +119,16 @@ component render =
           "Escape" -> a <$ do
             H.modify (_ { open = false })
 
-          "ArrowUp" -> a <$ do
-            H.liftAff $ log $ "Arrow up pressed"
+          "ArrowUp" -> do
             H.liftEff $ preventDefault (KE.keyboardEventToEvent ev)
-            -- TODO: Replace with query that validate in bounds (Next) and cycle to top
-            H.modify \st -> st { highlightedIndex = (\i -> i - 1) <$> st.highlightedIndex }
+            eval $ Highlight Next a
 
           "ArrowDown" -> a <$ do
             H.liftEff $ preventDefault (KE.keyboardEventToEvent ev)
-            -- TODO: Replace with queries that validate in bounds (Prev)
-            H.modify \st -> st { highlightedIndex = (\i -> i + 1) <$> st.highlightedIndex }
+            eval $ Highlight Prev a
 
           other → a <$ do
-            H.liftAff $ log $ "Invalid key press: " <> show other
+            H.liftAff $ log $ show other
 
       -- When toggling, the user will lose their highlighted index.
       Toggle a -> a <$ do

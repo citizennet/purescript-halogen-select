@@ -15,6 +15,6 @@
     "purescript-dom": "^4.13.2",
     "purescript-halogen-css": "^7.0.0",
     "purescript-css": "^3.3.0",
-    "purescript-halogen-typeahead": "git@github.com:citizennet/purescript-halogen-select.git"
+    "purescript-halogen-select": "git@github.com:citizennet/purescript-halogen-select.git"
   }
 }

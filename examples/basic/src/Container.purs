@@ -158,7 +158,7 @@ renderDropdown st =
         [ HE.onMouseOver $ HE.input_ $ Dropdown.embedQuery NoOp
         , HP.class_      $ HH.ClassName "f5 link ba bw1 ph3 pv2 mb2 dib near-black pointer"
         , HE.onClick     $ HE.input_ Dropdown.Toggle
-        , HE.onKeyDown   $ HE.input Dropdown.Key
+        , HE.onKeyPress  $ HE.input Dropdown.Key
         ]
         [ HH.text "Toggle" ]
 
@@ -175,7 +175,7 @@ renderDropdown st =
     renderItem index item =
       HH.li
         [ HE.onClick     $ HE.input_ $ Dropdown.Select index
-        , HE.onMouseOver $ HE.input_ $ Dropdown.Highlight index
+        , HE.onMouseOver $ HE.input_ $ Dropdown.Highlight (Dropdown.Index index)
         , HE.onKeyDown   $ HE.input Dropdown.Key
         , HP.class_ $ HH.ClassName
             $ "lh-copy pa2 ba bl-0 bt-0 br-0 b--dotted b--black-30"
