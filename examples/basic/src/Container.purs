@@ -6,6 +6,8 @@ import CSS as CSS
 import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Console (CONSOLE, log)
 import DOM (DOM)
+import DOM.Event.KeyboardEvent (KeyboardEvent)
+import DOM.Event.KeyboardEvent as KE
 import Data.Array (difference, mapWithIndex, (:))
 import Data.Maybe (Maybe(..))
 import Halogen as H
@@ -45,6 +47,7 @@ type Effects e = ( dom :: DOM, console :: CONSOLE, ajax :: AJAX | e)
 --    handle the Dropdown.Selected item message however they would like.
 data Query a
   = NoOp a
+  | Log String a
   | Handle (Dropdown.Message String Query) a
 
 type State =
@@ -69,7 +72,9 @@ component =
       HH.div
         [ HP.class_ $ HH.ClassName "mw8 sans-serif center" ]
         ( [ HH.h2
-            [ HP.class_ $ HH.ClassName "black-80 f-headline-1" ]
+            [ HP.class_ $ HH.ClassName "black-80 f-headline-1"
+            , HE.onKeyDown $ HE.input (\ke -> Log $ KE.code (ke :: KeyboardEvent))
+            ]
             [ HH.text "Dropdown Component"]
           , HH.p_
             [ HH.text "Open the console to view outputs. Mouse over the toggle to trigger an embedded parent query. Click the toggle to open or close the menu. Click an item to select it (and remove it from the available options)." ]
@@ -94,9 +99,10 @@ component =
     eval :: Query ~> H.ParentDSL State Query (Dropdown.Query String Query) Unit Void (FX e)
     eval = case _ of
       -- Dummy behavior to prove queries route back up properly
-      NoOp a -> a <$ do
-        H.liftAff $
-          log "The child routed this query back to the parent."
+      NoOp a -> pure a
+
+      Log s a -> a <$ do
+        H.liftAff $ log s
 
       -- All child messages
       Handle m a -> case m of
@@ -146,10 +152,9 @@ correctly.
 
 renderDropdown :: (Dropdown.State String) -> H.HTML Void (Dropdown.Query String Query)
 renderDropdown st =
-  case st.open of
-    false -> HH.div_ [ renderToggle ]
-    true  -> HH.div_ [ renderToggle, renderItems $ renderItem `mapWithIndex` st.items ]
-
+  if st.open
+    then HH.div_ [ renderToggle ]
+    else HH.div_ [ renderToggle, renderItems $ renderItem `mapWithIndex` st.items ]
   where
     -- Render whatever is going to provide the action for toggling the menu
     renderToggle :: H.HTML Void (Dropdown.Query String Query)
@@ -158,7 +163,7 @@ renderDropdown st =
         [ HE.onMouseOver $ HE.input_ $ Dropdown.embedQuery NoOp
         , HP.class_      $ HH.ClassName "f5 link ba bw1 ph3 pv2 mb2 dib near-black pointer"
         , HE.onClick     $ HE.input_ Dropdown.Toggle
-        , HE.onKeyPress  $ HE.input Dropdown.Key
+        , HE.onKeyDown   $ HE.input Dropdown.Key
         ]
         [ HH.text "Toggle" ]
 
@@ -176,7 +181,7 @@ renderDropdown st =
       HH.li
         [ HE.onClick     $ HE.input_ $ Dropdown.Select index
         , HE.onMouseOver $ HE.input_ $ Dropdown.Highlight (Dropdown.Index index)
-        , HE.onKeyDown   $ HE.input Dropdown.Key
+        , HE.onKeyDown   $ HE.input  (\ke -> Dropdown.Key (ke :: KeyboardEvent))
         , HP.class_ $ HH.ClassName
             $ "lh-copy pa2 ba bl-0 bt-0 br-0 b--dotted b--black-30"
             <> if st.highlightedIndex == Just index then " bg-light-blue" else "" ]

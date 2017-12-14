@@ -7,7 +7,7 @@ import Control.Monad.Aff.Console (CONSOLE, log)
 import DOM (DOM)
 import DOM.Classy.Event (preventDefault)
 import DOM.Event.KeyboardEvent as KE
-import DOM.Event.Types (MouseEvent)
+import DOM.Event.Types (KeyboardEvent, MouseEvent)
 import Data.Array (length, (!!))
 import Data.Maybe (Maybe(..))
 import Halogen as H
@@ -34,7 +34,7 @@ data Query item o a
   = ParentQuery (o Unit) a   -- Return an embedded query to the parent
   | Highlight Target a       -- Change the highlighted item
   | Select Int a             -- Select a particular item
-  | Key KE.KeyboardEvent a   -- A key has been pressed
+  | Key KeyboardEvent a      -- A key has been pressed
   | Toggle a                 -- Open or close the menu
   | SetItems (Array item) a  -- Set the data (used by parent)
 
@@ -106,11 +106,10 @@ component render =
             Just i | i /= 0 -> H.modify (_ { highlightedIndex = Just (i - 1) })
             otherwise -> H.modify (_ { highlightedIndex = Just st.lastIndex })
 
-      Key ev a → do
+      Key (ev :: KE.KeyboardEvent) a → do
         case KE.code ev of
           "Enter" -> do
-            H.liftAff $ log $ "Enter pressed"
-            H.liftEff $ preventDefault (KE.keyboardEventToEvent ev)
+            H.liftEff $ preventDefault ev
             st <- H.get
             case st.highlightedIndex of
               Nothing -> pure a
@@ -120,11 +119,11 @@ component render =
             H.modify (_ { open = false })
 
           "ArrowUp" -> do
-            H.liftEff $ preventDefault (KE.keyboardEventToEvent ev)
+            H.liftEff $ preventDefault ev
             eval $ Highlight Next a
 
           "ArrowDown" -> a <$ do
-            H.liftEff $ preventDefault (KE.keyboardEventToEvent ev)
+            H.liftEff $ preventDefault ev
             eval $ Highlight Prev a
 
           other → a <$ do
