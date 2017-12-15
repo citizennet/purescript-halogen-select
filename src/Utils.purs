@@ -40,20 +40,21 @@ inTypeahead :: ∀ item t f. (Unit -> t Unit) -> f -> Typeahead.Query item t f
 inTypeahead = Typeahead.ParentQuery <<< H.action
 
 getInputProps = augmentHTML
-  [ HE.onFocus      $ HE.input_ Menu.Toggle
-  , HE.onKeyDown    $ HE.input  Menu.Key
+  [ HE.onFocus      $ HE.input_ $ Menu.Visibility Menu.Toggle
+  , HE.onKeyDown    $ HE.input  $ Menu.Key
   -- , HE.onValueInput $ HE.input  Typeahead.Search
   , HP.tabIndex 0
   ]
 
 getToggleProps = augmentHTML
-  [ HE.onClick     $ HE.input_ Menu.Toggle
-  , HE.onKeyDown   $ HE.input  Menu.Key
+  [ HE.onClick     $ HE.input_ $ Menu.Visibility Menu.Toggle
+  , HE.onKeyDown   $ HE.input  $ Menu.Key
+-- , HE.onBlur      $ HE.input_ $ Menu.Visibility Menu.Off  -- can be re-added if wanted
   , HP.tabIndex 0
   ]
 
 getItemProps index = augmentHTML
-  [ HE.onClick     $ HE.input_ $ Menu.Select index
+  [ HE.onMouseDown $ HE.input_ $ Menu.Select index -- onMouseDown allows for onBlur in event ordering
   , HE.onMouseOver $ HE.input_ $ Menu.Highlight (Menu.Index index)
   , HE.onKeyDown   $ HE.input  $ Menu.Key
   , HP.tabIndex 0

@@ -12,7 +12,6 @@ import Halogen as H
 import Halogen.HTML as HH
 import Select.Effects (FX)
 
-
 {-
 
 The dropdown is the simplest select component. It consists of a toggle and a list
@@ -24,18 +23,24 @@ of items the user can select.
 -- to send in queries in HTML. The parent is responsible for setting data in
 -- this component, so it's necessary to include the item type.
 data Query item o a
-  = ParentQuery (o Unit) a   -- Return an embedded query to the parent
-  | Highlight Target a       -- Change the highlighted item
-  | Select Int a             -- Select a particular item
-  | Key KeyboardEvent a      -- A key has been pressed
-  | Toggle a                 -- Open or close the menu
-  | SetItems (Array item) a  -- Set the data (used by parent)
+  = ParentQuery (o Unit)         a  -- Return an embedded query to the parent
+  | Highlight   Target           a  -- Change the highlighted item
+  | Select      Int              a  -- Select a particular item
+  | Key         KeyboardEvent    a  -- A key has been pressed
+  | Visibility  VisibilityStatus a  -- Open or close the menu
+  | SetItems    (Array item)     a  -- Set the data (used by parent)
 
-
+-- Possible transformations for highlight state
 data Target
   = Next
   | Prev
   | Index Int
+
+-- Possible transformations for menu state
+data VisibilityStatus
+  = On
+  | Off
+  | Toggle
 
 -- This record should be considered read-only by the child except for the `open`
 -- field. The parent will consistently write the `items` field.
@@ -44,7 +49,6 @@ type State item =
   , open :: Boolean
   , highlightedIndex :: Maybe Int
   , lastIndex :: Int }
-
 
 type Input item =
   { items :: Array item }
@@ -74,33 +78,38 @@ component render =
       ParentQuery o a -> a <$ do
         H.raise $ Emit o
 
-      Select index a -> a <$ do
+      Select index a -> do
         st <- H.get
-        case st.items !! index of
+        if not st.open then pure a else a <$ case st.items !! index of
           Nothing -> H.liftAff $ log $ "No item at that index: " <> show index
           Just item -> H.raise $ Selected item
 
       -- We can ignore the case in which we don't want anything highlighted
       -- as once the highlight becomes active, nothing but closing the menu
       -- will remove it
-      Highlight target a -> a <$ case target of
-        Index i -> do
-          H.modify (_ { highlightedIndex = Just i })
+      Highlight target a -> do
+        st <- H.get
+        if not st.open then pure a else a <$ case target of
 
-        Next    -> do
-          st <- H.get
-          case st.highlightedIndex of
-            Just i | i /= st.lastIndex -> H.modify (_ { highlightedIndex = Just (i + 1) })
-            otherwise -> H.modify (_ { highlightedIndex = Just 0 })
+          Index i -> do
+            H.modify (_ { highlightedIndex = Just i })
 
-        Prev    -> do
-          st <- H.get
-          case st.highlightedIndex of
-            Just i | i /= 0 -> H.modify (_ { highlightedIndex = Just (i - 1) })
-            otherwise -> H.modify (_ { highlightedIndex = Just st.lastIndex })
+          Next    -> do
+            st <- H.get
+            case st.highlightedIndex of
+              Just i | i /= st.lastIndex -> H.modify (_ { highlightedIndex = Just (i + 1) })
+              otherwise -> H.modify (_ { highlightedIndex = Just 0 })
+
+          Prev    -> do
+            st <- H.get
+            case st.highlightedIndex of
+              Just i | i /= 0 -> H.modify (_ { highlightedIndex = Just (i - 1) })
+              otherwise -> H.modify (_ { highlightedIndex = Just st.lastIndex })
 
       Key (ev :: KE.KeyboardEvent) a -> do
-        case KE.code ev of
+        st <- H.get
+        if not st.open then pure a else a <$ case KE.code ev of
+
           "Enter" -> do
             H.liftEff $ preventDefault ev
             st <- H.get
@@ -123,8 +132,10 @@ component render =
             H.liftAff $ log $ show other
 
       -- When toggling, the user will lose their highlighted index.
-      Toggle a -> a <$ do
-        H.modify \st -> st { open = not st.open, highlightedIndex = Nothing }
+      Visibility status a -> a <$ case status of
+        On     -> H.modify (_ { open = true })
+        Off    -> H.modify (_ { open = false, highlightedIndex = Nothing })
+        Toggle -> H.modify \st -> st { open = not st.open, highlightedIndex = Nothing }
 
       SetItems arr a -> a <$ do
         H.modify (_ { items = arr, highlightedIndex = Nothing, lastIndex = length arr - 1 })

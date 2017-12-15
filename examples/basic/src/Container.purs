@@ -3,9 +3,7 @@ module Container where
 import Prelude
 
 import CSS as CSS
-import Control.Monad.Aff (Aff)
-import Control.Monad.Aff.Console (CONSOLE, log)
-import DOM (DOM)
+import Control.Monad.Aff.Console (log)
 import DOM.Event.KeyboardEvent as KE
 import Data.Array (difference, mapWithIndex, (:))
 import Data.Maybe (Maybe(..))
@@ -14,9 +12,9 @@ import Halogen.HTML as HH
 import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Network.HTTP.Affjax (AJAX)
 import Select.Menu as Menu
 import Select.Utils (getToggleProps, getItemProps, inMenu)
+import Select.Effects (FX)
 
 {-
 
@@ -40,9 +38,6 @@ a minimal example like this one, the end user will need to:
 
 -}
 
-type FX e = Aff (Effects e)
-type Effects e = ( dom :: DOM, console :: CONSOLE, ajax :: AJAX | e)
-
 -- 1. The parent must handle the Menu.Emit message with `eval q` and can
 --    handle the Menu.Selected item message however they would like.
 data Query a
@@ -51,7 +46,7 @@ data Query a
   | Handle (Menu.Message String Query) a
 
 type State =
-  { items :: Array String
+  { items    :: Array String
   , selected :: Array String }
 
 
@@ -122,23 +117,9 @@ component =
           _  <- H.query unit
                   $ H.action
                   $ Menu.SetItems
-                  $ filterItems st.items st.selected
+                  $ difference st.items st.selected
 
           pure a
-
-
-{-
-
-HELPERS
-
-The parent is responsible for managing selected items, so they might want
-to add their own filtering.
-
--}
-
--- This serves simply to remove items present in both lists
-filterItems :: Array String -> Array String -> Array String
-filterItems = difference
 
 
 {-
@@ -149,6 +130,10 @@ The parent will need to fill out this configuration information to function
 correctly.
 
 -}
+
+-- The parent is mainly responsible for filling out a function with this type signature,
+-- and attaching our queries. This can be done with our helper functions, or they can
+-- attach everything as they see fit by hand.
 
 renderMenu :: (Menu.State String) -> H.HTML Void (Menu.Query String Query)
 renderMenu st =
@@ -201,4 +186,5 @@ testData =
   , "Sanket Sabnis"
   , "Aaron Chu"
   , "Vincent Busam"
-  , "Riley Gibbs" ]
+  , "Riley Gibbs"
+  , "THE COOKIE MONSTER DID NOTHING WRONG" ]
