@@ -1,21 +1,16 @@
-module Select.Dropdown where
+module Select.Menu where
 
 import Prelude
 
-import Control.Monad.Aff (Aff)
-import Control.Monad.Aff.Console (CONSOLE, log)
-import DOM (DOM)
+import Control.Monad.Aff.Console (log)
 import DOM.Classy.Event (preventDefault)
 import DOM.Event.KeyboardEvent as KE
-import DOM.Event.Types (KeyboardEvent, MouseEvent)
+import DOM.Event.Types (KeyboardEvent)
 import Data.Array (length, (!!))
 import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML as HH
-import Halogen.HTML.Events as HE
-import Halogen.HTML.Properties as HP
-import Network.HTTP.Affjax (AJAX)
-import Select.Utils (augmentHTML)
+import Select.Effects (FX)
 
 
 {-
@@ -24,9 +19,6 @@ The dropdown is the simplest select component. It consists of a toggle and a lis
 of items the user can select.
 
 -}
-
-type FX e = Aff (Effects e)
-type Effects e = ( dom :: DOM, console :: CONSOLE, ajax :: AJAX | e)
 
 -- All components require the ParentQuery query in order to allow the parent
 -- to send in queries in HTML. The parent is responsible for setting data in
@@ -136,29 +128,3 @@ component render =
 
       SetItems arr a -> a <$ do
         H.modify (_ { items = arr, highlightedIndex = Nothing, lastIndex = length arr - 1 })
-
-
---
--- RENDER HELPERS
-
--- A convenience for the parent to ensure they embed their queries
--- properly.
-embedQuery :: ∀ item t f. (Unit -> t Unit) -> f -> Query item t f
-embedQuery = ParentQuery <<< H.action
-
--- Two render functions are required:
--- - Toggle: some clickable region to toggle the menu status
--- - Item: the user's data rendered into the menu list
-
-getToggleProps = augmentHTML
-  [ HE.onClick     $ HE.input_ Toggle
-  , HE.onKeyDown   $ HE.input  Key
-  , HP.tabIndex 0
-  ]
-
-getItemProps index = augmentHTML
-  [ HE.onClick     $ HE.input_ $ Select index
-  , HE.onMouseOver $ HE.input_ $ Highlight (Index index)
-  , HE.onKeyDown   $ HE.input  Key
-  , HP.tabIndex 0
-  ]
