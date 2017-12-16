@@ -1,4 +1,4 @@
-module Select.Menu where
+module Select.Primitive.Container where
 
 import Prelude
 
@@ -14,21 +14,21 @@ import Select.Effects (FX)
 
 {-
 
-The dropdown is the simplest select component. It consists of a toggle and a list
-of items the user can select.
+The Container primitive ...
 
 -}
 
--- All components require the ParentQuery query in order to allow the parent
--- to send in queries in HTML. The parent is responsible for setting data in
--- this component, so it's necessary to include the item type.
+
+-- Every primitive requires ParentQuery in order to allow the parent to embed
+-- their own queries. The item and output types come from the parent so must
+-- also be generic.
 data Query item o a
-  = ParentQuery (o Unit)         a  -- Return an embedded query to the parent
-  | Highlight   Target           a  -- Change the highlighted item
-  | Select      Int              a  -- Select a particular item
-  | Key         KeyboardEvent    a  -- A key has been pressed
-  | Visibility  VisibilityStatus a  -- Open or close the menu
-  | SetItems    (Array item)     a  -- Set the data (used by parent)
+  = ParentQuery (o Unit)            a  -- Return an embedded query to the parent
+  | Highlight   Target              a  -- Change the highlighted item
+  | Select      Int                 a  -- Select a particular item
+  | Key         KeyboardEvent       a  -- A key has been pressed
+  | Visibility  VisibilityStatus    a  -- Open or close the menu
+  | SetItems    (Array (Item item)) a  -- Set the data (used by parent)
 
 -- Possible transformations for highlight state
 data Target
@@ -42,26 +42,35 @@ data VisibilityStatus
   | Off
   | Toggle
 
--- This record should be considered read-only by the child except for the `open`
--- field. The parent will consistently write the `items` field.
 type State item =
-  { items :: Array item
-  , open :: Boolean
+  { items            :: Array (Item item)
+  , open             :: Boolean
   , highlightedIndex :: Maybe Int
-  , lastIndex :: Int }
+  , lastIndex        :: Int }
+
+-- Later, should support a grid.
+-- data Container item
+--   = MatrixOf (Item item)
+--     ListOf   (Item item)
+
+-- Containers contain items, which can have three
+-- possible states.
+data Item item
+  = Selected item
+  | Selectable item
+  | Disabled item
 
 type Input item =
-  { items :: Array item }
+  { items :: Array (Item item) }
 
 -- All components must allow for emitting the parent's queries back up to the parent.
 -- In addition, the dropdown supports selecting items from the list.
 data Message item o
   = Emit (o Unit)
-  | Selected item
+  | ItemSelected item
 
--- The component is responsible for behaviors but defers the render completely to the parent.
--- That render function can be written with the help of our `getProps` helpers, or you can
--- write it yourself completely.
+-- The primitive handles state and transformations but defers all rendering to the parent. The
+-- render function can be written using our helper functions to ensure the right events are included.
 component :: ∀ item o e
    . (State item -> H.ComponentHTML (Query item o))
   -> H.Component HH.HTML (Query item o) (Input item) (Message item o) (FX e)
@@ -81,8 +90,8 @@ component render =
       Select index a -> do
         st <- H.get
         if not st.open then pure a else a <$ case st.items !! index of
-          Nothing -> H.liftAff $ log $ "No item at that index: " <> show index
-          Just item -> H.raise $ Selected item
+          Just (Selectable item) -> H.raise $ ItemSelected item
+          _ -> H.liftAff $ log $ "Cannot select item at that index: " <> show index
 
       -- We can ignore the case in which we don't want anything highlighted
       -- as once the highlight becomes active, nothing but closing the menu

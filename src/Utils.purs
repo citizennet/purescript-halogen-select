@@ -5,8 +5,7 @@ import Prelude
 import Halogen as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Select.Menu as Menu
-import Select.Typeahead as Typeahead
+import Select.Primitive.Container as Container
 
 {-
 
@@ -33,29 +32,25 @@ augmentHTML = flip (<>)
 
 -- A convenience for the parent to ensure they embed their queries
 -- properly.
-inMenu :: ∀ item t f. (Unit -> t Unit) -> f -> Menu.Query item t f
-inMenu = Menu.ParentQuery <<< H.action
-
-inTypeahead :: ∀ item t f. (Unit -> t Unit) -> f -> Typeahead.Query item t f
-inTypeahead = Typeahead.ParentQuery <<< H.action
+inContainer :: ∀ item t f. (Unit -> t Unit) -> f -> Container.Query item t f
+inContainer = Container.ParentQuery <<< H.action
 
 getInputProps = augmentHTML
-  [ HE.onFocus      $ HE.input_ $ Menu.Visibility Menu.Toggle
-  , HE.onKeyDown    $ HE.input  $ Menu.Key
-  -- , HE.onValueInput $ HE.input  Typeahead.Search
+  [ HE.onFocus      $ HE.input_ $ Container.Visibility Container.Toggle
+  , HE.onKeyDown    $ HE.input  $ Container.Key
   , HP.tabIndex 0
   ]
 
 getToggleProps = augmentHTML
-  [ HE.onClick     $ HE.input_ $ Menu.Visibility Menu.Toggle
-  , HE.onKeyDown   $ HE.input  $ Menu.Key
--- , HE.onBlur      $ HE.input_ $ Menu.Visibility Menu.Off  -- can be re-added if wanted
+  [ HE.onClick     $ HE.input_ $ Container.Visibility Container.Toggle
+  , HE.onKeyDown   $ HE.input  $ Container.Key
+-- , HE.onBlur      $ HE.input_ $ Container.Visibility Menu.Off  -- can be re-added if wanted
   , HP.tabIndex 0
   ]
 
 getItemProps index = augmentHTML
-  [ HE.onMouseDown $ HE.input_ $ Menu.Select index -- onMouseDown allows for onBlur in event ordering
-  , HE.onMouseOver $ HE.input_ $ Menu.Highlight (Menu.Index index)
-  , HE.onKeyDown   $ HE.input  $ Menu.Key
+  [ HE.onMouseDown $ HE.input_ $ Container.Select index -- onMouseDown allows for onBlur in event ordering
+  , HE.onMouseOver $ HE.input_ $ Container.Highlight (Container.Index index)
+  , HE.onKeyDown   $ HE.input  $ Container.Key
   , HP.tabIndex 0
   ]
