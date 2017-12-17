@@ -188,7 +188,7 @@ renderContainer st =
                 [ HP.class_ $ HH.ClassName "fl w-50 tr" ]
                 [ HH.button
                     ( getChildProps
-                      [ HP.class_ $ HH.ClassName "ma2 ba bw1 ph3 pv2 dib near-black pointer outline-0 link"
+                      [ HP.class_ $ HH.ClassName "ma2 ba bw1 ph3 pv2 dib b--near-black pointer outline-0 link"
                       , HE.onClick $ HE.input_ $ inContainer (Log "button in container clicked")
                       ]
                     )
@@ -196,7 +196,7 @@ renderContainer st =
                 ]
             ]
         , HH.ul
-            [ HP.class_ $ HH.ClassName "list pl0 mt0 bt b--blac-30" ]
+            [ HP.class_ $ HH.ClassName "list pl0 mt0 bt b--black-30" ]
             html
         ]
 
