@@ -27,6 +27,8 @@ data Query item o a
   | Highlight   Target           a  -- Change the highlighted item
   | Select      Int              a  -- Select a particular item
   | Key         KeyboardEvent    a  -- A key has been pressed
+  | Mouse       MouseState       a  -- Update mousedown state
+  | Blur                         a  -- Blur event
   | Visibility  VisibilityStatus a  -- Open or close the menu
   | SetItems    (Array item)     a  -- Set the data (used by parent)
 
@@ -35,6 +37,10 @@ data Target
   = Next
   | Prev
   | Index Int
+
+data MouseState
+  = Down
+  | Up
 
 -- Possible transformations for menu state
 data VisibilityStatus
@@ -48,7 +54,9 @@ type State item =
   { items :: Array item
   , open :: Boolean
   , highlightedIndex :: Maybe Int
-  , lastIndex :: Int }
+  , lastIndex :: Int
+  , mouseDown :: Boolean
+  }
 
 type Input item =
   { items :: Array item }
@@ -67,12 +75,19 @@ component :: ∀ item o e
   -> H.Component HH.HTML (Query item o) (Input item) (Message item o) (FX e)
 component render =
   H.component
-    { initialState: \i -> { items: i.items, open: false, highlightedIndex: Nothing, lastIndex: length i.items - 1 }
+    { initialState
     , render
     , eval
     , receiver: const Nothing
     }
   where
+    initialState i =
+      { items: i.items
+      , open: false
+      , highlightedIndex: Nothing
+      , lastIndex: length i.items - 1
+      , mouseDown: false
+      }
     eval :: (Query item o) ~> H.ComponentDSL (State item) (Query item o) (Message item o) (FX e)
     eval = case _ of
       ParentQuery o a -> a <$ do
@@ -130,6 +145,23 @@ component render =
 
           other -> a <$ do
             H.liftAff $ log $ show other
+
+      Mouse ms a -> do
+        st <- H.get
+        if not st.open then pure a else a <$ case ms of
+          Down -> do
+            H.liftAff $ log $ "mouse: down"
+            H.modify (_ { mouseDown = true })
+          Up -> do
+            H.liftAff $ log $ "mouse: up"
+            H.modify (_ { mouseDown = false })
+
+      Blur a -> do
+        st <- H.get
+        H.liftAff $ log $ "st.open: " <> show st.open
+        H.liftAff $ log $ "st.mouseDown: " <> show st.mouseDown
+        if not st.open || st.mouseDown then pure a else a <$ do
+          eval $ Visibility Off a
 
       -- When toggling, the user will lose their highlighted index.
       Visibility status a -> a <$ case status of

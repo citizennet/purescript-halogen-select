@@ -1,20 +1,19 @@
 module Container where
 
 import Prelude
-
 import CSS as CSS
-import Control.Monad.Aff.Console (log)
 import DOM.Event.KeyboardEvent as KE
-import Data.Array (difference, mapWithIndex, (:))
-import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Select.Menu as Menu
-import Select.Utils (getToggleProps, getItemProps, inMenu)
+import Control.Monad.Aff.Console (log)
+import Data.Array (difference, mapWithIndex, (:))
+import Data.Maybe (Maybe(..))
 import Select.Effects (FX)
+import Select.Utils (getItemProps, getRootProps, getToggleProps, inMenu)
 
 {-
 
@@ -137,9 +136,11 @@ correctly.
 
 renderMenu :: (Menu.State String) -> H.HTML Void (Menu.Query String Query)
 renderMenu st =
-  if not st.open
-    then HH.div_ [ renderToggle ]
-    else HH.div_ [ renderToggle, renderItems $ renderItem `mapWithIndex` st.items ]
+  HH.div
+    ( getRootProps [] )
+    $ if not st.open
+        then [ renderToggle ]
+        else [ renderToggle, renderItems $ renderItem `mapWithIndex` st.items ]
   where
     -- Render whatever is going to provide the action for toggling the menu
     renderToggle :: H.HTML Void (Menu.Query String Query)
