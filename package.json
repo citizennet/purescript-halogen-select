@@ -1,8 +1,10 @@
 {
   "private": true,
   "scripts": {
+    "clean": "rm -rf output",
     "build": "pulp build",
-    "watch": "pulp -w build"
+    "watch": "pulp -w build",
+    "example-basic": "pulp build --include examples/basic/src --to examples/basic/dist/example.js"
   },
   "devDependencies": {
     "pulp": "^12.0.1",
