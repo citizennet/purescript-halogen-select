@@ -36,21 +36,39 @@ inContainer :: ∀ item t f. (Unit -> t Unit) -> f -> Container.Query item t f
 inContainer = Container.ParentQuery <<< H.action
 
 getInputProps = augmentHTML
-  [ HE.onFocus      $ HE.input_ $ Container.Visibility Container.Toggle
-  , HE.onKeyDown    $ HE.input  $ Container.Key
+  [ HE.onFocus     $ HE.input_ $ Container.Visibility Container.Toggle
+  , HE.onKeyDown   $ HE.input  $ Container.Key
+  , HE.onMouseDown $ HE.input_ $ Container.Mouse Container.Down
+  , HE.onMouseUp   $ HE.input_ $ Container.Mouse Container.Up
+  , HE.onBlur      $ HE.input_ $ Container.Blur
   , HP.tabIndex 0
   ]
 
 getToggleProps = augmentHTML
   [ HE.onClick     $ HE.input_ $ Container.Visibility Container.Toggle
   , HE.onKeyDown   $ HE.input  $ Container.Key
--- , HE.onBlur      $ HE.input_ $ Container.Visibility Menu.Off  -- can be re-added if wanted
+  , HE.onMouseDown $ HE.input_ $ Container.Mouse Container.Down
+  , HE.onMouseUp   $ HE.input_ $ Container.Mouse Container.Up
+  , HE.onBlur      $ HE.input_ $ Container.Blur
+  , HP.tabIndex 0
+  ]
+
+getContainerProps = augmentHTML
+  [ HE.onMouseDown $ HE.input_ $ Container.Mouse Container.Down
+  , HE.onMouseUp   $ HE.input_ $ Container.Mouse Container.Up
+  , HE.onBlur      $ HE.input_ $ Container.Blur
+  , HP.tabIndex 0
+  ]
+
+getChildProps = augmentHTML
+  [ HE.onBlur      $ HE.input_ $ Container.Blur
   , HP.tabIndex 0
   ]
 
 getItemProps index = augmentHTML
-  [ HE.onMouseDown $ HE.input_ $ Container.Select index -- onMouseDown allows for onBlur in event ordering
+  [ HE.onClick     $ HE.input_ $ Container.Select index
   , HE.onMouseOver $ HE.input_ $ Container.Highlight (Container.Index index)
   , HE.onKeyDown   $ HE.input  $ Container.Key
+  , HE.onBlur      $ HE.input_ $ Container.Blur
   , HP.tabIndex 0
   ]

@@ -1,21 +1,20 @@
 module Container where
 
 import Prelude
-
 import CSS as CSS
-import Control.Monad.Aff.Console (log, logShow)
 import DOM.Event.KeyboardEvent as KE
-import Data.Array (concatMap, difference, filter, mapWithIndex, (:))
-import Data.Foldable (length)
-import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Select.Effects (FX)
 import Select.Primitive.Container as Container
-import Select.Utils (getToggleProps, getItemProps, inContainer)
+import Control.Monad.Aff.Console (log, logShow)
+import Data.Array (concatMap, difference, filter, mapWithIndex, (:))
+import Data.Foldable (length)
+import Data.Maybe (Maybe(..))
+import Select.Effects (FX)
+import Select.Utils (getChildProps, getContainerProps, getItemProps, getToggleProps, inContainer)
 
 {-
 
@@ -152,9 +151,10 @@ correctly.
 
 renderContainer :: (Container.State String) -> H.HTML Void (Container.Query String Query)
 renderContainer st =
-  if not st.open
-    then HH.div_ [ renderToggle ]
-    else HH.div_ [ renderToggle, renderItems $ renderItem `mapWithIndex` st.items ]
+  HH.div_
+    $ if not st.open
+      then [ renderToggle ]
+      else [ renderToggle, renderItems $ renderItem `mapWithIndex` st.items ]
   where
 
     -- Render whatever is going to provide the action for toggling the menu. Notably, this is
@@ -173,10 +173,32 @@ renderContainer st =
     renderItems :: Array (H.HTML Void (Container.Query String Query))
                 -> H.HTML Void (Container.Query String Query)
     renderItems html =
-      HH.ul
-        [ HP.class_ $ HH.ClassName "list pl0 mt0 measure ba br1 b--black-30 overflow-y-scroll"
-        , HC.style $ CSS.maxHeight (CSS.px 200.0) ]
-        html
+      HH.div
+        ( getContainerProps
+          [ HP.class_ $ HH.ClassName "measure ba br1 b--black-30 overflow-y-scroll pb3 outline-0"
+          , HC.style $ CSS.maxHeight (CSS.px 300.0)
+          ]
+        )
+        [ HH.div
+            [ HP.class_ $ HH.ClassName "cf" ]
+            [ HH.h4
+                [ HP.class_ $ HH.ClassName "ph2 pv3 ma0 fl w-50" ]
+                [ HH.text "Choose One" ]
+            , HH.div
+                [ HP.class_ $ HH.ClassName "fl w-50 tr" ]
+                [ HH.button
+                    ( getChildProps
+                      [ HP.class_ $ HH.ClassName "ma2 ba bw1 ph3 pv2 dib b--near-black pointer outline-0 link"
+                      , HE.onClick $ HE.input_ $ inContainer (Log "button in container clicked")
+                      ]
+                    )
+                    [ HH.text "Click Me" ]
+                ]
+            ]
+        , HH.ul
+            [ HP.class_ $ HH.ClassName "list pl0 mt0 bt b--black-30" ]
+            html
+        ]
 
     renderItem :: Int -> Container.Item String -> H.HTML Void (Container.Query String Query)
     renderItem index item = HH.li item' [ HH.text str ]
