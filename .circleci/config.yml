@@ -26,17 +26,17 @@ jobs:
                 command: pulp build
 
             - save_cache:
-                key: build-cache
+                key: v1-build-cache
                 paths:
                     - ~/output
 
             - save_cache:
-                key: bower-cache-{{ arch }}-{{ .Branch }}-{{ checksum "bower.json" }}
+                key: v1-bower-cache-{{ arch }}-{{ .Branch }}-{{ checksum "bower.json" }}
                 paths:
                     - ~/bower_components
 
             - save_cache:
-                key: npm-cache-{{ arch }}-{{ .Branch }}-{{ checksum "package.json" }}
+                key: v1-npm-cache-{{ arch }}-{{ .Branch }}-{{ checksum "package.json" }}
                 paths:
                     - ~/node_modules
                       
