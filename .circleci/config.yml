@@ -3,33 +3,44 @@ version: 2
 jobs:
     build:
         docker:
-            - image: haskell:8.2
+            - image: thomashoneyman/purescript:0.0.1
         steps:
             - checkout
+
             - restore_cache:
                 keys:
                     - build-cache
                     - bower-cache-{{ arch }}-{{ .Branch }}-{{ checksum "bower.json" }}
                     - bower-cache-{{ arch }}-{{ .Branch }}
                     - bower-cache
-                    - node-cache-{{ arch }}-{{ .Branch }}-{{ checksum "package.json" }}
-                    - node-cache-{{ arch }}-{{ .Branch }}
+                    - npm-cache-{{ arch }}-{{ .Branch }}-{{ checksum "package.json" }}
+                    - npm-cache-{{ arch }}-{{ .Branch }}
+                    - npm-cache
                     - node-cache
+
             - run:
                 name: Build the project
                 command: pulp build
+
             - save_cache:
                 key: build-cache
                 paths:
                     - ~/output
+
             - save_cache:
                 key: bower-cache-{{ arch }}-{{ .Branch }}-{{ checksum "bower.json" }}
                 paths:
                     - ~/bower_components
+
             - save_cache:
-                key: node-cache-{{ arch }}-{{ .Branch }}-{{ checksum "package.json" }}
+                key: npm-cache-{{ arch }}-{{ .Branch }}-{{ checksum "package.json" }}
                 paths:
                     - ~/node_modules
+
+            - save_cache:
+                key: node-cache
+                paths: 
+                    - ~/node/.npm-global
 
     # test:
     #     docker:
