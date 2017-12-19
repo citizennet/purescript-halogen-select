@@ -1,0 +1,54 @@
+version: 2
+
+jobs:
+    build:
+        docker:
+            - image: thomashoneyman/purescript:0.0.1
+        steps:
+            - checkout
+
+            - restore_cache:
+                keys:
+                    - v1-build-cache
+                    - v1-bower-cache-{{ arch }}-{{ .Branch }}-{{ checksum "bower.json" }}
+                    - v1-bower-cache-{{ arch }}-{{ .Branch }}
+                    - v1-bower-cache
+                    - v1-npm-cache-{{ arch }}-{{ .Branch }}-{{ checksum "package.json" }}
+                    - v1-npm-cache-{{ arch }}-{{ .Branch }}
+                    - v1-npm-cache
+
+            - run:
+                name: Install dependencies from NPM and Bower...
+                command: npm install && bower install
+
+            - run:
+                name: Build the base component...
+                command: pulp build
+
+            - save_cache:
+                key: build-cache
+                paths:
+                    - ~/output
+
+            - save_cache:
+                key: bower-cache-{{ arch }}-{{ .Branch }}-{{ checksum "bower.json" }}
+                paths:
+                    - ~/bower_components
+
+            - save_cache:
+                key: npm-cache-{{ arch }}-{{ .Branch }}-{{ checksum "package.json" }}
+                paths:
+                    - ~/node_modules
+                      
+            # Verify all examples successfully build...  
+            - run:
+                name: Build all examples...
+                command: ./.circleci/run-examples.sh
+
+
+# Should be expanded to include tests and example repos                      
+workflows:
+    version: 2
+    build:
+        jobs:
+            - build

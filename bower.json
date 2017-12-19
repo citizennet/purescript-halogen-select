@@ -1,6 +1,20 @@
 {
-  "private": true,
   "name": "purescript-halogen-select",
+  "homepage": "https://github.com/citizennet/purescript-halogen-select",
+  "authors": [ "Thomas Honeyman <hello@thomashoneyman.com>" ],
+  "description": "Building blocks for common selection user interfaces in PureScript & Halogen",
+  "keywords": [
+    "purescript",
+    "halogen",
+    "autocomplete",
+    "typeahead",
+    "date picker",
+    "image picker"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/citizennet/purescript-halogen-select.git"
+  },
   "ignore": [
     "**/.*",
     "node_modules",

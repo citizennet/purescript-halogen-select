@@ -1,4 +1,4 @@
-# Select
+# Select [![CircleCI](https://circleci.com/gh/citizennet/purescript-halogen-select.svg?style=badge)](https://circleci.com/gh/citizennet/purescript-halogen-select)
 
 This project provides the core building blocks for common select fields, including:
 
