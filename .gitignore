@@ -7,3 +7,7 @@ node_modules
 .psci
 output
 package-lock.json
+
+# Generated examples
+**dist/* # ignore all dist
+!**dist/index.html # except index.html
