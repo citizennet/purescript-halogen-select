@@ -9,14 +9,13 @@ jobs:
 
             - restore_cache:
                 keys:
-                    - build-cache
-                    - bower-cache-{{ arch }}-{{ .Branch }}-{{ checksum "bower.json" }}
-                    - bower-cache-{{ arch }}-{{ .Branch }}
-                    - bower-cache
-                    - npm-cache-{{ arch }}-{{ .Branch }}-{{ checksum "package.json" }}
-                    - npm-cache-{{ arch }}-{{ .Branch }}
-                    - npm-cache
-                    - node-cache
+                    - v1-build-cache
+                    - v1-bower-cache-{{ arch }}-{{ .Branch }}-{{ checksum "bower.json" }}
+                    - v1-bower-cache-{{ arch }}-{{ .Branch }}
+                    - v1-bower-cache
+                    - v1-npm-cache-{{ arch }}-{{ .Branch }}-{{ checksum "package.json" }}
+                    - v1-npm-cache-{{ arch }}-{{ .Branch }}
+                    - v1-npm-cache
 
             - run:
                 name: Install dependencies from NPM and Bower...
@@ -40,11 +39,12 @@ jobs:
                 key: npm-cache-{{ arch }}-{{ .Branch }}-{{ checksum "package.json" }}
                 paths:
                     - ~/node_modules
+                      
+            # Verify all examples successfully build...  
+            - run:
+                name: Build all examples...
+                command: ./.circleci/run-examples.sh
 
-            - save_cache:
-                key: node-cache
-                paths: 
-                    - ~/node/.npm-global
 
 # Should be expanded to include tests and example repos                      
 workflows:
