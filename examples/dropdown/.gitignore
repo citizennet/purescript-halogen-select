@@ -6,4 +6,4 @@ node_modules
 # Generated files
 .psci
 output
-dist/app.js
+dist/example.js

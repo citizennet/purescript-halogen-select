@@ -6,6 +6,7 @@ import Halogen as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Select.Primitive.Container as Container
+import Select.Primitive.Search as Search
 
 {-
 
@@ -31,19 +32,43 @@ augmentHTML = flip (<>)
 -- RENDER HELPERS
 
 -- A convenience for the parent to ensure they embed their queries
--- properly.
-inContainer :: ∀ item t f. (Unit -> t Unit) -> f -> Container.Query item t f
+-- into primitives properly.
+inContainer :: ∀ item parent. H.Action parent -> Unit -> Container.Query item parent Unit
 inContainer = Container.ParentQuery <<< H.action
+-- inContainer :: ∀ item parent. H.Action parent -> Unit -> Unit -> Wrap item parent Unit
+-- inContainer q = C <<< Container.ParentQuery (H.action q)
+
+inSearch :: ∀ parent. H.Action parent -> Unit -> Search.Query parent Unit
+inSearch = Search.ParentQuery <<< H.action
+-- inSearch :: ∀ item parent. H.Action parent -> Unit -> Unit -> Wrap item parent Unit
+-- inSearch q = S <<< Search.ParentQuery (H.action q)
+
+-- data Wrap item o a
+--   = C (Container.Query item o Unit) a
+--   | S (Search.Query o Unit) a
+
+-- Intended for use on the text input field.
+-- getInputProps = augmentHTML
+--   [ HE.onFocus      $ HE.input_ $ C $ Container.Visibility Container.Toggle unit
+--   , HE.onKeyDown    $ HE.input  $ \ev -> C $ Container.Key ev unit
+--   , HE.onValueInput $ HE.input  $ \ev -> S $ Search.TextInput ev unit
+--   , HE.onMouseDown  $ HE.input_ $ C $ Container.Mouse Container.Down unit
+--   , HE.onMouseUp    $ HE.input_ $ C $ Container.Mouse Container.Up unit
+--   , HE.onBlur       $ HE.input_ $ C $ Container.Blur unit
+--   , HP.tabIndex 0
+--   ]
 
 getInputProps = augmentHTML
-  [ HE.onFocus     $ HE.input_ $ Container.Visibility Container.Toggle
-  , HE.onKeyDown   $ HE.input  $ Container.Key
-  , HE.onMouseDown $ HE.input_ $ Container.Mouse Container.Down
-  , HE.onMouseUp   $ HE.input_ $ Container.Mouse Container.Up
-  , HE.onBlur      $ HE.input_ $ Container.Blur
+  [ HE.onFocus      $ HE.input_ $ Container.Visibility Container.Toggle
+  , HE.onKeyDown    $ HE.input  $ Container.Key
+  -- , HE.onValueInput $ HE.input  $ Search.TextInput
+  , HE.onMouseDown  $ HE.input_ $ Container.Mouse Container.Down
+  , HE.onMouseUp    $ HE.input_ $ Container.Mouse Container.Up
+  , HE.onBlur       $ HE.input_ $ Container.Blur
   , HP.tabIndex 0
   ]
 
+-- Intended for a toggle button that will affect the container component
 getToggleProps = augmentHTML
   [ HE.onClick     $ HE.input_ $ Container.Visibility Container.Toggle
   , HE.onKeyDown   $ HE.input  $ Container.Key
@@ -53,6 +78,7 @@ getToggleProps = augmentHTML
   , HP.tabIndex 0
   ]
 
+-- Intended to be used on the container primitive itself
 getContainerProps = augmentHTML
   [ HE.onMouseDown $ HE.input_ $ Container.Mouse Container.Down
   , HE.onMouseUp   $ HE.input_ $ Container.Mouse Container.Up
@@ -60,6 +86,7 @@ getContainerProps = augmentHTML
   , HP.tabIndex 0
   ]
 
+-- Intended for anything that will be embedded into the container primitive
 getChildProps = augmentHTML
   [ HE.onBlur      $ HE.input_ $ Container.Blur
   , HP.tabIndex 0

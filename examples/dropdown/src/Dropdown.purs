@@ -1,4 +1,4 @@
-module Container where
+module Dropdown where
 
 import Prelude
 import CSS as CSS
@@ -21,7 +21,7 @@ import Select.Utils (getChildProps, getContainerProps, getItemProps, getTogglePr
 This module demonstrates a minimal parent component for a dropdown. To construct
 a minimal example like this one, the end user will need to:
 
-1. Add a handler for Menu.Message to their query algebra
+1. Add a handler for Message to their query algebra
    1a. Add a handler for the Emit message, which should simply recursively call
        `eval q`; this routes the query back into the parent's query algebra.
    1b. Add a handler for the Selected item message; this behavior is up to the

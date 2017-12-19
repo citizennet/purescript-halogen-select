@@ -61,8 +61,7 @@ type State item =
 --   = MatrixOf (Item item)
 --     ListOf   (Item item)
 
--- Containers contain items, which can have three
--- possible states.
+-- Items can have three possible states
 data Item item
   = Selected item
   | Selectable item

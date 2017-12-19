@@ -2,7 +2,8 @@
   "private": true,
   "scripts": {
     "build": "pulp build",
-    "example-basic": "pulp build --include examples/basic/src --to examples/basic/dist/example.js"
+    "example-dropdown": "pulp build --include examples/dropdown/src --to examples/dropdown/dist/example.js",
+    "example-typeahead": "pulp build --include examples/typeahead/src --to examples/typeahead/dist/example.js"
   },
   "devDependencies": {
     "pulp": "^12.0.1",
