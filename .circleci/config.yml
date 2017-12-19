@@ -4,7 +4,6 @@ jobs:
     build:
         docker:
             - image: thomashoneyman/purescript:0.0.1
-        parallelism: 4
         working_directory: ~/select
         steps:
             - checkout
