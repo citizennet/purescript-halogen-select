@@ -42,36 +42,9 @@ jobs:
                 paths: 
                     - ~/node/.npm-global
 
-    # test:
-    #     docker:
-    #         - image: haskell:8.2
-    #     steps:
-    #         - checkout
-    #         - restore_cache:
-    #             keys:
-    #                 - test-cache
-    #                 - test-lib-cache-{{ arch }}-{{ .Branch }}-{{ checksum "package.yaml" }}
-    #                 - test-lib-cache-{{ arch }}-{{ .Branch }}
-    #                 - test-lib-cache
-    #         - run:
-    #             name: Test the project
-    #             command: stack test
-    #         - save_cache:
-    #             key: test-cache
-    #             paths:
-    #                 - ~/.ghc
-    #                 - ~/.cabal
-    #                 - ~/.stack
-    #         - save_cache:
-    #             key: test-lib-cache-{{ arch }}-{{ .Branch }}-{{ checksum "package.yaml" }}
-    #             paths:
-    #                 - ~/.stack-work/install
-
+# Should be expanded to include tests and example repos                      
 workflows:
     version: 2
-    build_and_test:
+    build:
         jobs:
             - build
-            # - test:
-            #     requires:
-            #       - build
