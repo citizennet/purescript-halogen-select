@@ -4,6 +4,8 @@ jobs:
     build:
         docker:
             - image: thomashoneyman/purescript:0.0.1
+        parallelism: 4
+        working_directory: ~/select
         steps:
             - checkout
 
@@ -26,12 +28,12 @@ jobs:
             - save_cache:
                 key: v1-bower-cache-{{ arch }}-{{ .Branch }}-{{ checksum "bower.json" }}
                 paths:
-                    - ~/bower_components
+                    - ~/select/bower_components
 
             - save_cache:
                 key: v1-npm-cache-{{ arch }}-{{ .Branch }}-{{ checksum "package.json" }}
                 paths:
-                    - ~/node_modules
+                    - ~/select/node_modules
                       
             - restore_cache:
                 keys:
@@ -44,7 +46,7 @@ jobs:
             - save_cache:
                 key: v1-build-cache
                 paths:
-                    - ~/output
+                    - ~/select/output
 
             # Verify all examples successfully build...  
             - run:
