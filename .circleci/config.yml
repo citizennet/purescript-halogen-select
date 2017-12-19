@@ -19,7 +19,11 @@ jobs:
                     - node-cache
 
             - run:
-                name: Build the project
+                name: Install dependencies from NPM and Bower...
+                command: npm install && bower install
+
+            - run:
+                name: Build the base component...
                 command: pulp build
 
             - save_cache:
