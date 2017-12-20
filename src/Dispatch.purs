@@ -69,11 +69,26 @@ augmentHTML :: forall t q q' -- q q' represents parent query wrapped by child qu
  -> Array (H.IProp t (q q'))
 augmentHTML = flip (<>)
 
+-- Embed a parent query
+embed :: ∀ item parentQuery. H.Action parentQuery -> Unit -> Dispatch item parentQuery Unit
+embed = ParentQuery <<< H.action
+
 -- Intended for use on the text input field.
 getInputProps = augmentHTML
   [ HE.onFocus      $ HE.input_ $ C $ Visibility Toggle
   , HE.onKeyDown    $ HE.input  $ \ev -> C $ Key ev
   , HE.onValueInput $ HE.input  $ \ev -> S $ TextInput ev
+  , HE.onMouseDown  $ HE.input_ $ C $ Mouse Down
+  , HE.onMouseUp    $ HE.input_ $ C $ Mouse Up
+  , HE.onBlur       $ HE.input_ $ C $ Blur
+  , HP.tabIndex 0
+  ]
+
+
+-- Intended for use on a clickable toggle
+getToggleProps = augmentHTML
+  [ HE.onClick      $ HE.input_ $ C $ Visibility Toggle
+  , HE.onKeyDown    $ HE.input  $ \ev -> C $ Key ev
   , HE.onMouseDown  $ HE.input_ $ C $ Mouse Down
   , HE.onMouseUp    $ HE.input_ $ C $ Mouse Up
   , HE.onBlur       $ HE.input_ $ C $ Blur

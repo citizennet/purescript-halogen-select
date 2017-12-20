@@ -31,7 +31,7 @@ This module contains an example typeahead component that uses the following prim
 -- aka 'a damn mess'
 data Query a
   = HandleContainer (Container.Message String Query) a
-  | HandleSearch (Search.Message String Query) a
+  | HandleSearch    (Search.Message String Query)    a
 
 data Slot = Slot Int
 derive instance eqSlot :: Eq Slot
