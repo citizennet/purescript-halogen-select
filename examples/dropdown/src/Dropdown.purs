@@ -5,7 +5,7 @@ import Prelude
 import CSS as CSS
 import Control.Monad.Aff.Console (log, logShow)
 import DOM.Event.KeyboardEvent as KE
-import Data.Array (concatMap, difference, filter, mapWithIndex, (:))
+import Data.Array (filter, mapWithIndex, (:))
 import Data.Foldable (length)
 import Data.Maybe (Maybe(..))
 import Halogen as H

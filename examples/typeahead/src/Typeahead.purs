@@ -8,6 +8,7 @@ import Data.Array (difference, filter, mapWithIndex, (:))
 import Data.Foldable (length)
 import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..), contains)
+import Data.Time.Duration (Milliseconds(..))
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.CSS as HC
@@ -60,7 +61,7 @@ component =
         [ HH.h2
           [ HP.class_ $ HH.ClassName "black-80 f-headline-1" ]
           [ HH.text "Typeahead Component"]
-        , HH.slot (Slot 0) (Search.component renderSearch) { search: Nothing, debounce: Nothing } (HE.input HandleSearch)
+        , HH.slot (Slot 0) (Search.component renderSearch) { search: Nothing, debounceTime: Milliseconds 500.0 } (HE.input HandleSearch)
         , HH.slot (Slot 1) (Container.component renderContainer) { items: testData } (HE.input HandleContainer)
         ]
 
@@ -88,7 +89,9 @@ component =
         Search.NewSearch s -> a <$ do
           st <- H.get
           let filtered = filterItems s st.items
-          H.liftAff $ logShow $ unpackItem <$> filtered
+
+          -- Watch the debounce delay
+          H.liftAff $ log s
           _ <- H.query (Slot 1)
                  $ H.action
                  $ C
@@ -146,7 +149,7 @@ CONFIGURATION
 -}
 
 -- The user is using the Search primitive, so they have to fill out a Search render function
-renderSearch :: Search.State -> H.HTML Void (Dispatch String Query)
+renderSearch :: ∀ e. (Search.State e) -> H.HTML Void (Dispatch String Query)
 renderSearch st =
   HH.input ( getInputProps [] )
 

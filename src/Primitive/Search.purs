@@ -2,12 +2,15 @@ module Select.Primitive.Search where
 
 import Prelude
 
-import Control.Monad.Aff.Console (log)
-import Data.Maybe (Maybe(..))
-import Halogen as H
+import Control.Monad.Aff (Error, Fiber, delay, error, forkAff, killFiber)
+import Control.Monad.Aff.AVar (AVar, makeEmptyVar, putVar, takeVar)
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Time.Duration (Milliseconds)
+import Halogen (Component, ComponentDSL, ComponentHTML, component, get, liftAff, modify) as H
 import Halogen.HTML as HH
-import Select.Effects (FX)
+import Halogen.Query.HalogenM (fork, raise) as H
 import Select.Dispatch (Dispatch(ParentQuery, C, S), SearchQuery(TextInput))
+import Select.Effects (FX, Effects)
 
 {-
 
@@ -15,45 +18,91 @@ The Search primitive captures user input and returns it to the parent.
 
 -}
 
-type State =
-  { search   :: Maybe Search   -- If no text, Nothing
-  , debounce :: Maybe Delay    -- If Nothing, don't debounce. If Just n, use N as time in ms
+type State e =
+  { search    :: String
+  , ms        :: Milliseconds
+  , debouncer :: Maybe (Debouncer e)
   }
 
--- Expects a delay in milliseconds
-data Delay  = Delay Int
-type Search = String
+type Debouncer e =
+  { var :: AVar String
+  , fiber :: Fiber (Effects e) Unit }
 
--- Expect a possible pre-filled state and a potential debounce value
-type Input = State
+
+type Input =
+  { search :: Maybe String
+  , debounceTime :: Milliseconds }
 
 -- The search serves only to notify the parent that a new search has been performed by the user.
 -- If this search should cause any new data to be sent to a container, that is the responsibility
 -- of the parent.
 data Message item o
   = Emit (Dispatch item o Unit)
-  | NewSearch Search
+  | NewSearch String
 
 component :: ∀ item o e
-   . (State -> H.ComponentHTML (Dispatch item o))
+   . (State e -> H.ComponentHTML (Dispatch item o))
   -> H.Component HH.HTML (Dispatch item o) Input (Message item o) (FX e)
 component render =
   H.component
-    { initialState: id
+    { initialState: \i -> { search: fromMaybe "" i.search, ms: i.debounceTime, debouncer: Nothing }
     , render
     , eval
     , receiver: const Nothing
     }
   where
-    eval :: (Dispatch item o) ~> H.ComponentDSL State (Dispatch item o) (Message item o) (FX e)
+    eval :: (Dispatch item o) ~> H.ComponentDSL (State e) (Dispatch item o) (Message item o) (FX e)
     eval = case _ of
-      S q a -> a <$ case q of
-        TextInput str -> H.raise $ NewSearch str
+      -- The dispatch type matches this primitive -- the Search primitive
+      S q a -> case q of
+        TextInput str -> do
+          st  <- H.get
+          H.modify _ { search = str }
 
-      -- Boilerplate for now...
+          case st.debouncer of
+            Nothing -> unit <$ do
+              (var :: AVar String) <- H.liftAff makeEmptyVar
+
+              (fiber :: Fiber (Effects e) Unit) <- H.liftAff $ forkAff do
+                  delay st.ms
+                  putVar str var
+
+              -- This computation will fork and run later. When the var is finally filled,
+              -- it will run the effect.
+              (x :: Error -> (FX e) Unit) <- H.fork $ do
+                -- This won't happen until there is something in the var to take
+                _ <- H.liftAff $ takeVar var
+
+                -- Reset the debouncer
+                H.modify _ { debouncer = Nothing }
+
+                -- Run the effect, making sure to get from the state.
+                st <- H.get
+                H.raise $ NewSearch st.search
+
+              -- In the meantime -- while the other fork is running -- create the new debouncer
+              -- in state so it can continue to be accessed.
+              H.modify \st -> st { debouncer = Just { var, fiber } }
+
+
+            Just debouncer -> do
+              let var = debouncer.var
+              _ <- H.liftAff $ killFiber (error "Time's up!") debouncer.fiber
+
+              (fiber :: Fiber (Effects e) Unit) <- H.liftAff $ forkAff do
+                  delay st.ms
+                  putVar str var
+
+              H.modify _ { debouncer = Just { var, fiber } }
+
+
+          pure a
+          -- H.raise $ NewSearch str
+
+      -- Boilerplate for now...raise container queries back to the parent
       C q a -> a <$ do
         H.raise $ Emit (C q unit)
 
-      -- Boilerplate for now...
+      -- Boilerplate for now...raise parent queries back to the parent.
       ParentQuery q a -> a <$ do
         H.raise $ Emit (ParentQuery q unit)

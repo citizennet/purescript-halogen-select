@@ -97,7 +97,7 @@ component render =
 
         Key (ev :: KE.KeyboardEvent) -> do
           st <- H.get
-          if not st.open then pure a else a <$ case KE.code ev of
+          if not st.open then pure a else case KE.code ev of
 
             "Enter" -> do
               H.liftEff $ preventDefault ev
@@ -117,25 +117,21 @@ component render =
               H.liftEff $ preventDefault ev
               eval $ C (Highlight Next) a
 
-            other -> a <$ do
-              H.liftAff $ log $ show other
+            other -> pure a
 
         Mouse ms -> do
           st <- H.get
           if not st.open then pure a else a <$ case ms of
             Down -> do
-              H.liftAff $ log $ "mouse: down"
+              -- H.liftAff $ log $ "mouse: down"
               H.modify (_ { mouseDown = true })
             Up -> do
-              H.liftAff $ log $ "mouse: up"
+              -- H.liftAff $ log $ "mouse: up"
               H.modify (_ { mouseDown = false })
 
         Blur -> do
           st <- H.get
-          H.liftAff $ log $ "st.open: " <> show st.open
-          H.liftAff $ log $ "st.mouseDown: " <> show st.mouseDown
           if not st.open || st.mouseDown then pure a else a <$ do
-
             -- You're forced to wrap in Dispatch
             eval $ C (Visibility Off) unit
 
