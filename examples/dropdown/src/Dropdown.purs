@@ -14,7 +14,7 @@ import Data.Array (concatMap, difference, filter, mapWithIndex, (:))
 import Data.Foldable (length)
 import Data.Maybe (Maybe(..))
 import Select.Effects (FX)
-import Select.Utils (getChildProps, getContainerProps, getItemProps, getToggleProps, inContainer)
+import Select.Dispatch (getChildProps, getContainerProps, getItemProps, getToggleProps, inContainer)
 
 {-
 
