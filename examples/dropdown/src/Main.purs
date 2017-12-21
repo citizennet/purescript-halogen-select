@@ -4,7 +4,7 @@ import Prelude
 
 import Halogen.Aff as HA
 import Halogen.VDom.Driver (runUI)
-import Container (component)
+import Dropdown (component)
 
 -- Type signature elided for convenience as effect types change
 main = HA.runHalogenAff do

@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "basic",
+  "name": "typeahead",
   "ignore": [
     "**/.*",
     "node_modules",
