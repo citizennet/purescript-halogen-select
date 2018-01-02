@@ -9,6 +9,7 @@ import Data.Foldable (length)
 import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..), contains)
 import Data.Time.Duration (Milliseconds(..))
+import Data.Traversable (traverse_)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.CSS as HC
@@ -61,7 +62,7 @@ component =
         [ HH.h2
           [ HP.class_ $ HH.ClassName "black-80 f-headline-1" ]
           [ HH.text "Typeahead Component"]
-        , HH.slot (Slot 0) (Search.component renderSearch) { search: Nothing, debounceTime: Milliseconds 500.0 } (HE.input HandleSearch)
+        , HH.slot (Slot 0) (Search.component renderSearch) { search: Nothing, debounceTime: Milliseconds 300.0 } (HE.input HandleSearch)
         , HH.slot (Slot 1) (Container.component renderContainer) { items: testData } (HE.input HandleContainer)
         ]
 
@@ -89,24 +90,45 @@ component =
         Search.NewSearch s -> a <$ do
           st <- H.get
           let filtered = filterItems s st.items
+          let available = filterSelected filtered st.selected
+          let items
+                | length available < 1 = D.Selectable s : available
+                | otherwise            = available
 
           -- Watch the debounce delay
-          H.liftAff $ log s
           _ <- H.query (Slot 1)
                  $ H.action
                  $ C
-                 $ SetItems
-                 $ filterSelected filtered st.selected
+                 $ SetItems items
 
           pure a
 
       HandleContainer m a -> case m of
-        Container.Emit q -> pure a
+        Container.Emit q -> case q of
+
+          -- This is boilerplate. Have to direct the search query back over to the search slot
+          -- if any of them happen to be emitted by the container.
+          -- It's unclear whether this would ever happen.
+          S searchQuery _ -> do
+            _ <- H.query (Slot 0)
+                   $ H.action
+                   $ S searchQuery
+            pure a
+
+          -- This is my own query, so I handle it. Again, boilerplate!
+          ParentQuery parentQuery _ -> eval parentQuery *> pure a
+
+          -- Container won't emit recursively
+          _ -> pure a
 
         -- The parent can do whatever they like here.
         Container.ItemSelected item -> a <$ do
-          H.liftAff $ log ("Selected: " <> item)
-          H.modify \st -> st { selected = ( item : st.selected ) }
+          st <- H.get
+          H.liftAff $ log ("Selected! Choice was " <> item)
+
+          if length (filter ((==) (D.Selectable item)) st.items) > 0
+            then H.modify _ { selected = ( item : st.selected ) }
+            else H.modify _ { items = ( (D.Selected item) : st.items ), selected = ( item : st.selected ) }
 
           st <- H.get
           _  <- H.query (Slot 1)
@@ -115,7 +137,7 @@ component =
                   $ SetItems
                   $ updateItems st.items st.selected
 
-          H.liftAff $ logShow st.selected
+          H.liftAff $ log "List of selections..." *> logShow st.selected
 
 
 {-
@@ -131,7 +153,7 @@ filterItems str = filter (\i -> contains (Pattern str) (unpackItem i))
 updateItems :: Array (D.Item String) -> Array String -> Array (D.Item String)
 updateItems items selected = map (\i -> update i selected) items
   where
-    -- If the item is in the selected list then updated it
+    -- If the item is in the selected list then update it
     update :: D.Item String -> Array String -> D.Item String
     update item arr = if length (filter (\m -> m == str) arr) > 0 then D.Selected str else item
       where
@@ -168,11 +190,11 @@ renderContainer st =
     renderItems html =
       HH.div
         ( getContainerProps
-          [ HP.class_ $ HH.ClassName "measure ba br1 b--black-30 overflow-y-scroll pb3 outline-0"
+          [ HP.class_ $ HH.ClassName "measure ba br1 b--black-30 overflow-y-scroll outline-0"
           , HC.style $ CSS.maxHeight (CSS.px 300.0)
           ]
         )
-        [ HH.div
+        ([ HH.div
             [ HP.class_ $ HH.ClassName "cf" ]
             [ HH.h4
                 [ HP.class_ $ HH.ClassName "ph2 pv3 ma0 fl w-50" ]
@@ -186,10 +208,15 @@ renderContainer st =
                     [ HH.text "Click Me" ]
                 ]
             ]
-        , HH.ul
-            [ HP.class_ $ HH.ClassName "list pl0 mt0 bt b--black-30" ]
-            html
-        ]
+         ]
+         <> if length html > 0
+             then
+               [ HH.ul
+                 [ HP.class_ $ HH.ClassName "list pa0 ma0 bt b--black-30" ]
+                 html ]
+             else
+               [ HH.p [HP.class_ $ HH.ClassName "lh-copy black-70 pa2"] [ HH.text "No results for that search." ] ]
+        )
 
     renderItem :: Int -> D.Item String -> H.HTML Void (Dispatch String Query)
     renderItem index item = HH.li item' [ HH.text str ]
@@ -200,18 +227,18 @@ renderContainer st =
         item' = case item of
           D.Selectable str -> getItemProps index
               [ HP.class_ $ HH.ClassName
-                  $ "lh-copy pa2 ba bl-0 bt-0 br-0 b--dotted b--black-30"
+                  $ "lh-copy pa2 bb b--black-10"
                   <> if st.highlightedIndex == Just index then " bg-light-blue" else "" ]
 
           D.Selected str -> getItemProps index
               [ HP.class_ $ HH.ClassName
-                  $ "lh-copy pa2 ba bl-0 bt-0 br-0 b--dotted b--black-30 bg-washed-blue"
+                  $ "lh-copy pa2 bb b--black-10 bg-washed-blue"
                   <> if st.highlightedIndex == Just index then " bg-light-blue" else "" ]
 
-          D.Disabled str ->
+          D.Disabled str -> getItemProps index
               [ HP.class_ $ HH.ClassName
-                  $ "lh-copy pa2 ba bl-0 bt-0 br-0 b--dotted black-30 b--black-30"
-                  <> if st.highlightedIndex == Just index then " bg-light-gray" else "" ]
+                  $ "lh-copy pa2 bb black-20 b--black-10"
+                  <> if st.highlightedIndex == Just index then " bg-moon-gray" else "" ]
 
 
 unpackItem :: D.Item String -> String
@@ -221,17 +248,17 @@ unpackItem (D.Disabled str)   = str
 
 -- The parent must provide some input data.
 testData :: Array (D.Item String)
-testData = map (\i -> D.Selectable i)
-  [ "Thomas Honeyman"
-  , "Dave Zuch"
-  , "Chris Cornwell"
-  , "Forest Toney"
-  , "Lee Leathers"
-  , "Kim Wu"
-  , "Rachel Blair"
-  , "Tara Strauss"
-  , "Sanket Sabnis"
-  , "Aaron Chu"
-  , "Vincent Busam"
-  , "Riley Gibbs"
-  , "THE COOKIE MONSTER DID NOTHING WRONG" ]
+testData =
+  [ D.Selectable "Thomas Honeyman"
+  , D.Selectable "Dave Zuch"
+  , D.Selectable "Chris Cornwell"
+  , D.Disabled "Forest Toney"
+  , D.Selectable "Lee Leathers"
+  , D.Disabled "Kim Wu"
+  , D.Selectable "Rachel Blair"
+  , D.Selectable "Tara Strauss"
+  , D.Selectable "Sanket Sabnis"
+  , D.Selectable "Aaron Chu"
+  , D.Selectable "Vincent Busam"
+  , D.Selectable "Riley Gibbs"
+  , D.Disabled "THE COOKIE MONSTER DID NOTHING WRONG" ]

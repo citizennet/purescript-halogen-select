@@ -123,10 +123,8 @@ component render =
           st <- H.get
           if not st.open then pure a else a <$ case ms of
             Down -> do
-              -- H.liftAff $ log $ "mouse: down"
               H.modify (_ { mouseDown = true })
             Up -> do
-              -- H.liftAff $ log $ "mouse: up"
               H.modify (_ { mouseDown = false })
 
         Blur -> do

@@ -56,7 +56,18 @@ data Item item
   | Selectable item
   | Disabled item
 
+instance showItem :: Show item => Show (Item item) where
+  show (Selected item)   = "Selected: " <> show item
+  show (Selectable item) = "Selectable: " <> show item
+  show (Disabled item)   = "Disabled: " <> show item
 
+instance eqItem :: Eq item => Eq (Item item) where
+  eq (Selected a) (Selected b) = eq a b
+  eq (Selectable a) (Selectable b) = eq a b
+  eq (Disabled a) (Disabled b) = eq a b
+  eq (Selected a) _ = false
+  eq (Selectable a) _ = false
+  eq (Disabled a) _ = false
 --
 --
 -- RENDERING
