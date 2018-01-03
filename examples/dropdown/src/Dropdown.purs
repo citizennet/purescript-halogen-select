@@ -16,7 +16,7 @@ import Halogen.HTML.Properties as HP
 import Select.Dispatch (ContainerQuery(..), Dispatch(..), getChildProps, getContainerProps, getItemProps, getToggleProps)
 import Select.Dispatch as D
 import Select.Effects (FX)
-import Select.Primitive.Container as Container
+import Select.Primitive.Container as C
 
 {-
 
@@ -45,12 +45,11 @@ a minimal example like this one, the end user will need to:
 data Query a
   = NoOp a
   | Log String a
-  | Handle (Container.Message String Query) a
+  | HandleContainer (C.Message String Query) a
 
 type State =
   { items    :: Array (D.Item String)
   , selected :: Array String }
-
 
 component :: ∀ e. H.Component HH.HTML Query Unit Void (FX e)
 component =
@@ -77,7 +76,7 @@ component =
             [ HH.text "Open the console to view outputs. Mouse over the toggle to trigger an embedded parent query. Click the toggle to open or close the menu. Click an item to select it (and remove it from the available options)." ]
 
           -- The typeahead can be mounted anywhere
-          , HH.slot unit (Container.component renderContainer) { items: testData } (HE.input Handle) ]
+          , HH.slot unit (C.component renderContainer) { items: testData } (HE.input HandleContainer) ]
 
           -- Selections are managed outside the component
           <> selected )
@@ -102,18 +101,13 @@ component =
         H.liftAff $ log s
 
       -- All child messages
-      Handle m a -> case m of
-
-        -- This is expected to call `eval q`
-        Container.Emit q -> case q of
-          -- Evaluate the parent query if it exists.
-          D.ParentQuery q _ -> eval q *> pure a
-
-          -- The container won't emit anything else
+      HandleContainer m a -> case m of
+        -- in the case of `Emit`, send up the parent query and ignore everything else.
+        C.Emit q -> case (q :: Dispatch String Query Unit) of
+          D.ParentQuery q _ -> a <$ eval q
           _ -> pure a
 
-        -- The parent can do whatever they like here.
-        Container.ItemSelected item -> do
+        C.ItemSelected item -> do
           H.liftAff $ log ("Selected: " <> item)
           H.modify \st -> st { selected = ( item : st.selected ) }
 
@@ -121,7 +115,7 @@ component =
           H.liftAff $ logShow st.selected
           _  <- H.query unit
                   $ H.action
-                  $ C
+                  $ Container
                   $ SetItems
                   $ updateItems st.items st.selected
 
@@ -157,7 +151,7 @@ correctly.
 -- and attaching our queries. This can be done with our helper functions, or they can
 -- attach everything as they see fit by hand.
 
-renderContainer :: (Container.State String) -> H.HTML Void (Dispatch String Query)
+renderContainer :: (C.State String) -> H.HTML Void (Dispatch String Query)
 renderContainer st =
   HH.div_
     $ if not st.open

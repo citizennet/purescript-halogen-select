@@ -18,8 +18,8 @@ import Halogen.HTML.Properties as HP
 import Select.Dispatch (ContainerQuery(SetItems), Dispatch(..), getChildProps, getContainerProps, getInputProps, getItemProps)
 import Select.Dispatch as D
 import Select.Effects (FX)
-import Select.Primitive.Container as Container
-import Select.Primitive.Search as Search
+import Select.Primitive.Container as C
+import Select.Primitive.Search as S
 
 {-
 
@@ -32,8 +32,8 @@ This module contains an example typeahead component that uses the following prim
 
 -- aka 'a damn mess'
 data Query a
-  = HandleContainer (Container.Message String Query) a
-  | HandleSearch    (Search.Message String Query)    a
+  = HandleContainer (C.Message String Query) a
+  | HandleSearch    (S.Message String Query)    a
 
 data Slot = Slot Int
 derive instance eqSlot :: Eq Slot
@@ -62,67 +62,42 @@ component =
         [ HH.h2
           [ HP.class_ $ HH.ClassName "black-80 f-headline-1" ]
           [ HH.text "Typeahead Component"]
-        , HH.slot (Slot 0) (Search.component renderSearch) { search: Nothing, debounceTime: Milliseconds 300.0 } (HE.input HandleSearch)
-        , HH.slot (Slot 1) (Container.component renderContainer) { items: testData } (HE.input HandleContainer)
+        , HH.slot (Slot 0) (S.component renderSearch) { search: Nothing, debounceTime: Milliseconds 300.0 } (HE.input HandleSearch)
+        , HH.slot (Slot 1) (C.component renderContainer) { items: testData } (HE.input HandleContainer)
         ]
 
     -- Here, Menu.Emit recursively calls the parent eval function.
     eval :: Query ~> H.ParentDSL State Query (Dispatch String Query) Slot Void (FX e)
     eval = case _ of
       HandleSearch m a -> case m of
-        Search.Emit q -> case q of
-
-          -- A container event has occurred, so dispatch that shit over into the container
-          -- slot
-          Container containerQuery _ -> do
-            _ <- H.query (Slot 1)
-                   $ H.action
-                   $ Container containerQuery
-            pure a
-
-          ParentQuery parentQuery _ -> a <$ do
-            eval parentQuery
-
-          -- Search won't emit itself, so it can be ignored safely.
+        S.Emit q -> case q of
+          ParentQuery parentQuery _ -> a <$ eval parentQuery
           _ -> pure a
 
         -- A new search is done: filter the results!
-        Search.NewSearch s -> a <$ do
+        S.NewSearch s -> a <$ do
           st <- H.get
           let filtered = filterItems s st.items
           let available = filterSelected filtered st.selected
+
+          -- Allow insertion of elements
           let items
                 | length available < 1 = D.Selectable s : available
                 | otherwise            = available
 
-          -- Watch the debounce delay
           _ <- H.query (Slot 1)
                  $ H.action
                  $ Container
                  $ SetItems items
-
           pure a
 
       HandleContainer m a -> case m of
-        Container.Emit q -> case q of
-
-          -- This is boilerplate. Have to direct the search query back over to the search slot
-          -- if any of them happen to be emitted by the container.
-          -- It's unclear whether this would ever happen.
-          Search searchQuery _ -> do
-            _ <- H.query (Slot 0)
-                   $ H.action
-                   $ Search searchQuery
-            pure a
-
-          -- This is my own query, so I handle it. Again, boilerplate!
-          ParentQuery parentQuery _ -> eval parentQuery *> pure a
-
-          -- Container won't emit recursively
+        C.Emit q -> case q of
+          ParentQuery parentQuery _ -> a <$ eval parentQuery
           _ -> pure a
 
         -- The parent can do whatever they like here.
-        Container.ItemSelected item -> a <$ do
+        C.ItemSelected item -> a <$ do
           st <- H.get
           H.liftAff $ log ("Selected! Choice was " <> item)
 
@@ -171,12 +146,12 @@ CONFIGURATION
 -}
 
 -- The user is using the Search primitive, so they have to fill out a Search render function
-renderSearch :: ∀ e. (Search.State e) -> H.HTML Void (Dispatch String Query)
+renderSearch :: ∀ e. (S.State e) -> H.HTML Void (Dispatch String Query)
 renderSearch st =
   HH.input ( getInputProps [] )
 
 -- The user is using the Container primitive, so they have to fill out a Container render function
-renderContainer :: (Container.State String) -> H.HTML Void (Dispatch String Query)
+renderContainer :: (C.State String) -> H.HTML Void (Dispatch String Query)
 renderContainer st =
   HH.div_
     $ if not st.open
