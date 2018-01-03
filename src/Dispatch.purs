@@ -70,9 +70,9 @@ instance eqItem :: Eq item => Eq (Item item) where
   eq (Disabled a) _ = false
 
 
-runEmit :: forall a0 a1 o item f. Applicative f => (o Unit -> f Unit) -> Dispatch item o a0 -> a1 -> f a1
-runEmit f (ParentQuery o _) a = a <$ f o
-runEmit _ _ a = pure a
+emit :: forall a0 a1 o item f. Applicative f => (o Unit -> f Unit) -> Dispatch item o a0 -> a1 -> f a1
+emit f (ParentQuery o _) a = a <$ f o
+emit _ _ a = pure a
 
 
 --

@@ -8,7 +8,7 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Select.Dispatch (Dispatch(ParentQuery))
+import Select.Dispatch (Dispatch(ParentQuery), emit)
 import Select.Dispatch as D
 import Select.Effects (FX)
 import Select.Primitive.Container as C
@@ -52,12 +52,7 @@ component =
     eval :: Query ~> H.ParentDSL State Query (Dispatch String Query) Unit Void (FX e)
     eval = case _ of
       HandleContainer m a -> case m of
-        -- Handle the `Emit` case by calling the parent query with `eval` and ignoring the
-        -- other cases. Primitives will not emit queries for other primitivesa and can be
-        -- safely ignored.
-        C.Emit q -> case q of
-          ParentQuery o _ -> a <$ eval o
-          _ -> pure a
+        C.Emit q -> emit eval q a
 
         -- The only other message raised by the container primitive is when an item has been
         -- selected.

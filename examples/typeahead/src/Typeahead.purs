@@ -14,7 +14,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Select.Dispatch (ContainerQuery(SetItems), Dispatch(..), getChildProps, getContainerProps, getInputProps, getItemProps, runEmit)
+import Select.Dispatch (ContainerQuery(SetItems), Dispatch(..), getChildProps, getContainerProps, getInputProps, getItemProps, emit)
 import Select.Dispatch as D
 import Select.Effects (FX)
 import Select.Primitive.Container as C
@@ -68,7 +68,7 @@ component =
     eval :: Query ~> H.ParentDSL State Query (Dispatch String Query) Slot Void (FX e)
     eval = case _ of
       HandleSearch m a -> case m of
-        S.Emit q -> runEmit eval q a
+        S.Emit q -> emit eval q a
 
         -- A new search is done: filter the results!
         S.NewSearch s -> a <$ do
@@ -88,7 +88,7 @@ component =
           pure a
 
       HandleContainer m a -> case m of
-        C.Emit q -> runEmit eval q a
+        C.Emit q -> emit eval q a
 
         C.ItemSelected item -> a <$ do
           st <- H.get
