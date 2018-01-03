@@ -69,11 +69,14 @@ instance eqItem :: Eq item => Eq (Item item) where
   eq (Selectable a) _ = false
   eq (Disabled a) _ = false
 
+unpackItem :: Item String -> String
+unpackItem (Selected str)   = str
+unpackItem (Selectable str) = str
+unpackItem (Disabled str)   = str
 
-emit :: forall a0 a1 o item f. Applicative f => (o Unit -> f Unit) -> Dispatch item o a0 -> a1 -> f a1
+emit :: ∀ a0 a1 o item f. Applicative f => (o Unit -> f Unit) -> Dispatch item o a0 -> a1 -> f a1
 emit f (ParentQuery o _) a = a <$ f o
 emit _ _ a = pure a
-
 
 --
 --
