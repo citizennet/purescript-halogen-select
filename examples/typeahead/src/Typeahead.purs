@@ -9,13 +9,12 @@ import Data.Foldable (length)
 import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..), contains)
 import Data.Time.Duration (Milliseconds(..))
-import Data.Traversable (traverse_)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Select.Dispatch (ContainerQuery(SetItems), Dispatch(..), getChildProps, getContainerProps, getInputProps, getItemProps)
+import Select.Dispatch (ContainerQuery(SetItems), Dispatch(..), getChildProps, getContainerProps, getInputProps, getItemProps, runEmit)
 import Select.Dispatch as D
 import Select.Effects (FX)
 import Select.Primitive.Container as C
@@ -66,13 +65,10 @@ component =
         , HH.slot (Slot 1) (C.component renderContainer) { items: testData } (HE.input HandleContainer)
         ]
 
-    -- Here, Menu.Emit recursively calls the parent eval function.
     eval :: Query ~> H.ParentDSL State Query (Dispatch String Query) Slot Void (FX e)
     eval = case _ of
       HandleSearch m a -> case m of
-        S.Emit q -> case q of
-          ParentQuery parentQuery _ -> a <$ eval parentQuery
-          _ -> pure a
+        S.Emit q -> runEmit eval q a
 
         -- A new search is done: filter the results!
         S.NewSearch s -> a <$ do
@@ -92,15 +88,10 @@ component =
           pure a
 
       HandleContainer m a -> case m of
-        C.Emit q -> case q of
-          ParentQuery parentQuery _ -> a <$ eval parentQuery
-          _ -> pure a
+        C.Emit q -> runEmit eval q a
 
-        -- The parent can do whatever they like here.
         C.ItemSelected item -> a <$ do
           st <- H.get
-          H.liftAff $ log ("Selected! Choice was " <> item)
-
           if length (filter ((==) (D.Selectable item)) st.items) > 0
             then H.modify _ { selected = ( item : st.selected ) }
             else H.modify _ { items = ( (D.Selected item) : st.items ), selected = ( item : st.selected ) }
@@ -138,6 +129,7 @@ filterSelected :: Array (D.Item String) -> Array String -> Array (D.Item String)
 filterSelected items selected = map (\i -> D.Selectable i) $ difference unpacked selected
   where
     unpacked = unpackItem <$> items
+
 
 {-
 

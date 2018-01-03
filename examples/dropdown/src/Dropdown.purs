@@ -13,7 +13,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Select.Dispatch (ContainerQuery(..), Dispatch(..), getChildProps, getContainerProps, getItemProps, getToggleProps)
+import Select.Dispatch (ContainerQuery(..), Dispatch(..), getChildProps, getContainerProps, getItemProps, getToggleProps, runEmit)
 import Select.Dispatch as D
 import Select.Effects (FX)
 import Select.Primitive.Container as C
@@ -102,11 +102,7 @@ component =
 
       -- All child messages
       HandleContainer m a -> case m of
-        -- in the case of `Emit`, send up the parent query and ignore everything else.
-        C.Emit q -> case (q :: Dispatch String Query Unit) of
-          D.ParentQuery q _ -> a <$ eval q
-          _ -> pure a
-
+        C.Emit q -> runEmit eval q a
         C.ItemSelected item -> do
           H.liftAff $ log ("Selected: " <> item)
           H.modify \st -> st { selected = ( item : st.selected ) }
@@ -118,8 +114,8 @@ component =
                   $ Container
                   $ SetItems
                   $ updateItems st.items st.selected
-
           pure a
+
 
 
 {-
