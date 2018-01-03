@@ -63,10 +63,10 @@ component render =
         H.raise $ Emit (ParentQuery q unit)
 
       -- Boilerplate for now...emits a SearchQuery back up
-      S q a -> a <$ do
-        H.raise $ Emit (S q unit)
+      Search q a -> a <$ do
+        H.raise $ Emit (Search q unit)
 
-      C q a -> case q of
+      Container q a -> case q of
         Select index -> do
           st <- H.get
           if not st.open then pure a else a <$ case st.items !! index of
@@ -104,18 +104,18 @@ component render =
               st <- H.get
               case st.highlightedIndex of
                 Nothing -> pure a
-                Just index -> eval $ C (Select index) a
+                Just index -> eval $ Container (Select index) a
 
             "Escape" -> a <$ do
               H.modify (_ { open = false })
 
             "ArrowUp" -> a <$ do
               H.liftEff $ preventDefault ev
-              eval $ C (Highlight Prev) a
+              eval $ Container (Highlight Prev) a
 
             "ArrowDown" -> a <$ do
               H.liftEff $ preventDefault ev
-              eval $ C (Highlight Next) a
+              eval $ Container (Highlight Next) a
 
             other -> pure a
 
@@ -131,7 +131,7 @@ component render =
           st <- H.get
           if not st.open || st.mouseDown then pure a else a <$ do
             -- You're forced to wrap in Dispatch
-            eval $ C (Visibility Off) unit
+            eval $ Container (Visibility Off) unit
 
         -- When toggling, the user will lose their highlighted index.
         Visibility status -> a <$ case status of

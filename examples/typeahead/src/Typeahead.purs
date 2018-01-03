@@ -74,10 +74,10 @@ component =
 
           -- A container event has occurred, so dispatch that shit over into the container
           -- slot
-          C containerQuery _ -> do
+          Container containerQuery _ -> do
             _ <- H.query (Slot 1)
                    $ H.action
-                   $ C containerQuery
+                   $ Container containerQuery
             pure a
 
           ParentQuery parentQuery _ -> a <$ do
@@ -98,7 +98,7 @@ component =
           -- Watch the debounce delay
           _ <- H.query (Slot 1)
                  $ H.action
-                 $ C
+                 $ Container
                  $ SetItems items
 
           pure a
@@ -109,10 +109,10 @@ component =
           -- This is boilerplate. Have to direct the search query back over to the search slot
           -- if any of them happen to be emitted by the container.
           -- It's unclear whether this would ever happen.
-          S searchQuery _ -> do
+          Search searchQuery _ -> do
             _ <- H.query (Slot 0)
                    $ H.action
-                   $ S searchQuery
+                   $ Search searchQuery
             pure a
 
           -- This is my own query, so I handle it. Again, boilerplate!
@@ -133,7 +133,7 @@ component =
           st <- H.get
           _  <- H.query (Slot 1)
                   $ H.action
-                  $ C
+                  $ Container
                   $ SetItems
                   $ updateItems st.items st.selected
 

@@ -9,7 +9,7 @@ import Data.Time.Duration (Milliseconds)
 import Halogen (Component, ComponentDSL, ComponentHTML, component, get, liftAff, modify) as H
 import Halogen.HTML as HH
 import Halogen.Query.HalogenM (fork, raise) as H
-import Select.Dispatch (Dispatch(ParentQuery, C, S), SearchQuery(TextInput))
+import Select.Dispatch (Dispatch(ParentQuery, Container, Search), SearchQuery(TextInput))
 import Select.Effects (FX, Effects)
 
 {-
@@ -54,7 +54,7 @@ component render =
     eval :: (Dispatch item o) ~> H.ComponentDSL (State e) (Dispatch item o) (Message item o) (FX e)
     eval = case _ of
       -- The dispatch type matches this primitive -- the Search primitive
-      S q a -> case q of
+      Search q a -> case q of
         TextInput str -> do
           st  <- H.get
           H.modify _ { search = str }
@@ -100,8 +100,8 @@ component render =
           -- H.raise $ NewSearch str
 
       -- Boilerplate for now...raise container queries back to the parent
-      C q a -> a <$ do
-        H.raise $ Emit (C q unit)
+      Container q a -> a <$ do
+        H.raise $ Emit (Container q unit)
 
       -- Boilerplate for now...raise parent queries back to the parent.
       ParentQuery q a -> a <$ do

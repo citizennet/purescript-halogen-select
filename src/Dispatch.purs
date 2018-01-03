@@ -20,8 +20,8 @@ to share query types.
 
 data Dispatch item o a
   = ParentQuery (o Unit) a
-  | S (SearchQuery Unit) a
-  | C (ContainerQuery item Unit) a
+  | Search (SearchQuery Unit) a
+  | Container (ContainerQuery item Unit) a
 
 
 -- Primitive query types using `a` as a phantom argument to allow being used as an action
@@ -86,44 +86,44 @@ embed = ParentQuery <<< H.action
 
 -- Intended for use on the text input field.
 getInputProps = augmentHTML
-  [ HE.onFocus      $ HE.input_ $ C $ Visibility Toggle
-  , HE.onKeyDown    $ HE.input  $ \ev -> C $ Key ev
-  , HE.onValueInput $ HE.input  $ \ev -> S $ TextInput ev
-  , HE.onMouseDown  $ HE.input_ $ C $ Mouse Down
-  , HE.onMouseUp    $ HE.input_ $ C $ Mouse Up
-  , HE.onBlur       $ HE.input_ $ C $ Blur
+  [ HE.onFocus      $ HE.input_ $ Container $ Visibility Toggle
+  , HE.onKeyDown    $ HE.input  $ \ev -> Container $ Key ev
+  , HE.onValueInput $ HE.input  $ \ev -> Search $ TextInput ev
+  , HE.onMouseDown  $ HE.input_ $ Container $ Mouse Down
+  , HE.onMouseUp    $ HE.input_ $ Container $ Mouse Up
+  , HE.onBlur       $ HE.input_ $ Container $ Blur
   , HP.tabIndex 0
   ]
 
 
 -- Intended for use on a clickable toggle
 getToggleProps = augmentHTML
-  [ HE.onClick      $ HE.input_ $ C $ Visibility Toggle
-  , HE.onKeyDown    $ HE.input  $ \ev -> C $ Key ev
-  , HE.onMouseDown  $ HE.input_ $ C $ Mouse Down
-  , HE.onMouseUp    $ HE.input_ $ C $ Mouse Up
-  , HE.onBlur       $ HE.input_ $ C $ Blur
+  [ HE.onClick      $ HE.input_ $ Container $ Visibility Toggle
+  , HE.onKeyDown    $ HE.input  $ \ev -> Container $ Key ev
+  , HE.onMouseDown  $ HE.input_ $ Container $ Mouse Down
+  , HE.onMouseUp    $ HE.input_ $ Container $ Mouse Up
+  , HE.onBlur       $ HE.input_ $ Container $ Blur
   , HP.tabIndex 0
   ]
 
 -- Intended to be used on the container primitive itself
 getContainerProps = augmentHTML
-  [ HE.onMouseDown $ HE.input_ $ C $ Mouse Down
-  , HE.onMouseUp   $ HE.input_ $ C $ Mouse Up
-  , HE.onBlur      $ HE.input_ $ C $ Blur
+  [ HE.onMouseDown $ HE.input_ $ Container $ Mouse Down
+  , HE.onMouseUp   $ HE.input_ $ Container $ Mouse Up
+  , HE.onBlur      $ HE.input_ $ Container $ Blur
   , HP.tabIndex 0
   ]
 
 -- -- Intended for anything that will be embedded into the container primitive
 getChildProps = augmentHTML
-  [ HE.onBlur      $ HE.input_ $ C $ Blur
+  [ HE.onBlur      $ HE.input_ $ Container $ Blur
   , HP.tabIndex 0
   ]
 
 getItemProps index = augmentHTML
-  [ HE.onClick     $ HE.input_ $ C $ Select index
-  , HE.onMouseOver $ HE.input_ $ C $ Highlight (Index index)
-  , HE.onKeyDown   $ HE.input  $ \ev -> C $ Key ev
-  , HE.onBlur      $ HE.input_ $ C $ Blur
+  [ HE.onClick     $ HE.input_ $ Container $ Select index
+  , HE.onMouseOver $ HE.input_ $ Container $ Highlight (Index index)
+  , HE.onKeyDown   $ HE.input  $ \ev -> Container $ Key ev
+  , HE.onBlur      $ HE.input_ $ Container $ Blur
   , HP.tabIndex 0
   ]
