@@ -1,7 +1,9 @@
 {
   "name": "purescript-halogen-select",
   "homepage": "https://github.com/citizennet/purescript-halogen-select",
-  "authors": [ "Thomas Honeyman <hello@thomashoneyman.com>" ],
+  "authors": [
+    "Thomas Honeyman <hello@thomashoneyman.com>"
+  ],
   "description": "Building blocks for common selection user interfaces in PureScript & Halogen",
   "keywords": [
     "purescript",
@@ -30,5 +32,9 @@
     "purescript-halogen-css": "^7.0.0",
     "purescript-css": "^3.3.0",
     "purescript-dom-classy": "^2.1.0"
+  },
+  "devDependencies": {
+    "purescript-datetime": "^3.4.1",
+    "purescript-formatters": "^3.0.1"
   }
 }
