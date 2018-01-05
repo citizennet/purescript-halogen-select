@@ -10,7 +10,7 @@ import Data.Array (length, (!!))
 import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML as HH
-import Select.Dispatch (ContainerQuery(..), Dispatch(..), Item(..), MouseState(..), Target(..), VisibilityStatus(..))
+import Select.Dispatch (ContainerQuery(..), Dispatch(..), MouseState(..), Target(..), VisibilityStatus(..))
 import Select.Effects (FX)
 
 {-
@@ -20,7 +20,7 @@ The Container primitive ...
 -}
 
 type State item =
-  { items            :: Array (Item item)
+  { items            :: Array item
   , open             :: Boolean
   , highlightedIndex :: Maybe Int
   , lastIndex        :: Int
@@ -28,7 +28,7 @@ type State item =
   }
 
 type Input item =
-  { items :: Array (Item item) }
+  { items :: Array item }
 
 -- All components must allow for emitting the parent's queries back up to the parent.
 -- In addition, the dropdown supports selecting items from the list.
@@ -70,8 +70,10 @@ component render =
         Select index -> do
           st <- H.get
           if not st.open then pure a else a <$ case st.items !! index of
-            Just (Selectable item) -> H.raise $ ItemSelected item
-            _ -> H.liftAff $ log $ "Cannot select item at that index: " <> show index
+            Just item -> do 
+              H.liftAff $ log $ "Found item, sending to parent."
+              H.raise $ ItemSelected item
+            _ -> H.liftAff $ log $ "Index " <> show index <> " is out of bounds."
 
         -- We can ignore the case in which we don't want anything highlighted
         -- as once the highlight becomes active, nothing but closing the menu

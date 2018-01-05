@@ -35,7 +35,7 @@ data ContainerQuery item a
   | Mouse       MouseState          -- Update mousedown state
   | Blur                            -- Blur event
   | Visibility  VisibilityStatus    -- Open or close the menu
-  | SetItems    (Array (Item item)) -- Set the data (used by parent)
+  | SetItems    (Array item) -- Set the data (used by parent)
 
 data Target
   = Next
@@ -50,29 +50,6 @@ data VisibilityStatus
   = On
   | Off
   | Toggle
-
-data Item item
-  = Selected item
-  | Selectable item
-  | Disabled item
-
-instance showItem :: Show item => Show (Item item) where
-  show (Selected item)   = "Selected: " <> show item
-  show (Selectable item) = "Selectable: " <> show item
-  show (Disabled item)   = "Disabled: " <> show item
-
-instance eqItem :: Eq item => Eq (Item item) where
-  eq (Selected a) (Selected b) = eq a b
-  eq (Selectable a) (Selectable b) = eq a b
-  eq (Disabled a) (Disabled b) = eq a b
-  eq (Selected a) _ = false
-  eq (Selectable a) _ = false
-  eq (Disabled a) _ = false
-
-unpackItem :: Item String -> String
-unpackItem (Selected str)   = str
-unpackItem (Selectable str) = str
-unpackItem (Disabled str)   = str
 
 emit :: ∀ a0 a1 o item f. Applicative f => (o Unit -> f Unit) -> Dispatch item o a0 -> a1 -> f a1
 emit f (ParentQuery o _) a = a <$ f o

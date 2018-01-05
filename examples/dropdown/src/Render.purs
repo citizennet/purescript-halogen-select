@@ -11,8 +11,10 @@ import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Dropdown.Query (Query(..))
-import Select.Dispatch (Dispatch, Item(..), embed, getChildProps, getContainerProps, getItemProps, getToggleProps, unpackItem)
+import Select.Dispatch (Dispatch, embed, getChildProps, getContainerProps, getItemProps, getToggleProps)
 import Select.Primitive.Container as C
+
+type DropdownItem = String
 
 renderContainer :: (C.State String) -> H.HTML Void (Dispatch String Query)
 renderContainer st =
@@ -35,7 +37,7 @@ renderContainer st =
         [ HH.text "Toggle" ]
 
     -- Render the container for the items
-    renderItems :: Array (H.HTML Void (Dispatch String Query))
+    renderItems :: Array (H.HTML Void (Dispatch DropdownItem Query))
                 -> H.HTML Void (Dispatch String Query)
     renderItems html =
       HH.div
@@ -65,24 +67,11 @@ renderContainer st =
             html
         ]
 
-    renderItem :: Int -> Item String -> H.HTML Void (Dispatch String Query)
-    renderItem index item = HH.li item' [ HH.text str ]
+    renderItem :: Int -> DropdownItem -> H.HTML Void (Dispatch DropdownItem Query)
+    renderItem index item = HH.li item' [ HH.text item ]
       where
-        str :: String
-        str = unpackItem item
-
-        item' = case item of
-          Selectable str -> getItemProps index
+        item' =
+          getItemProps index
               [ HP.class_ $ HH.ClassName
                   $ "lh-copy pa2 ba bl-0 bt-0 br-0 b--dotted b--black-30"
                   <> if st.highlightedIndex == Just index then " bg-light-blue" else "" ]
-
-          Selected str -> getItemProps index
-              [ HP.class_ $ HH.ClassName
-                  $ "lh-copy pa2 ba bl-0 bt-0 br-0 b--dotted b--black-30 bg-washed-blue"
-                  <> if st.highlightedIndex == Just index then " bg-light-blue" else "" ]
-
-          Disabled str ->
-              [ HP.class_ $ HH.ClassName
-                  $ "lh-copy pa2 ba bl-0 bt-0 br-0 b--dotted black-30 b--black-30"
-                  <> if st.highlightedIndex == Just index then " bg-light-gray" else "" ]

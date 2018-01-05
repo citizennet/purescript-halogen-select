@@ -6,14 +6,14 @@ import Dropdown.Query
 
 import Control.Monad.Aff.Console (log, logShow)
 import DOM.Event.KeyboardEvent as KE
-import Data.Array (filter, (:))
+import Data.Array (filter, (:), difference)
 import Data.Foldable (length)
 import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Select.Dispatch (ContainerQuery(SetItems), Dispatch(Container), emit, unpackItem)
+import Select.Dispatch (ContainerQuery(SetItems), Dispatch(Container), emit)
 import Select.Dispatch as D
 import Select.Effects (FX)
 import Select.Primitive.Container as C
@@ -41,8 +41,10 @@ a minimal example like this one, the end user will need to:
 -}
 
 type State =
-  { items    :: Array (D.Item String)
-  , selected :: Array String }
+  { items    :: Array DropdownItem
+  , selected :: Array DropdownItem }
+
+type DropdownItem = String
 
 component :: ∀ e. H.Component HH.HTML Query Unit Void (FX e)
 component =
@@ -56,7 +58,7 @@ component =
     initState :: State
     initState = { items: testData, selected: [] }
 
-    render :: State -> H.ParentHTML Query (Dispatch String Query) Unit (FX e)
+    render :: State -> H.ParentHTML Query (Dispatch DropdownItem Query) Unit (FX e)
     render st =
       HH.div
         [ HP.class_ $ HH.ClassName "mw8 sans-serif center" ]
@@ -85,7 +87,7 @@ component =
     -- Here, Menu.Emit recursively calls the parent eval function.
     -- Menu.Selected item is handled by removing that item from
     -- the options and maintaining it here in state.
-    eval :: Query ~> H.ParentDSL State Query (Dispatch String Query) Unit Void (FX e)
+    eval :: Query ~> H.ParentDSL State Query (Dispatch DropdownItem Query) Unit Void (FX e)
     eval = case _ of
       Log s a -> a <$ do
         H.liftAff $ log s
@@ -103,26 +105,9 @@ component =
                   $ H.action
                   $ Container
                   $ SetItems
-                  $ updateItems st.items st.selected
+                  $ difference st.items st.selected
           pure a
 
-
-
-{-
-
-HELPERS
-
--}
-
--- Brute force. Can be more elegant.
-updateItems :: Array (D.Item String) -> Array String -> Array (D.Item String)
-updateItems items selected = map (\i -> update i selected) items
-  where
-    -- If the item is in the selected list then updated it
-    update :: D.Item String -> Array String -> D.Item String
-    update item arr = if length (filter (\m -> m == str) arr) > 0 then D.Selected str else item
-      where
-        str = unpackItem item
 
 {-
 
@@ -132,8 +117,8 @@ CONFIGURATION
 
 
 -- The parent must provide some input data.
-testData :: Array (D.Item String)
-testData = map (\i -> D.Selectable i)
+testData :: Array DropdownItem
+testData =
   [ "Thomas Honeyman"
   , "Dave Zuch"
   , "Chris Cornwell"

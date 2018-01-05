@@ -12,7 +12,9 @@ import Halogen.HTML.CSS as HC
 import Halogen.HTML.Properties as HP
 import Select.Primitive.Container as C
 import Select.Primitive.Search as S
-import Select.Dispatch (Dispatch, Item(..), getChildProps, getContainerProps, getInputProps, getItemProps, unpackItem)
+import Select.Dispatch (Dispatch, getChildProps, getContainerProps, getInputProps, getItemProps)
+
+type TypeaheadItem = String
 
 -- The user is using the Search primitive, so they have to fill out a Search render function
 renderSearch :: ∀ i o e. (S.State e) -> H.HTML Void (Dispatch i o)
@@ -20,7 +22,7 @@ renderSearch st =
   HH.input ( getInputProps [] )
 
 -- The user is using the Container primitive, so they have to fill out a Container render function
-renderContainer :: ∀ o. (C.State String) -> H.HTML Void (Dispatch String o)
+renderContainer :: ∀ o. (C.State TypeaheadItem) -> H.HTML Void (Dispatch TypeaheadItem o)
 renderContainer st =
   HH.div_
     $ if not st.open
@@ -29,8 +31,8 @@ renderContainer st =
   where
 
     -- Render the container for the items
-    renderItems :: Array (H.HTML Void (Dispatch String o))
-                -> H.HTML Void (Dispatch String o)
+    renderItems :: Array (H.HTML Void (Dispatch TypeaheadItem o))
+                -> H.HTML Void (Dispatch TypeaheadItem o)
     renderItems html =
       HH.div
         ( getContainerProps
@@ -62,24 +64,11 @@ renderContainer st =
                [ HH.p [HP.class_ $ HH.ClassName "lh-copy black-70 pa2"] [ HH.text "No results for that search." ] ]
         )
 
-    renderItem :: Int -> Item String -> H.HTML Void (Dispatch String o)
-    renderItem index item = HH.li item' [ HH.text str ]
+    renderItem :: Int -> TypeaheadItem -> H.HTML Void (Dispatch TypeaheadItem o)
+    renderItem index item = HH.li item' [ HH.text item ]
       where
-        str :: String
-        str = unpackItem item
-
-        item' = case item of
-          Selectable str -> getItemProps index
-              [ HP.class_ $ HH.ClassName
-                  $ "lh-copy pa2 bb b--black-10"
-                  <> if st.highlightedIndex == Just index then " bg-light-blue" else "" ]
-
-          Selected str -> getItemProps index
-              [ HP.class_ $ HH.ClassName
-                  $ "lh-copy pa2 bb b--black-10 bg-washed-blue"
-                  <> if st.highlightedIndex == Just index then " bg-light-blue" else "" ]
-
-          Disabled str -> getItemProps index
-              [ HP.class_ $ HH.ClassName
-                  $ "lh-copy pa2 bb black-20 b--black-10"
-                  <> if st.highlightedIndex == Just index then " bg-moon-gray" else "" ]
+        item' =
+          getItemProps index
+            [ HP.class_ $ HH.ClassName
+              $ "lh-copy pa2 bb b--black-10"
+              <> if st.highlightedIndex == Just index then " bg-light-blue" else "" ]

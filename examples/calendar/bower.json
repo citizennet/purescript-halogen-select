@@ -18,6 +18,7 @@
     "purescript-halogen-select": "git@github.com:citizennet/purescript-halogen-select.git"
   },
   "devDependencies": {
-    "purescript-datetime": "^3.4.1"
+    "purescript-datetime": "^3.4.1",
+    "purescript-now": "^3.0.0"
   }
 }

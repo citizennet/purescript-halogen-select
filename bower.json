@@ -35,6 +35,7 @@
   },
   "devDependencies": {
     "purescript-datetime": "^3.4.1",
-    "purescript-formatters": "^3.0.1"
+    "purescript-formatters": "^3.0.1",
+    "purescript-now": "^3.0.0"
   }
 }

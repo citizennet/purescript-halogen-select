@@ -13,7 +13,7 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Select.Dispatch (ContainerQuery(SetItems), Dispatch(Container), emit, unpackItem)
+import Select.Dispatch (ContainerQuery(SetItems), Dispatch(Container), emit )
 import Select.Dispatch as D
 import Select.Effects (FX)
 import Select.Primitive.Container as C
@@ -22,6 +22,8 @@ import Select.Primitive.Search as S
 {-
 
 -}
+
+type TypeaheadItem = String
 
 data Query a
   = HandleContainer (C.Message String Query) a
@@ -32,8 +34,8 @@ derive instance eqSlot :: Eq Slot
 derive instance ordSlot :: Ord Slot
 
 type State =
-  { items    :: Array (D.Item String)
-  , selected :: Array String }
+  { items    :: Array TypeaheadItem
+  , selected :: Array TypeaheadItem }
 
 component :: ∀ e. H.Component HH.HTML Query Unit Void (FX e)
 component =
@@ -47,7 +49,7 @@ component =
     initState :: State
     initState = { items: testData, selected: [] }
 
-    render :: State -> H.ParentHTML Query (Dispatch String Query) Slot (FX e)
+    render :: State -> H.ParentHTML Query (Dispatch TypeaheadItem Query) Slot (FX e)
     render st =
       HH.div
         [ HP.class_ $ HH.ClassName "mw8 sans-serif center" ]
@@ -58,7 +60,7 @@ component =
         , HH.slot (Slot 1) (C.component renderContainer) { items: testData } (HE.input HandleContainer)
         ]
 
-    eval :: Query ~> H.ParentDSL State Query (Dispatch String Query) Slot Void (FX e)
+    eval :: Query ~> H.ParentDSL State Query (Dispatch TypeaheadItem Query) Slot Void (FX e)
     eval = case _ of
       HandleSearch m a -> case m of
         S.Emit q -> emit eval q a
@@ -66,12 +68,12 @@ component =
         -- A new search is done: filter the results!
         S.NewSearch s -> a <$ do
           st <- H.get
-          let filtered = filterItems s st.items
-          let available = filterSelected filtered st.selected
+          let filtered  = filterItems s st.items
+          let available = difference filtered st.selected
 
           -- Allow insertion of elements
           let items
-                | length available < 1 = D.Selectable s : available
+                | length available < 1 = s : available
                 | otherwise            = available
 
           _ <- H.query (Slot 1)
@@ -85,16 +87,16 @@ component =
 
         C.ItemSelected item -> a <$ do
           st <- H.get
-          if length (filter ((==) (D.Selectable item)) st.items) > 0
+          if length (filter ((==) item) st.items) > 0
             then H.modify _ { selected = ( item : st.selected ) }
-            else H.modify _ { items = ( (D.Selected item) : st.items ), selected = ( item : st.selected ) }
+            else H.modify _ { items = ( item : st.items ), selected = ( item : st.selected ) }
 
           st <- H.get
           _  <- H.query (Slot 1)
                   $ H.action
                   $ Container
                   $ SetItems
-                  $ updateItems st.items st.selected
+                  $ difference st.items st.selected
 
           H.liftAff $ log "List of selections..." *> logShow st.selected
 
@@ -105,24 +107,8 @@ HELPERS
 
 -}
 
-filterItems :: String -> Array (D.Item String) -> Array (D.Item String)
-filterItems str = filter (\i -> contains (Pattern str) (unpackItem i))
-
--- Brute force. Can be more elegant.
-updateItems :: Array (D.Item String) -> Array String -> Array (D.Item String)
-updateItems items selected = map (\i -> update i selected) items
-  where
-    -- If the item is in the selected list then update it
-    update :: D.Item String -> Array String -> D.Item String
-    update item arr = if length (filter (\m -> m == str) arr) > 0 then D.Selected str else item
-      where
-        str = unpackItem item
-
-filterSelected :: Array (D.Item String) -> Array String -> Array (D.Item String)
-filterSelected items selected = map (\i -> D.Selectable i) $ difference unpacked selected
-  where
-    unpacked = unpackItem <$> items
-
+filterItems :: TypeaheadItem -> Array TypeaheadItem -> Array TypeaheadItem
+filterItems str = filter (\i -> contains (Pattern str) i)
 
 {-
 
@@ -130,18 +116,19 @@ Config
 
 -}
 
-testData :: Array (D.Item String)
+testData :: Array TypeaheadItem
 testData =
-  [ D.Selectable "Thomas Honeyman"
-  , D.Selectable "Dave Zuch"
-  , D.Selectable "Chris Cornwell"
-  , D.Disabled "Forest Toney"
-  , D.Selectable "Lee Leathers"
-  , D.Disabled "Kim Wu"
-  , D.Selectable "Rachel Blair"
-  , D.Selectable "Tara Strauss"
-  , D.Selectable "Sanket Sabnis"
-  , D.Selectable "Aaron Chu"
-  , D.Selectable "Vincent Busam"
-  , D.Selectable "Riley Gibbs"
-  , D.Disabled "THE COOKIE MONSTER DID NOTHING WRONG" ]
+  [ "Thomas Honeyman"
+  , "Dave Zuch"
+  , "Chris Cornwell"
+  , "Forest Toney"
+  , "Lee Leathers"
+  , "Kim Wu"
+  , "Rachel Blair"
+  , "Tara Strauss"
+  , "Sanket Sabnis"
+  , "Aaron Chu"
+  , "Vincent Busam"
+  , "Riley Gibbs"
+  , "THE COOKIE MONSTER DID NOTHING WRONG" 
+  ]
