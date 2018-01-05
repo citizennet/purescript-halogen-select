@@ -10,6 +10,7 @@ import Data.Array (length, (!!))
 import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML as HH
+import Halogen.HTML.Events as HE
 import Select.Dispatch (ContainerQuery(..), Dispatch(..), MouseState(..), Target(..), VisibilityStatus(..))
 import Select.Effects (FX)
 
@@ -46,7 +47,7 @@ component render =
     { initialState
     , render
     , eval
-    , receiver: const Nothing
+    , receiver: \i -> Just $ H.action (Container $ SetItems i.items)
     }
   where
     initialState i =
