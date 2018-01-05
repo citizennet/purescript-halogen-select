@@ -28,7 +28,7 @@ import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Partial.Unsafe (unsafePartial)
-import Select.Dispatch (Dispatch(..), ContainerQuery(..), VisibilityStatus(..), emit, getItemProps, embed)
+import Select.Dispatch (Dispatch(..), ContainerQuery(..), VisibilityStatus(..), emit, getItemProps, embed, getToggleProps, getChildProps)
 import Select.Effects (FX)
 import Select.Primitive.Container as C
 
@@ -59,12 +59,12 @@ data Selection
   | Range Date Date
 
 -- Calendar Items
-data CalendarItem 
+data CalendarItem
   = CalendarItem SelectableStatus SelectedStatus BoundaryStatus Date
 
 data SelectableStatus
   = NotSelectable
-  | Selectable 
+  | Selectable
 
 data SelectedStatus
   = NotSelected
@@ -116,9 +116,9 @@ component =
   	     m = snd st.targetDate
 
 	 let (newDate :: Date) = case dir of
-               Next -> nextMonth (canonicalDate y m bottom) 
+               Next -> nextMonth (canonicalDate y m bottom)
                Prev -> prevMonth (canonicalDate y m bottom)
-	
+
 	 H.modify _ { targetDate = Tuple (year newDate) (month newDate) }
 
       ToggleYear dir a -> do
@@ -128,9 +128,9 @@ component =
   	     m = snd st.targetDate
 
 	 let (newDate :: Date) = case dir of
-               Next -> nextYear (canonicalDate y m bottom) 
+               Next -> nextYear (canonicalDate y m bottom)
                Prev -> prevYear (canonicalDate y m bottom)
-	
+
 	 H.modify _ { targetDate = Tuple (year newDate) (month newDate) }
   	 eval (OpenCalendar a)
 
@@ -183,16 +183,16 @@ renderRows arr = go gridSize rowSize [] $ reverse arr
     rowSize  = length <<< (unsafePartial fromJust) <<< head $ arr
 
     go :: Int -> Int -> _ -> Array (Array CalendarItem) -> _
-    go 0 _      acc xs = acc 
+    go 0 _      acc xs = acc
     go n offset acc xs = go (n - 1) offset ((renderRow ((n - 1) * offset) ((unsafePartial fromJust <<< head) xs)) : acc) (drop 1 xs)
 
 renderItem :: Int -> CalendarItem -> H.HTML Void ChildQuery
 renderItem index item =
-  HH.div 
+  HH.div
     -- Use raw style attribute for convenience.
-    ( attachItemProps index item 
+    ( attachItemProps index item
       [ HP.class_ $ HH.ClassName "w3 pa3"
-      , HP.attr (H.AttrName "style") (getCalendarStyles item) ] 
+      , HP.attr (H.AttrName "style") (getCalendarStyles item) ]
     )
     [ HH.text $ printDay item ]
   where
@@ -203,13 +203,13 @@ renderItem index item =
 
     -- Get the correct styles for a calendar item dependent on its statuses
     getCalendarStyles :: CalendarItem -> String
-    getCalendarStyles i 
+    getCalendarStyles i
       =  getSelectableStyles i
       <> " " <> getSelectedStyles i
       <> " " <> getBoundaryStyles i
       where
         getSelectableStyles:: CalendarItem -> String
-        getSelectableStyles (CalendarItem NotSelectable _ _ _) 
+        getSelectableStyles (CalendarItem NotSelectable _ _ _)
           = "color: rgba(0,0,0,0.6); background-image: linear-gradient(to bottom, rgba(125,125,125,0.75) 0%, rgba(125,125,125,0.75), 100%;"
         getSelectableStyles _ = mempty
 
@@ -234,8 +234,18 @@ renderItem index item =
 ----------
 -- Render helpers
 
-container :: ∀ e. State -> ParentHTML e
-container st = 
+-- renderToggle :: H.HTML Void (Dispatch String Query)
+-- renderToggle =
+--   HH.span
+--   ( getToggleProps
+--     [ HE.onMouseOver $ HE.input_ $ embed (Log "I'm the parent.")
+--     , HP.class_      $ HH.ClassName "f5 link ba bw1 ph3 pv2 mb2 dib near-black pointer outline-0"
+--     ]
+--   )
+--   [ HH.text "Toggle" ]
+
+container :: ∀ e. State -> H.HTML Void ChildQuery
+container st =
   HH.div
   [ HP.class_ $ HH.ClassName "tc"
   , HC.style  $ CSS.width (CSS.rem 28.0) ]
@@ -251,9 +261,9 @@ container st =
     monthYear = fmtMonthYear (canonicalDate targetYear targetMonth bottom)
 
     -- Given a string ("Month YYYY"), creates the calendar navigation
-    calendarNav :: ParentHTML e
+    calendarNav :: H.HTML Void ChildQuery
     calendarNav =
-      HH.div 
+      HH.div
       [ HP.class_ $ HH.ClassName "flex pv3" ]
       [ arrowButton (ToggleYear Prev) "<<" (Just "ml2")
       , arrowButton (ToggleMonth Prev) "<" Nothing
@@ -263,23 +273,25 @@ container st =
       ]
       where
         -- Buttons next to the date.
-        arrowButton :: H.Action Query -> String -> Maybe String -> ParentHTML e
+        arrowButton :: H.Action Query -> String -> Maybe String -> _
         arrowButton q t css =
-          HH.div
-          [ HP.class_  $ HH.ClassName $ "w-10" <> fromMaybe "" (((<>) " ") <$> css)
-          , HE.onClick $ HE.input_ q ]
+          HH.button
+          ( getChildProps
+            [ HP.class_ $ HH.ClassName $ "w-10" <> fromMaybe "" (((<>) " ") <$> css)
+            , HE.onClick $ HE.input_ $ embed q ]
+          )
           [ HH.text t ]
 
         -- Show the month and year
-        dateHeader :: String -> ParentHTML e
-        dateHeader t = 
+        dateHeader :: String -> _
+        dateHeader t =
           HH.div
           [ HP.class_ $ HH.ClassName "w-60 b" ]
           [ HH.text t ]
 
-    calendarHeader :: ParentHTML e
+    calendarHeader :: _
     calendarHeader =
-      HH.div 
+      HH.div
       [ HP.class_ $ HH.ClassName "flex pv3" ]
       ( headers <#> (\day -> HH.div [ HP.class_ $ HH.ClassName "w3" ] [ HH.text day ]) )
       where

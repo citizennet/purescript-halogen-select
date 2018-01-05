@@ -8,6 +8,7 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Time.Duration (Milliseconds)
 import Halogen (Component, ComponentDSL, ComponentHTML, component, get, liftAff, modify) as H
 import Halogen.HTML as HH
+import Halogen.HTML.Events as HE
 import Halogen.Query.HalogenM (fork, raise) as H
 import Select.Dispatch (Dispatch(ParentQuery, Container, Search), SearchQuery(TextInput))
 import Select.Effects (FX, Effects)
