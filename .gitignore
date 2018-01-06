@@ -10,3 +10,7 @@ package-lock.json
 
 # Generated examples
 **/dist/*.js
+
+# IDE
+*.swo
+*.swp

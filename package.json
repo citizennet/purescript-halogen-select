@@ -5,7 +5,10 @@
     "all-examples": "./.circleci/run-examples.sh",
     "example-dropdown": "pulp build --include examples/dropdown/src --to examples/dropdown/dist/example.js",
     "example-typeahead": "pulp build --include examples/typeahead/src --to examples/typeahead/dist/example.js",
-    "example-calendar": "pulp build --include examples/calendar/src --to examples/calendar/dist/example.js"
+    "example-calendar": "pulp build --include examples/calendar/src --to examples/calendar/dist/example.js",
+    "watch-dropdown": "pulp -w build --include examples/dropdown/src --to examples/dropdown/dist/example.js",
+    "watch-typeahead": "pulp -w build --include examples/typeahead/src --to examples/typeahead/dist/example.js",
+    "watch-calendar": "pulp -w build --include examples/calendar/src --to examples/calendar/dist/example.js"
   },
   "devDependencies": {
     "pulp": "^12.0.1",

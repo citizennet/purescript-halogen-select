@@ -1,8 +1,8 @@
 module Calendar where
 
+import Calendar.Utils
 import Prelude
 
-import Calendar.Utils
 import CSS as CSS
 import Control.Monad.Aff.Console (log)
 import Data.Array (drop, head, last, mapWithIndex, reverse, take, (:), length)
@@ -28,7 +28,7 @@ import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Partial.Unsafe (unsafePartial)
-import Select.Dispatch (Dispatch(..), ContainerQuery(..), VisibilityStatus(..), emit, getItemProps, embed, getToggleProps, getChildProps)
+import Select.Dispatch (ContainerQuery(..), Dispatch(..), VisibilityStatus(..), embed, emit, getChildProps, getContainerProps, getItemProps, getToggleProps)
 import Select.Effects (FX)
 import Select.Primitive.Container as C
 
@@ -43,7 +43,6 @@ data Query a
   = HandleContainer (C.Message CalendarItem Query) a
   | ToggleYear  Direction a
   | ToggleMonth Direction a
-  | OpenCalendar a
 
 data Direction = Prev | Next
 
@@ -81,21 +80,11 @@ component =
     { initialState: const initState
     , render
     , eval
-    , receiver: const $ Just $ H.action OpenCalendar
+    , receiver: const Nothing
     }
   where
     initState :: State
     initState = { targetDate: Tuple (unsafeMkYear 2018) (unsafeMkMonth 2), statuses: [] }
-
-    render :: State -> H.ParentHTML Query ChildQuery Unit (FX e)
-    render st =
-      HH.div
-        [ HP.class_ $ HH.ClassName "mw8 sans-serif center" ]
-        [ HH.h2
-          [ HP.class_ $ HH.ClassName "black-80 f-headline-1" ]
-          [ HH.text "Calendar Component"]
-	, container st
-        ]
 
     eval :: Query ~> H.ParentDSL State Query ChildQuery Unit Void (FX e)
     eval = case _ of
@@ -110,36 +99,118 @@ component =
           H.liftAff $ log ("Selected! Choice was " <> showCalendar item)
 
       ToggleMonth dir a -> a <$ do
-	 st <- H.get
+        st <- H.get
 
-  	 let y = fst st.targetDate
-  	     m = snd st.targetDate
+        let y = fst st.targetDate
+            m = snd st.targetDate
 
-	 let (newDate :: Date) = case dir of
+        let (newDate :: Date) = case dir of
                Next -> nextMonth (canonicalDate y m bottom)
                Prev -> prevMonth (canonicalDate y m bottom)
 
-	 H.modify _ { targetDate = Tuple (year newDate) (month newDate) }
+        H.modify _ { targetDate = Tuple (year newDate) (month newDate) }
 
-      ToggleYear dir a -> do
-	 st <- H.get
+      ToggleYear dir a -> a <$ do
+        st <- H.get
 
-  	 let y = fst st.targetDate
-  	     m = snd st.targetDate
+        let y = fst st.targetDate
+            m = snd st.targetDate
 
-	 let (newDate :: Date) = case dir of
+        let (newDate :: Date) = case dir of
                Next -> nextYear (canonicalDate y m bottom)
                Prev -> prevYear (canonicalDate y m bottom)
 
-	 H.modify _ { targetDate = Tuple (year newDate) (month newDate) }
-  	 eval (OpenCalendar a)
+        H.modify _ { targetDate = Tuple (year newDate) (month newDate) }
 
-      OpenCalendar a ->  do
-        _ <- H.query unit
-             $ H.action
-             $ Container
-             $ Visibility On
-        pure a
+    render :: State -> H.ParentHTML Query ChildQuery Unit (FX e)
+    render st =
+      HH.div
+        [ HP.class_ $ HH.ClassName "mw8 sans-serif center" ]
+        [ HH.h2
+          [ HP.class_ $ HH.ClassName "black-80 f-headline-1" ]
+          [ HH.text "Calendar Component"]
+        , HH.slot
+            unit
+            (C.component renderContainer)
+            { items: generateCalendarRows targetYear targetMonth }
+            (HE.input HandleContainer)
+        ]
+
+      where
+        targetYear  = fst st.targetDate
+        targetMonth = snd st.targetDate
+
+        fmtMonthYear = (unsafePartial fromRight) <<< formatDateTime "MMMM YYYY" <<< toDateTime <<< fromDate
+        monthYear = fmtMonthYear (canonicalDate targetYear targetMonth bottom)
+
+        renderToggle :: H.HTML Void ChildQuery
+        renderToggle =
+          HH.span
+          ( getToggleProps
+            [ HP.class_ $ HH.ClassName "f5 link ba bw1 ph3 pv2 mb2 dib near-black pointer outline-0" ]
+          )
+          [ HH.text "Toggle" ]
+
+        -- The user is using the Container primitive, so they have to fill out a Container render function
+        renderContainer :: (C.State CalendarItem) -> H.HTML Void ChildQuery
+        renderContainer cst =
+          HH.div_
+            $ if not cst.open
+              then [ renderToggle ]
+              else [ renderToggle
+                   , renderCalendar
+                   ]
+
+          where
+            renderCalendar :: H.HTML Void ChildQuery
+            renderCalendar =
+              HH.div
+                ( getContainerProps
+                  [ HP.class_ $ HH.ClassName "tc"
+                  , HC.style  $ CSS.width (CSS.rem 28.0) ]
+                )
+                [ calendarNav
+                , calendarHeader
+                , HH.div_ $ renderRows $ rowsFromArray cst.items
+                ]
+
+            -- Given a string ("Month YYYY"), creates the calendar navigation
+            calendarNav :: H.HTML Void ChildQuery
+            calendarNav =
+              HH.div
+              [ HP.class_ $ HH.ClassName "flex pv3" ]
+              [ arrowButton (ToggleYear Prev) "<<" (Just "ml2")
+              , arrowButton (ToggleMonth Prev) "<" Nothing
+              , dateHeader
+              , arrowButton (ToggleMonth Next) ">" Nothing
+              , arrowButton (ToggleYear Next) ">>" (Just "mr2")
+              ]
+              where
+                -- Buttons next to the date.
+                arrowButton :: H.Action Query -> String -> Maybe String -> _
+                arrowButton q t css =
+                  HH.button
+                  ( getChildProps
+                    [ HP.class_ $ HH.ClassName $ "w-10" <> fromMaybe "" (((<>) " ") <$> css)
+                    , HE.onClick $ HE.input_ $ embed q ]
+                  )
+                  [ HH.text t ]
+
+                -- Show the month and year
+                dateHeader =
+                  HH.div
+                  [ HP.class_ $ HH.ClassName "w-60 b" ]
+                  [ HH.text monthYear ]
+
+            calendarHeader :: _
+            calendarHeader =
+              HH.div
+              [ HP.class_ $ HH.ClassName "flex pv3" ]
+              ( headers <#> (\day -> HH.div [ HP.class_ $ HH.ClassName "w3" ] [ HH.text day ]) )
+              where
+                headers = [ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" ]
+
+
 
 
 {-
@@ -165,13 +236,11 @@ Render Functions
 
 -}
 
--- The user is using the Container primitive, so they have to fill out a Container render function
-renderContainer :: (C.State CalendarItem) -> H.HTML Void ChildQuery
-renderContainer st =
-  HH.div_ $ renderRows rows
-    where
-      rows :: Array (Array CalendarItem)
-      rows = rowsFromArray st.items
+{--renderContainer st =--}
+  {--HH.div_ $ renderRows rows--}
+    {--where--}
+      {--rows :: Array (Array CalendarItem)--}
+      {--rows = rowsFromArray st.items--}
 
 renderRows :: Array (Array CalendarItem) -> Array (H.HTML Void ChildQuery)
 renderRows arr = go gridSize rowSize [] $ reverse arr
@@ -229,72 +298,5 @@ renderItem index item =
           <<< formatDateTime "D"
           <<< toDateTime
           <<< fromDate
-
-
-----------
--- Render helpers
-
--- renderToggle :: H.HTML Void (Dispatch String Query)
--- renderToggle =
---   HH.span
---   ( getToggleProps
---     [ HE.onMouseOver $ HE.input_ $ embed (Log "I'm the parent.")
---     , HP.class_      $ HH.ClassName "f5 link ba bw1 ph3 pv2 mb2 dib near-black pointer outline-0"
---     ]
---   )
---   [ HH.text "Toggle" ]
-
-container :: ∀ e. State -> H.HTML Void ChildQuery
-container st =
-  HH.div
-  [ HP.class_ $ HH.ClassName "tc"
-  , HC.style  $ CSS.width (CSS.rem 28.0) ]
-  [ calendarNav
-  , calendarHeader
-  , HH.slot unit (C.component renderContainer) { items: generateCalendarRows targetYear targetMonth } (HE.input HandleContainer)
-  ]
-  where
-    targetYear  = fst st.targetDate
-    targetMonth = snd st.targetDate
-
-    fmtMonthYear = (unsafePartial fromRight) <<< formatDateTime "MMMM YYYY" <<< toDateTime <<< fromDate
-    monthYear = fmtMonthYear (canonicalDate targetYear targetMonth bottom)
-
-    -- Given a string ("Month YYYY"), creates the calendar navigation
-    calendarNav :: H.HTML Void ChildQuery
-    calendarNav =
-      HH.div
-      [ HP.class_ $ HH.ClassName "flex pv3" ]
-      [ arrowButton (ToggleYear Prev) "<<" (Just "ml2")
-      , arrowButton (ToggleMonth Prev) "<" Nothing
-      , dateHeader monthYear
-      , arrowButton (ToggleMonth Next) ">" Nothing
-      , arrowButton (ToggleYear Next) ">>" (Just "mr2")
-      ]
-      where
-        -- Buttons next to the date.
-        arrowButton :: H.Action Query -> String -> Maybe String -> _
-        arrowButton q t css =
-          HH.button
-          ( getChildProps
-            [ HP.class_ $ HH.ClassName $ "w-10" <> fromMaybe "" (((<>) " ") <$> css)
-            , HE.onClick $ HE.input_ $ embed q ]
-          )
-          [ HH.text t ]
-
-        -- Show the month and year
-        dateHeader :: String -> _
-        dateHeader t =
-          HH.div
-          [ HP.class_ $ HH.ClassName "w-60 b" ]
-          [ HH.text t ]
-
-    calendarHeader :: _
-    calendarHeader =
-      HH.div
-      [ HP.class_ $ HH.ClassName "flex pv3" ]
-      ( headers <#> (\day -> HH.div [ HP.class_ $ HH.ClassName "w3" ] [ HH.text day ]) )
-      where
-        headers = [ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" ]
 
 
