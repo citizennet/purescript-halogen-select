@@ -73,7 +73,6 @@ data BoundaryStatus
   = OutOfBounds
   | InBounds
 
-
 component :: ∀ e. H.Component HH.HTML Query Unit Void (FX e)
 component =
   H.parentComponent
@@ -131,9 +130,11 @@ component =
           [ HH.text "Calendar Component"]
         , HH.slot
             unit
-            (C.component renderContainer)
-            { items: generateCalendarRows targetYear targetMonth }
-            (HE.input HandleContainer)
+            C.component
+            { items: generateCalendarRows targetYear targetMonth
+            , render: renderContainer
+            }
+            ( HE.input HandleContainer )
         ]
 
       where
@@ -152,7 +153,7 @@ component =
           [ HH.text "Toggle" ]
 
         -- The user is using the Container primitive, so they have to fill out a Container render function
-        renderContainer :: (C.State CalendarItem) -> H.HTML Void ChildQuery
+        renderContainer :: (C.ContainerState CalendarItem) -> H.HTML Void ChildQuery
         renderContainer cst =
           HH.div_
             $ if not cst.open
@@ -210,6 +211,74 @@ component =
               where
                 headers = [ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" ]
 
+            renderRows :: Array (Array CalendarItem) -> Array (H.HTML Void ChildQuery)
+            renderRows arr = go gridSize rowSize [] $ reverse arr
+              where
+                renderRow :: Int -> Array CalendarItem -> H.HTML Void ChildQuery
+                renderRow offset items =
+                  HH.div
+                    [ HP.class_ $ HH.ClassName "flex" ]
+                    ( mapWithIndex (\i item -> renderItem (i + offset) item) items )
+
+                gridSize = length arr
+                rowSize  = length <<< (unsafePartial fromJust) <<< head $ arr
+
+                go :: Int -> Int -> _ -> Array (Array CalendarItem) -> _
+                go 0 _      acc xs = acc
+                go n offset acc xs =
+                  go
+                    (n - 1)
+                    offset
+                    ((renderRow ((n - 1) * offset) ((unsafePartial fromJust <<< head) xs)) : acc)
+                    (drop 1 xs)
+
+
+            renderItem :: Int -> CalendarItem -> H.HTML Void ChildQuery
+            renderItem index item =
+              HH.div
+                -- Use raw style attribute for convenience.
+                ( attachItemProps index item
+                [ HP.class_ $ HH.ClassName $ "w3 pa3" <> (if cst.highlightedIndex == Just index then " bg-washed-green" else "")
+                , HP.attr (H.AttrName "style") (getCalendarStyles item) ]
+                )
+                [ HH.text $ printDay item ]
+              where
+                -- If the calendar item is selectable, augment the props with the correct click events.
+                attachItemProps :: Int -> CalendarItem -> _ -> _
+                attachItemProps index (CalendarItem Selectable _ _ _) props = getItemProps index props
+                attachItemProps _ _ props = props
+
+                -- Get the correct styles for a calendar item dependent on its statuses
+                getCalendarStyles :: CalendarItem -> String
+                getCalendarStyles i
+                  =  getSelectableStyles i
+                  <> " " <> getSelectedStyles i
+                  <> " " <> getBoundaryStyles i
+                  where
+                    getSelectableStyles:: CalendarItem -> String
+                    getSelectableStyles (CalendarItem NotSelectable _ _ _)
+                      = "color: rgba(0,0,0,0.6); background-image: linear-gradient(to bottom, rgba(125,125,125,0.75) 0%, rgba(125,125,125,0.75), 100%;"
+                    getSelectableStyles _ = mempty
+
+                    getSelectedStyles :: CalendarItem -> String
+                    getSelectedStyles (CalendarItem _ Selected _ _) = "color: white; background-color: green;"
+                    getSelectedStyles _ = mempty
+
+                    getBoundaryStyles :: CalendarItem -> String
+                    getBoundaryStyles (CalendarItem _ _ OutOfBounds _) = "opacity: 0.5;"
+                    getBoundaryStyles _ = mempty
+
+                printDay :: CalendarItem -> String
+                printDay (CalendarItem _ _ _ d) = printDay' d
+                  where
+                    printDay' :: Date -> String
+                    printDay' = (unsafePartial fromRight)
+                      <<< formatDateTime "D"
+                      <<< toDateTime
+                      <<< fromDate
+
+
+
 
 
 
@@ -235,68 +304,4 @@ generateCalendarRows y m = lastMonth <> thisMonth <> nextMonth
 Render Functions
 
 -}
-
-{--renderContainer st =--}
-  {--HH.div_ $ renderRows rows--}
-    {--where--}
-      {--rows :: Array (Array CalendarItem)--}
-      {--rows = rowsFromArray st.items--}
-
-renderRows :: Array (Array CalendarItem) -> Array (H.HTML Void ChildQuery)
-renderRows arr = go gridSize rowSize [] $ reverse arr
-  where
-    renderRow :: Int -> Array CalendarItem -> H.HTML Void ChildQuery
-    renderRow offset items = HH.div [ HP.class_ $ HH.ClassName "flex" ] ( mapWithIndex (\i item -> renderItem (i + offset) item) items )
-
-    gridSize = length arr
-    rowSize  = length <<< (unsafePartial fromJust) <<< head $ arr
-
-    go :: Int -> Int -> _ -> Array (Array CalendarItem) -> _
-    go 0 _      acc xs = acc
-    go n offset acc xs = go (n - 1) offset ((renderRow ((n - 1) * offset) ((unsafePartial fromJust <<< head) xs)) : acc) (drop 1 xs)
-
-renderItem :: Int -> CalendarItem -> H.HTML Void ChildQuery
-renderItem index item =
-  HH.div
-    -- Use raw style attribute for convenience.
-    ( attachItemProps index item
-      [ HP.class_ $ HH.ClassName "w3 pa3"
-      , HP.attr (H.AttrName "style") (getCalendarStyles item) ]
-    )
-    [ HH.text $ printDay item ]
-  where
-    -- If the calendar item is selectable, augment the props with the correct click events.
-    attachItemProps :: Int -> CalendarItem -> _ -> _
-    attachItemProps index (CalendarItem Selectable _ _ _) props = getItemProps index props
-    attachItemProps _ _ props = props
-
-    -- Get the correct styles for a calendar item dependent on its statuses
-    getCalendarStyles :: CalendarItem -> String
-    getCalendarStyles i
-      =  getSelectableStyles i
-      <> " " <> getSelectedStyles i
-      <> " " <> getBoundaryStyles i
-      where
-        getSelectableStyles:: CalendarItem -> String
-        getSelectableStyles (CalendarItem NotSelectable _ _ _)
-          = "color: rgba(0,0,0,0.6); background-image: linear-gradient(to bottom, rgba(125,125,125,0.75) 0%, rgba(125,125,125,0.75), 100%;"
-        getSelectableStyles _ = mempty
-
-        getSelectedStyles :: CalendarItem -> String
-        getSelectedStyles (CalendarItem _ Selected _ _) = "color: white; background-color: green;"
-        getSelectedStyles _ = mempty
-
-        getBoundaryStyles :: CalendarItem -> String
-        getBoundaryStyles (CalendarItem _ _ OutOfBounds _) = "opacity: 0.5;"
-        getBoundaryStyles _ = mempty
-
-    printDay :: CalendarItem -> String
-    printDay (CalendarItem _ _ _ d) = printDay' d
-      where
-        printDay' :: Date -> String
-        printDay' = (unsafePartial fromRight)
-          <<< formatDateTime "D"
-          <<< toDateTime
-          <<< fromDate
-
 

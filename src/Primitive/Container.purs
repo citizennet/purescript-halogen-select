@@ -5,6 +5,9 @@ import Prelude
 import Control.Monad.Aff.Console (log)
 import DOM.Classy.Event (preventDefault)
 import DOM.Event.KeyboardEvent as KE
+import Control.Comonad
+import Data.Tuple
+import Control.Comonad.Store
 
 import Data.Array (length, (!!))
 import Data.Maybe (Maybe(..))
@@ -20,7 +23,9 @@ The Container primitive ...
 
 -}
 
-type State item =
+type State item o = Store (ContainerState item) (H.ComponentHTML (Dispatch item o))
+
+type ContainerState item =
   { items            :: Array item
   , open             :: Boolean
   , highlightedIndex :: Maybe Int
@@ -28,8 +33,10 @@ type State item =
   , mouseDown        :: Boolean
   }
 
-type Input item =
-  { items :: Array item }
+type Input item o =
+  { items  :: Array item
+  , render :: ContainerState item -> H.ComponentHTML (Dispatch item o) }
+
 
 -- All components must allow for emitting the parent's queries back up to the parent.
 -- In addition, the dropdown supports selecting items from the list.
@@ -37,27 +44,28 @@ data Message item o
   = Emit (Dispatch item o Unit)
   | ItemSelected item
 
+
 -- The primitive handles state and transformations but defers all rendering to the parent. The
 -- render function can be written using our helper functions to ensure the right events are included.
-component :: ∀ item o e
-   . (State item -> H.ComponentHTML (Dispatch item o))
-  -> H.Component HH.HTML (Dispatch item o) (Input item) (Message item o) (FX e)
-component render =
+component :: ∀ item o e. H.Component HH.HTML (Dispatch item o) (Input item o) (Message item o) (FX e)
+component =
   H.component
     { initialState
-    , render
+    , render: extract
     , eval
     , receiver: \i -> Just $ H.action (Container $ SetItems i.items)
     }
   where
-    initialState i =
+    initialState :: Input item o -> State item o
+    initialState i = store i.render
       { items: i.items
       , open: false
       , highlightedIndex: Nothing
       , lastIndex: length i.items - 1
       , mouseDown: false
       }
-    eval :: (Dispatch item o) ~> H.ComponentDSL (State item) (Dispatch item o) (Message item o) (FX e)
+
+    eval :: (Dispatch item o) ~> H.ComponentDSL (State item o) (Dispatch item o) (Message item o) (FX e)
     eval = case _ of
       -- Boilerplate for now...emits a ParentQuery back up
       ParentQuery q a -> a <$ do
@@ -69,22 +77,34 @@ component render =
 
       Container q a -> case q of
         Select index -> do
-          st <- H.get
-          if not st.open then pure a else a <$ case st.items !! index of
-            Just item -> do 
-              H.liftAff $ log $ "Found item, sending to parent."
-              H.raise $ ItemSelected item
-            _ -> H.liftAff $ log $ "Index " <> show index <> " is out of bounds."
+          let (Tuple _ st) = runStore =<< H.get
+
+          if not st.open
+            then pure a
+            else a <$ case st.items !! index of
+              Just item -> do
+                H.liftAff $ log $ "Found item, sending to parent."
+                H.raise $ ItemSelected item
+              _ -> H.liftAff $ log $ "Index " <> show index <> " is out of bounds."
+
 
         -- We can ignore the case in which we don't want anything highlighted
         -- as once the highlight becomes active, nothing but closing the menu
         -- will remove it
         Highlight target -> do
-          st <- H.get
+          let (Tuple r st) = runStore =<< H.get
+
           if not st.open then pure a else a <$ case target of
 
             Index i -> do
-              H.modify (_ { highlightedIndex = Just i })
+              let f :: State item o -> State item o
+                  f inStore = newStore
+                    where
+                         (Tuple _ oldSt) = runStore inStore
+                         newSt = (_ { highlightedIndex = Just i }) oldSt
+                         newStore = store r newSt
+
+              H.modify f -- $ \(inStore :: State item o) -> -- store r (_ { highlightedIndex = Just i })
 
             Next    -> do
               st <- H.get
@@ -144,3 +164,4 @@ component render =
 
         SetItems arr -> a <$ do
           H.modify (_ { items = arr, highlightedIndex = Nothing, lastIndex = length arr - 1 })
+

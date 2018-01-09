@@ -35,7 +35,7 @@ data ContainerQuery item a
   | Mouse       MouseState          -- Update mousedown state
   | Blur                            -- Blur event
   | Visibility  VisibilityStatus    -- Open or close the menu
-  | SetItems    (Array item) -- Set the data (used by parent)
+  | SetItems    (Array item)        -- Set the data (used by parent)
 
 data Target
   = Next
