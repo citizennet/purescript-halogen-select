@@ -143,7 +143,6 @@ getInputProps = augmentHTML
   , HP.tabIndex 0
   ]
 
-
 -- Intended for use on a clickable toggle
 getToggleProps = augmentHTML
   [ HE.onClick      $ HE.input_ $ Container $ Visibility Toggle
