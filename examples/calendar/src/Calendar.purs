@@ -28,7 +28,7 @@ import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Partial.Unsafe (unsafePartial)
-import Select.Dispatch (ContainerQuery(..), Dispatch(..), VisibilityStatus(..), embed, emit, getChildProps, getContainerProps, getItemProps, getToggleProps)
+import Select.Dispatch (ContainerQuery(..), Dispatch(..), VisibilityStatus(..), embed, emit, getChildProps, getContainerProps, getItemProps, getToggleProps, ContainerState)
 import Select.Effects (FX)
 import Select.Primitive.Container as C
 
@@ -132,7 +132,7 @@ component =
             unit
             C.component
             { items: generateCalendarRows targetYear targetMonth
-            , render: renderContainer
+            , render: renderContainer targetYear targetMonth
             }
             ( HE.input HandleContainer )
         ]
@@ -140,9 +140,6 @@ component =
       where
         targetYear  = fst st.targetDate
         targetMonth = snd st.targetDate
-
-        fmtMonthYear = (unsafePartial fromRight) <<< formatDateTime "MMMM YYYY" <<< toDateTime <<< fromDate
-        monthYear = fmtMonthYear (canonicalDate targetYear targetMonth bottom)
 
         renderToggle :: H.HTML Void ChildQuery
         renderToggle =
@@ -153,8 +150,8 @@ component =
           [ HH.text "Toggle" ]
 
         -- The user is using the Container primitive, so they have to fill out a Container render function
-        renderContainer :: (C.ContainerState CalendarItem) -> H.HTML Void ChildQuery
-        renderContainer cst =
+        renderContainer :: Year -> Month -> (ContainerState CalendarItem) -> H.HTML Void ChildQuery
+        renderContainer y m cst =
           HH.div_
             $ if not cst.open
               then [ renderToggle ]
@@ -163,6 +160,9 @@ component =
                    ]
 
           where
+            fmtMonthYear = (unsafePartial fromRight) <<< formatDateTime "MMMM YYYY" <<< toDateTime <<< fromDate
+            monthYear = fmtMonthYear (canonicalDate y m bottom)
+
             renderCalendar :: H.HTML Void ChildQuery
             renderCalendar =
               HH.div

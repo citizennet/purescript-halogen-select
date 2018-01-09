@@ -14,7 +14,7 @@ import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
-import Select.Dispatch (ContainerQuery(..), Dispatch(..), MouseState(..), Target(..), VisibilityStatus(..))
+import Select.Dispatch (ContainerQuery(..), Dispatch(..), MouseState(..), Target(..), VisibilityStatus(..), ContainerState(..), ContainerInput(..), updateState, updateStore)
 import Select.Effects (FX)
 
 {-
@@ -25,38 +25,24 @@ The Container primitive ...
 
 type State item o = Store (ContainerState item) (H.ComponentHTML (Dispatch item o))
 
-type ContainerState item =
-  { items            :: Array item
-  , open             :: Boolean
-  , highlightedIndex :: Maybe Int
-  , lastIndex        :: Int
-  , mouseDown        :: Boolean
-  }
-
-type Input item o =
-  { items  :: Array item
-  , render :: ContainerState item -> H.ComponentHTML (Dispatch item o) }
-
-
 -- All components must allow for emitting the parent's queries back up to the parent.
 -- In addition, the dropdown supports selecting items from the list.
 data Message item o
   = Emit (Dispatch item o Unit)
   | ItemSelected item
 
-
 -- The primitive handles state and transformations but defers all rendering to the parent. The
 -- render function can be written using our helper functions to ensure the right events are included.
-component :: ∀ item o e. H.Component HH.HTML (Dispatch item o) (Input item o) (Message item o) (FX e)
+component :: ∀ item o e. H.Component HH.HTML (Dispatch item o) (ContainerInput item o) (Message item o) (FX e)
 component =
   H.component
     { initialState
     , render: extract
     , eval
-    , receiver: \i -> Just $ H.action (Container $ SetItems i.items)
+    , receiver: HE.input (Container <<< Receive)
     }
   where
-    initialState :: Input item o -> State item o
+    initialState :: ContainerInput item o -> State item o
     initialState i = store i.render
       { items: i.items
       , open: false
@@ -77,8 +63,7 @@ component =
 
       Container q a -> case q of
         Select index -> do
-          let (Tuple _ st) = runStore =<< H.get
-
+          (Tuple _ st) <- pure <<< runStore =<< H.get
           if not st.open
             then pure a
             else a <$ case st.items !! index of
@@ -87,50 +72,40 @@ component =
                 H.raise $ ItemSelected item
               _ -> H.liftAff $ log $ "Index " <> show index <> " is out of bounds."
 
-
         -- We can ignore the case in which we don't want anything highlighted
         -- as once the highlight becomes active, nothing but closing the menu
         -- will remove it
         Highlight target -> do
-          let (Tuple r st) = runStore =<< H.get
+          (Tuple _ st) <- pure <<< runStore =<< H.get
 
           if not st.open then pure a else a <$ case target of
 
             Index i -> do
-              let f :: State item o -> State item o
-                  f inStore = newStore
-                    where
-                         (Tuple _ oldSt) = runStore inStore
-                         newSt = (_ { highlightedIndex = Just i }) oldSt
-                         newStore = store r newSt
-
-              H.modify f -- $ \(inStore :: State item o) -> -- store r (_ { highlightedIndex = Just i })
+              H.modify $ updateState (_ { highlightedIndex = Just i } )
 
             Next    -> do
-              st <- H.get
               case st.highlightedIndex of
-                Just i | i /= st.lastIndex -> H.modify (_ { highlightedIndex = Just (i + 1) })
-                otherwise -> H.modify (_ { highlightedIndex = Just 0 })
+                Just i | i /= st.lastIndex -> H.modify $ updateState (_ { highlightedIndex = Just (i + 1) })
+                otherwise -> H.modify $ updateState (_ { highlightedIndex = Just 0 })
 
             Prev    -> do
-              st <- H.get
               case st.highlightedIndex of
-                Just i | i /= 0 -> H.modify (_ { highlightedIndex = Just (i - 1) })
-                otherwise -> H.modify (_ { highlightedIndex = Just st.lastIndex })
+                Just i | i /= 0 -> H.modify $ updateState (_ { highlightedIndex = Just (i - 1) })
+                otherwise -> H.modify $ updateState (_ { highlightedIndex = Just st.lastIndex })
 
         Key (ev :: KE.KeyboardEvent) -> do
-          st <- H.get
+          (Tuple _ st) <- pure <<< runStore =<< H.get
+
           if not st.open then pure a else case KE.code ev of
 
             "Enter" -> do
               H.liftEff $ preventDefault ev
-              st <- H.get
               case st.highlightedIndex of
                 Nothing -> pure a
                 Just index -> eval $ Container (Select index) a
 
             "Escape" -> a <$ do
-              H.modify (_ { open = false })
+              H.modify $ updateState (_ { open = false })
 
             "ArrowUp" -> a <$ do
               H.liftEff $ preventDefault ev
@@ -143,25 +118,32 @@ component =
             other -> pure a
 
         Mouse ms -> do
-          st <- H.get
+          (Tuple _ st) <- pure <<< runStore =<< H.get
+
           if not st.open then pure a else a <$ case ms of
             Down -> do
-              H.modify (_ { mouseDown = true })
+              H.modify $ updateState (_ { mouseDown = true })
             Up -> do
-              H.modify (_ { mouseDown = false })
+              H.modify $ updateState (_ { mouseDown = false })
 
         Blur -> do
-          st <- H.get
+          (Tuple _ st) <- pure <<< runStore =<< H.get
           if not st.open || st.mouseDown then pure a else a <$ do
-            -- You're forced to wrap in Dispatch
             eval $ Container (Visibility Off) unit
 
         -- When toggling, the user will lose their highlighted index.
         Visibility status -> a <$ case status of
-          On     -> H.modify (_ { open = true })
-          Off    -> H.modify (_ { open = false, highlightedIndex = Nothing })
-          Toggle -> H.modify \st -> st { open = not st.open, highlightedIndex = Nothing }
+          On     -> do
+             H.liftAff $ log "set on"
+             H.modify $ updateState (_ { open = true })
+          Off    -> do
+             H.liftAff $ log "set off"
+             H.modify $ updateState (_ { open = false, highlightedIndex = Nothing })
+          Toggle ->  do
+             H.liftAff $ log "toggle"
+             H.modify $ updateState (\st -> st { open = not st.open, highlightedIndex = Nothing })
 
-        SetItems arr -> a <$ do
-          H.modify (_ { items = arr, highlightedIndex = Nothing, lastIndex = length arr - 1 })
+        Receive (i :: ContainerInput item o) -> a <$ do
+          -- Replaces the state entirely with a newly-initialized one.
+          H.modify $ updateStore i.render $ (_ { items = i.items, highlightedIndex = Nothing, lastIndex = length i.items - 1 })
 

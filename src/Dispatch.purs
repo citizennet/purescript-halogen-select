@@ -6,6 +6,11 @@ import DOM.Event.KeyboardEvent (KeyboardEvent)
 import Halogen as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
+import Data.Maybe
+import Halogen as H
+import Control.Comonad
+import Data.Tuple
+import Control.Comonad.Store
 
 {-
 
@@ -21,21 +26,33 @@ to share query types.
 data Dispatch item o a
   = ParentQuery (o Unit) a
   | Search (SearchQuery Unit) a
-  | Container (ContainerQuery item Unit) a
+  | Container (ContainerQuery item o) a
 
 
 -- Primitive query types using `a` as a phantom argument to allow being used as an action
-data SearchQuery a
+data SearchQuery o
   = TextInput String
 
-data ContainerQuery item a
+type ContainerState item =
+  { items            :: Array item
+  , open             :: Boolean
+  , highlightedIndex :: Maybe Int
+  , lastIndex        :: Int
+  , mouseDown        :: Boolean
+  }
+
+type ContainerInput item o =
+  { items  :: Array item
+  , render :: ContainerState item -> H.ComponentHTML (Dispatch item o) }
+
+data ContainerQuery item o
   = Highlight   Target              -- Change the highlighted item
   | Select      Int                 -- Select a particular item
   | Key         KeyboardEvent       -- A key has been pressed
   | Mouse       MouseState          -- Update mousedown state
   | Blur                            -- Blur event
   | Visibility  VisibilityStatus    -- Open or close the menu
-  | SetItems    (Array item)        -- Set the data (used by parent)
+  | Receive    (ContainerInput item o)
 
 data Target
   = Next
@@ -54,6 +71,16 @@ data VisibilityStatus
 emit :: ∀ a0 a1 o item f. Applicative f => (o Unit -> f Unit) -> Dispatch item o a0 -> a1 -> f a1
 emit f (ParentQuery o _) a = a <$ f o
 emit _ _ a = pure a
+
+updateState f inputStore =
+  let (Tuple r oldState) = runStore inputStore
+   in store r <<< f $ oldState
+
+updateStore r f inputStore =
+  let (Tuple _ oldState) = runStore inputStore
+   in store r <<< f $ oldState
+
+
 
 --
 --
