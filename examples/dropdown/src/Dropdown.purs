@@ -13,7 +13,7 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Select.Dispatch (ContainerQuery(SetItems), Dispatch(Container), emit)
+import Select.Dispatch (ContainerQuery(..), Dispatch(Container), emit)
 import Select.Dispatch as D
 import Select.Effects (FX)
 import Select.Primitive.Container as C
@@ -46,7 +46,7 @@ type State =
 
 type DropdownItem = String
 
-component :: ∀ e. H.Component HH.HTML Query Unit Void (FX e)
+component :: ∀ e. H.Component HH.HTML (Query e) Unit Void (FX e)
 component =
   H.parentComponent
     { initialState: const initState
@@ -58,7 +58,7 @@ component =
     initState :: State
     initState = { items: testData, selected: [] }
 
-    render :: State -> H.ParentHTML Query (Dispatch DropdownItem Query) Unit (FX e)
+    render :: State -> H.ParentHTML (Query e) (Dispatch DropdownItem (Query e) e) Unit (FX e)
     render st =
       HH.div
         [ HP.class_ $ HH.ClassName "mw8 sans-serif center" ]
@@ -71,7 +71,7 @@ component =
             [ HH.text "Open the console to view outputs. Mouse over the toggle to trigger an embedded parent query. Click the toggle to open or close the menu. Click an item to select it (and remove it from the available options)." ]
 
           -- The typeahead can be mounted anywhere
-          , HH.slot unit (C.component renderContainer) { items: testData } (HE.input HandleContainer) ]
+          , HH.slot unit C.component { items: testData, render: renderContainer } (HE.input HandleContainer) ]
 
           -- Selections are managed outside the component
           <> selected )
@@ -87,7 +87,7 @@ component =
     -- Here, Menu.Emit recursively calls the parent eval function.
     -- Menu.Selected item is handled by removing that item from
     -- the options and maintaining it here in state.
-    eval :: Query ~> H.ParentDSL State Query (Dispatch DropdownItem Query) Unit Void (FX e)
+    eval :: (Query e) ~> H.ParentDSL State (Query e) (Dispatch DropdownItem (Query e) e) Unit Void (FX e)
     eval = case _ of
       Log s a -> a <$ do
         H.liftAff $ log s
@@ -104,8 +104,7 @@ component =
           _  <- H.query unit
                   $ H.action
                   $ Container
-                  $ SetItems
-                  $ difference st.items st.selected
+                  $ ContainerReceiver { render: renderContainer, items: difference st.items st.selected }
           pure a
 
 

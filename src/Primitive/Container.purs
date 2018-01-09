@@ -23,26 +23,26 @@ The Container primitive ...
 
 -}
 
-type State item o = Store (ContainerState item) (H.ComponentHTML (Dispatch item o))
+type State item o e = Store (ContainerState item) (H.ComponentHTML (Dispatch item o e))
 
 -- All components must allow for emitting the parent's queries back up to the parent.
 -- In addition, the dropdown supports selecting items from the list.
-data Message item o
-  = Emit (Dispatch item o Unit)
+data Message item o e
+  = Emit (Dispatch item o e Unit)
   | ItemSelected item
 
 -- The primitive handles state and transformations but defers all rendering to the parent. The
 -- render function can be written using our helper functions to ensure the right events are included.
-component :: ∀ item o e. H.Component HH.HTML (Dispatch item o) (ContainerInput item o) (Message item o) (FX e)
+component :: ∀ item o e. H.Component HH.HTML (Dispatch item o e) (ContainerInput item o e) (Message item o e) (FX e)
 component =
   H.component
     { initialState
     , render: extract
     , eval
-    , receiver: HE.input (Container <<< Receive)
+    , receiver: HE.input (Container <<< ContainerReceiver)
     }
   where
-    initialState :: ContainerInput item o -> State item o
+    initialState :: ContainerInput item o e -> State item o e
     initialState i = store i.render
       { items: i.items
       , open: false
@@ -51,7 +51,7 @@ component =
       , mouseDown: false
       }
 
-    eval :: (Dispatch item o) ~> H.ComponentDSL (State item o) (Dispatch item o) (Message item o) (FX e)
+    eval :: (Dispatch item o e) ~> H.ComponentDSL (State item o e) (Dispatch item o e) (Message item o e) (FX e)
     eval = case _ of
       -- Boilerplate for now...emits a ParentQuery back up
       ParentQuery q a -> a <$ do
@@ -143,7 +143,7 @@ component =
              H.liftAff $ log "toggle"
              H.modify $ updateState (\st -> st { open = not st.open, highlightedIndex = Nothing })
 
-        Receive (i :: ContainerInput item o) -> a <$ do
+        ContainerReceiver i -> a <$ do
           -- Replaces the state entirely with a newly-initialized one.
           H.modify $ updateStore i.render $ (_ { items = i.items, highlightedIndex = Nothing, lastIndex = length i.items - 1 })
 

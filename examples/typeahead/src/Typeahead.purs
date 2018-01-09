@@ -13,7 +13,7 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Select.Dispatch (ContainerQuery(SetItems), Dispatch(Container), emit )
+import Select.Dispatch (ContainerQuery(..), Dispatch(Container), emit )
 import Select.Dispatch as D
 import Select.Effects (FX)
 import Select.Primitive.Container as C
@@ -25,9 +25,9 @@ import Select.Primitive.Search as S
 
 type TypeaheadItem = String
 
-data Query a
-  = HandleContainer (C.Message String Query) a
-  | HandleSearch    (S.Message String Query) a
+data Query e a
+  = HandleContainer (C.Message String (Query e) e) a
+  | HandleSearch    (S.Message String (Query e) e) a
 
 data Slot = Slot Int
 derive instance eqSlot :: Eq Slot
@@ -37,7 +37,7 @@ type State =
   { items    :: Array TypeaheadItem
   , selected :: Array TypeaheadItem }
 
-component :: ∀ e. H.Component HH.HTML Query Unit Void (FX e)
+component :: ∀ e. H.Component HH.HTML (Query e) Unit Void (FX e)
 component =
   H.parentComponent
     { initialState: const initState
@@ -49,18 +49,18 @@ component =
     initState :: State
     initState = { items: testData, selected: [] }
 
-    render :: State -> H.ParentHTML Query (Dispatch TypeaheadItem Query) Slot (FX e)
+    render :: State -> H.ParentHTML (Query e) (Dispatch TypeaheadItem (Query e) e) Slot (FX e)
     render st =
       HH.div
         [ HP.class_ $ HH.ClassName "mw8 sans-serif center" ]
         [ HH.h2
           [ HP.class_ $ HH.ClassName "black-80 f-headline-1" ]
           [ HH.text "Typeahead Component"]
-        , HH.slot (Slot 0) (S.component renderSearch) { search: Nothing, debounceTime: Milliseconds 300.0 } (HE.input HandleSearch)
-        , HH.slot (Slot 1) (C.component renderContainer) { items: testData } (HE.input HandleContainer)
+        , HH.slot (Slot 0) S.component { render: renderSearch, search: Nothing, debounceTime: Milliseconds 300.0 } (HE.input HandleSearch)
+        , HH.slot (Slot 1) C.component { render: renderContainer, items: testData } (HE.input HandleContainer)
         ]
 
-    eval :: Query ~> H.ParentDSL State Query (Dispatch TypeaheadItem Query) Slot Void (FX e)
+    eval :: (Query e) ~> H.ParentDSL State (Query e) (Dispatch TypeaheadItem (Query e) e) Slot Void (FX e)
     eval = case _ of
       HandleSearch m a -> case m of
         S.Emit q -> emit eval q a
@@ -79,7 +79,7 @@ component =
           _ <- H.query (Slot 1)
                  $ H.action
                  $ Container
-                 $ SetItems items
+                 $ ContainerReceiver { render: renderContainer, items: items }
           pure a
 
       HandleContainer m a -> case m of
@@ -95,8 +95,7 @@ component =
           _  <- H.query (Slot 1)
                   $ H.action
                   $ Container
-                  $ SetItems
-                  $ difference st.items st.selected
+                  $ ContainerReceiver { render: renderContainer, items: difference st.items st.selected }
 
           H.liftAff $ log "List of selections..." *> logShow st.selected
 
@@ -130,5 +129,5 @@ testData =
   , "Aaron Chu"
   , "Vincent Busam"
   , "Riley Gibbs"
-  , "THE COOKIE MONSTER DID NOTHING WRONG" 
+  , "THE COOKIE MONSTER DID NOTHING WRONG"
   ]

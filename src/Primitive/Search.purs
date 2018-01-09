@@ -10,8 +10,11 @@ import Halogen (Component, ComponentDSL, ComponentHTML, component, get, liftAff,
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.Query.HalogenM (fork, raise) as H
-import Select.Dispatch (Dispatch(ParentQuery, Container, Search), SearchQuery(TextInput))
+import Select.Dispatch (Dispatch(..), SearchQuery(..), SearchState, SearchInput, updateState, updateStore)
 import Select.Effects (FX, Effects)
+import Control.Comonad
+import Data.Tuple
+import Control.Comonad.Store
 
 {-
 
@@ -19,46 +22,35 @@ The Search primitive captures user input and returns it to the parent.
 
 -}
 
-type State e =
-  { search    :: String
-  , ms        :: Milliseconds
-  , debouncer :: Maybe (Debouncer e)
-  }
+type State item o e = Store (SearchState e) (H.ComponentHTML (Dispatch item o e))
 
-type Debouncer e =
-  { var :: AVar String
-  , fiber :: Fiber (Effects e) Unit }
-
-
-type Input =
-  { search :: Maybe String
-  , debounceTime :: Milliseconds }
-
--- The search serves only to notify the parent that a new search has been performed by the user.
--- If this search should cause any new data to be sent to a container, that is the responsibility
--- of the parent.
-data Message item o
-  = Emit (Dispatch item o Unit)
+data Message item o e
+  = Emit (Dispatch item o e Unit)
   | NewSearch String
 
-component :: ∀ item o e
-   . (State e -> H.ComponentHTML (Dispatch item o))
-  -> H.Component HH.HTML (Dispatch item o) Input (Message item o) (FX e)
-component render =
+component :: ∀ item o e. H.Component HH.HTML (Dispatch item o e) (SearchInput item o e) (Message item o e) (FX e)
+component =
   H.component
-    { initialState: \i -> { search: fromMaybe "" i.search, ms: i.debounceTime, debouncer: Nothing }
-    , render
+    { initialState
+    , render: extract
     , eval
-    , receiver: const Nothing
+    , receiver: const Nothing -- HE.input (Search <<< SearchReceiver)
     }
   where
-    eval :: (Dispatch item o) ~> H.ComponentDSL (State e) (Dispatch item o) (Message item o) (FX e)
+    initialState :: SearchInput item o e -> State item o e
+    initialState i = store i.render
+      { search: fromMaybe "" i.search
+      , ms: i.debounceTime
+      , debouncer: Nothing
+      }
+
+    eval :: (Dispatch item o e) ~> H.ComponentDSL (State item o e) (Dispatch item o e) (Message item o e) (FX e)
     eval = case _ of
       -- The dispatch type matches this primitive -- the Search primitive
       Search q a -> case q of
         TextInput str -> do
-          st  <- H.get
-          H.modify _ { search = str }
+          (Tuple _ st) <- pure <<< runStore =<< H.get
+          H.modify $ updateState _ { search = str }
 
           case st.debouncer of
             Nothing -> unit <$ do
@@ -75,15 +67,15 @@ component render =
                 _ <- H.liftAff $ takeVar var
 
                 -- Reset the debouncer
-                H.modify _ { debouncer = Nothing }
+                H.modify $ updateState _ { debouncer = Nothing }
 
                 -- Run the effect, making sure to get from the state.
-                st <- H.get
+                (Tuple _ st) <- pure <<< runStore =<< H.get
                 H.raise $ NewSearch st.search
 
               -- In the meantime -- while the other fork is running -- create the new debouncer
               -- in state so it can continue to be accessed.
-              H.modify \st -> st { debouncer = Just { var, fiber } }
+              H.modify $ updateState \st -> st { debouncer = Just { var, fiber } }
 
 
             Just debouncer -> do
@@ -94,11 +86,14 @@ component render =
                   delay st.ms
                   putVar str var
 
-              H.modify _ { debouncer = Just { var, fiber } }
-
+              H.modify $ updateState _ { debouncer = Just { var, fiber } }
 
           pure a
-          -- H.raise $ NewSearch str
+
+        -- Only update `render`. To send a new search to the field, use a query from
+        -- the parent to set the text.
+        SearchReceiver i -> a <$ do
+           H.modify $ updateStore i.render id
 
       -- Boilerplate for now...raise container queries back to the parent
       Container q a -> a <$ do

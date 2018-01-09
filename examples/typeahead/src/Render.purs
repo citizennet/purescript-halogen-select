@@ -12,17 +12,17 @@ import Halogen.HTML.CSS as HC
 import Halogen.HTML.Properties as HP
 import Select.Primitive.Container as C
 import Select.Primitive.Search as S
-import Select.Dispatch (Dispatch, getChildProps, getContainerProps, getInputProps, getItemProps)
+import Select.Dispatch (Dispatch, getChildProps, getContainerProps, getInputProps, getItemProps, SearchState, ContainerState)
 
 type TypeaheadItem = String
 
 -- The user is using the Search primitive, so they have to fill out a Search render function
-renderSearch :: ∀ i o e. (S.State e) -> H.HTML Void (Dispatch i o)
+renderSearch :: ∀ i o e. (SearchState e) -> H.HTML Void (Dispatch i o e)
 renderSearch st =
   HH.input ( getInputProps [] )
 
 -- The user is using the Container primitive, so they have to fill out a Container render function
-renderContainer :: ∀ o. (C.State TypeaheadItem) -> H.HTML Void (Dispatch TypeaheadItem o)
+renderContainer :: ∀ o e. (ContainerState TypeaheadItem) -> H.HTML Void (Dispatch TypeaheadItem o e)
 renderContainer st =
   HH.div_
     $ if not st.open
@@ -31,8 +31,8 @@ renderContainer st =
   where
 
     -- Render the container for the items
-    renderItems :: Array (H.HTML Void (Dispatch TypeaheadItem o))
-                -> H.HTML Void (Dispatch TypeaheadItem o)
+    renderItems :: Array (H.HTML Void (Dispatch TypeaheadItem o e))
+                -> H.HTML Void (Dispatch TypeaheadItem o e)
     renderItems html =
       HH.div
         ( getContainerProps
@@ -64,7 +64,7 @@ renderContainer st =
                [ HH.p [HP.class_ $ HH.ClassName "lh-copy black-70 pa2"] [ HH.text "No results for that search." ] ]
         )
 
-    renderItem :: Int -> TypeaheadItem -> H.HTML Void (Dispatch TypeaheadItem o)
+    renderItem :: Int -> TypeaheadItem -> H.HTML Void (Dispatch TypeaheadItem o e)
     renderItem index item = HH.li item' [ HH.text item ]
       where
         item' =

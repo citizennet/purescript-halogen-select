@@ -11,12 +11,12 @@ import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Dropdown.Query (Query(..))
-import Select.Dispatch (Dispatch, embed, getChildProps, getContainerProps, getItemProps, getToggleProps)
+import Select.Dispatch (Dispatch, embed, getChildProps, getContainerProps, getItemProps, getToggleProps, ContainerState)
 import Select.Primitive.Container as C
 
 type DropdownItem = String
 
-renderContainer :: (C.State String) -> H.HTML Void (Dispatch String Query)
+renderContainer :: ∀ e. (ContainerState String) -> H.HTML Void (Dispatch String (Query e) e)
 renderContainer st =
   HH.div_
     $ if not st.open
@@ -26,7 +26,7 @@ renderContainer st =
 
     -- Render whatever is going to provide the action for toggling the menu. Notably, this is
     -- NOT a primitive.
-    renderToggle :: H.HTML Void (Dispatch String Query)
+    renderToggle :: H.HTML Void (Dispatch String (Query e) e)
     renderToggle =
       HH.span
       ( getToggleProps
@@ -37,8 +37,8 @@ renderContainer st =
         [ HH.text "Toggle" ]
 
     -- Render the container for the items
-    renderItems :: Array (H.HTML Void (Dispatch DropdownItem Query))
-                -> H.HTML Void (Dispatch String Query)
+    renderItems :: Array (H.HTML Void (Dispatch DropdownItem (Query e) e))
+                -> H.HTML Void (Dispatch String (Query e) e)
     renderItems html =
       HH.div
         ( getContainerProps
@@ -67,7 +67,7 @@ renderContainer st =
             html
         ]
 
-    renderItem :: Int -> DropdownItem -> H.HTML Void (Dispatch DropdownItem Query)
+    renderItem :: Int -> DropdownItem -> H.HTML Void (Dispatch DropdownItem (Query e) e)
     renderItem index item = HH.li item' [ HH.text item ]
       where
         item' =

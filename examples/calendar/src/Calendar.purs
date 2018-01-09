@@ -39,15 +39,15 @@ The calendar component is an example.
 
 -}
 
-data Query a
-  = HandleContainer (C.Message CalendarItem Query) a
+data Query e a
+  = HandleContainer (C.Message CalendarItem (Query e) e) a
   | ToggleYear  Direction a
   | ToggleMonth Direction a
 
 data Direction = Prev | Next
 
-type ParentHTML e = H.ParentHTML Query ChildQuery Unit (FX e)
-type ChildQuery = Dispatch CalendarItem Query
+type ParentHTML e = H.ParentHTML (Query e) (ChildQuery e) Unit (FX e)
+type ChildQuery e = Dispatch CalendarItem (Query e) e
 
 type State =
   { targetDate :: Tuple Year Month
@@ -73,7 +73,7 @@ data BoundaryStatus
   = OutOfBounds
   | InBounds
 
-component :: ∀ e. H.Component HH.HTML Query Unit Void (FX e)
+component :: ∀ e. H.Component HH.HTML (Query e) Unit Void (FX e)
 component =
   H.parentComponent
     { initialState: const initState
@@ -85,7 +85,7 @@ component =
     initState :: State
     initState = { targetDate: Tuple (unsafeMkYear 2018) (unsafeMkMonth 2), statuses: [] }
 
-    eval :: Query ~> H.ParentDSL State Query ChildQuery Unit Void (FX e)
+    eval :: (Query e) ~> H.ParentDSL State (Query e) (ChildQuery e) Unit Void (FX e)
     eval = case _ of
       HandleContainer m a -> case m of
         C.Emit q -> emit eval q a
@@ -121,7 +121,7 @@ component =
 
         H.modify _ { targetDate = Tuple (year newDate) (month newDate) }
 
-    render :: State -> H.ParentHTML Query ChildQuery Unit (FX e)
+    render :: State -> H.ParentHTML (Query e) (ChildQuery e) Unit (FX e)
     render st =
       HH.div
         [ HP.class_ $ HH.ClassName "mw8 sans-serif center" ]
@@ -141,7 +141,7 @@ component =
         targetYear  = fst st.targetDate
         targetMonth = snd st.targetDate
 
-        renderToggle :: H.HTML Void ChildQuery
+        renderToggle :: H.HTML Void (ChildQuery e)
         renderToggle =
           HH.span
           ( getToggleProps
@@ -150,7 +150,7 @@ component =
           [ HH.text "Toggle" ]
 
         -- The user is using the Container primitive, so they have to fill out a Container render function
-        renderContainer :: Year -> Month -> (ContainerState CalendarItem) -> H.HTML Void ChildQuery
+        renderContainer :: Year -> Month -> (ContainerState CalendarItem) -> H.HTML Void (ChildQuery e)
         renderContainer y m cst =
           HH.div_
             $ if not cst.open
@@ -163,7 +163,7 @@ component =
             fmtMonthYear = (unsafePartial fromRight) <<< formatDateTime "MMMM YYYY" <<< toDateTime <<< fromDate
             monthYear = fmtMonthYear (canonicalDate y m bottom)
 
-            renderCalendar :: H.HTML Void ChildQuery
+            renderCalendar :: H.HTML Void (ChildQuery e)
             renderCalendar =
               HH.div
                 ( getContainerProps
@@ -176,7 +176,7 @@ component =
                 ]
 
             -- Given a string ("Month YYYY"), creates the calendar navigation
-            calendarNav :: H.HTML Void ChildQuery
+            calendarNav :: H.HTML Void (ChildQuery e)
             calendarNav =
               HH.div
               [ HP.class_ $ HH.ClassName "flex pv3" ]
@@ -188,7 +188,7 @@ component =
               ]
               where
                 -- Buttons next to the date.
-                arrowButton :: H.Action Query -> String -> Maybe String -> _
+                arrowButton :: H.Action (Query e) -> String -> Maybe String -> _
                 arrowButton q t css =
                   HH.button
                   ( getChildProps
@@ -211,10 +211,10 @@ component =
               where
                 headers = [ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" ]
 
-            renderRows :: Array (Array CalendarItem) -> Array (H.HTML Void ChildQuery)
+            renderRows :: Array (Array CalendarItem) -> Array (H.HTML Void (ChildQuery e))
             renderRows arr = go gridSize rowSize [] $ reverse arr
               where
-                renderRow :: Int -> Array CalendarItem -> H.HTML Void ChildQuery
+                renderRow :: Int -> Array CalendarItem -> H.HTML Void (ChildQuery e)
                 renderRow offset items =
                   HH.div
                     [ HP.class_ $ HH.ClassName "flex" ]
@@ -233,7 +233,7 @@ component =
                     (drop 1 xs)
 
 
-            renderItem :: Int -> CalendarItem -> H.HTML Void ChildQuery
+            renderItem :: Int -> CalendarItem -> H.HTML Void (ChildQuery e)
             renderItem index item =
               HH.div
                 -- Use raw style attribute for convenience.
@@ -278,13 +278,9 @@ component =
                       <<< fromDate
 
 
-
-
-
-
 {-
 
-Generators
+Helpers
 
 -}
 
@@ -297,11 +293,4 @@ generateCalendarRows y m = lastMonth <> thisMonth <> nextMonth
     lastMonth   = outOfBounds pre
     nextMonth   = outOfBounds post
     thisMonth   = body <#> (\i -> CalendarItem Selectable NotSelected InBounds i)
-
-
-{-
-
-Render Functions
-
--}
 
