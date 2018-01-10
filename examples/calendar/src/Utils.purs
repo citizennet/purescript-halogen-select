@@ -2,6 +2,7 @@ module Calendar.Utils where
 
 import Prelude
 
+import Debug.Trace (trace, spy)
 import Data.Date (Date, Day, Year, canonicalDate, lastDayOfMonth, year, month, day, Weekday(..), weekday)
 import Data.DateTime (Month(..), adjust, date)
 import Data.DateTime.Instant (fromDate, toDateTime)
@@ -22,7 +23,7 @@ align y m = rowsFromAligned (alignByWeek y m)
 -- A type to help assist making grid-based calendar layouts. Calendars
 -- can use dates directly or use array lengths as offsets.
 type Aligned =
-  { pre  :: Array Date   -- Dates before the first of the month 
+  { pre  :: Array Date   -- Dates before the first of the month
   , body :: Array Date   -- Dates within the month
   , post :: Array Date   -- Dates after the last of the month
   , all  :: Array Date } -- The full 35-day range
@@ -39,20 +40,25 @@ rowsFromArray all = go all []
     go xs acc = go (drop 7 xs) (take 7 xs : acc)
 
 -- A special case for when you need to match days of the month to a grid
--- that's bound to weekdays Sun - Sat. Will always contain 35 values.
+-- that's bound to weekdays Sun - Sat.
 alignByWeek :: Year -> Month -> Aligned
-alignByWeek y m = { pre, body, post, all: pre <> body <> post }
+alignByWeek y m = { pre: pre, body: body, post: post, all: pre <> body <> post }
  where
    start = firstDateOfMonth y m
-   end   = lastDateOfMonth y m
-   body  = dateRange start end
-   pre   = dateRange (adjustDaysBy (padPrev $ weekday start) start) (prevDay start)
-   post  = dateRange (nextDay end) (adjustDaysBy (padNext $ weekday end) end)
+   end = lastDateOfMonth y m
+   body = dateRange start end
+   pre =
+     let pad = padPrev $ weekday start
+      in if pad == 0.0 then [] else dateRange (adjustDaysBy pad start) (prevDay start)
+   post =
+     let pad = padNext $ weekday end
+      in if pad == 0.0 then [] else dateRange (nextDay end) (adjustDaysBy pad end)
+
 
 -- Represents the number of days that will need to be "filled in"
 -- when the first day of the month is this weekday. For example, if the
 -- first day of the month is Tuesday, then Sunday and Monday will need
--- to be padded 
+-- to be padded
 padPrev :: Weekday -> Number
 padPrev Sunday    = 0.0
 padPrev Monday    = (-1.0)
@@ -64,7 +70,7 @@ padPrev Saturday  = (-6.0)
 
 -- Represents the number of days that will need to be "filled in"
 -- when the last day of the month is this weekday. For example, if the
--- last day of the month is Tuesday, then Wednesday through Saturday 
+-- last day of the month is Tuesday, then Wednesday through Saturday
 -- will need to be padded
 padNext :: Weekday -> Number
 padNext Sunday    = 6.0
@@ -131,7 +137,7 @@ adjustDaysBy n = unsafePartial fromJust <<< next n
     next dur d = date <$> (adjust (Days dur) (toDateTime $ fromDate d))
 
 -- Months
--- Note: Attempts to preserve the same day, but due to the use of 
+-- Note: Attempts to preserve the same day, but due to the use of
 -- `canonical` this can cause odd behavior. Fix if necessary.
 nextMonth :: Date -> Date
 nextMonth d = case (month d) of
@@ -144,8 +150,8 @@ prevMonth d = case (month d) of
   other   -> canonicalDate (year d) (unsafePred (month d)) (day d)
 
 -- Years
--- Note: Attempts to preserve the same day, but due to the use of 
--- `canonical` this can cause odd behavior (ex: Feb 29 -> leap year) 
+-- Note: Attempts to preserve the same day, but due to the use of
+-- `canonical` this can cause odd behavior (ex: Feb 29 -> leap year)
 -- Fix if necessary.
 nextYear :: Date -> Date
 nextYear d = canonicalDate (unsafeSucc (year d)) (month d) (day d)

@@ -38,6 +38,7 @@
     "purescript-formatters": "^3.0.1",
     "purescript-now": "^3.0.0",
     "purescript-transformers": "^3.5.0",
-    "purescript-control": "^3.3.1"
+    "purescript-control": "^3.3.1",
+    "purescript-debug": "^3.0.0"
   }
 }
