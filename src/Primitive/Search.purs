@@ -10,7 +10,7 @@ import Halogen (Component, ComponentDSL, ComponentHTML, component, get, liftAff,
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.Query.HalogenM (fork, raise) as H
-import Select.Dispatch (Dispatch(..), SearchQuery(..), SearchState, SearchInput, updateState, updateStore)
+import Select.Dispatch (Dispatch(..), SearchQuery(..), SearchState, SearchInput, updateStore)
 import Select.Effects (FX, Effects)
 import Control.Comonad
 import Data.Tuple
@@ -50,7 +50,7 @@ component =
       Search q a -> case q of
         TextInput str -> do
           (Tuple _ st) <- pure <<< runStore =<< H.get
-          H.modify $ updateState _ { search = str }
+          H.modify $ seeks _ { search = str }
 
           case st.debouncer of
             Nothing -> unit <$ do
@@ -67,7 +67,7 @@ component =
                 _ <- H.liftAff $ takeVar var
 
                 -- Reset the debouncer
-                H.modify $ updateState _ { debouncer = Nothing }
+                H.modify $ seeks _ { debouncer = Nothing }
 
                 -- Run the effect, making sure to get from the state.
                 (Tuple _ st) <- pure <<< runStore =<< H.get
@@ -75,7 +75,7 @@ component =
 
               -- In the meantime -- while the other fork is running -- create the new debouncer
               -- in state so it can continue to be accessed.
-              H.modify $ updateState \st -> st { debouncer = Just { var, fiber } }
+              H.modify $ seeks \st -> st { debouncer = Just { var, fiber } }
 
 
             Just debouncer -> do
@@ -86,7 +86,7 @@ component =
                   delay st.ms
                   putVar str var
 
-              H.modify $ updateState _ { debouncer = Just { var, fiber } }
+              H.modify $ seeks _ { debouncer = Just { var, fiber } }
 
           pure a
 

@@ -14,7 +14,7 @@ import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
-import Select.Dispatch (ContainerQuery(..), Dispatch(..), MouseState(..), Target(..), VisibilityStatus(..), ContainerState(..), ContainerInput(..), updateState, updateStore)
+import Select.Dispatch (ContainerQuery(..), Dispatch(..), MouseState(..), Target(..), VisibilityStatus(..), ContainerState(..), ContainerInput(..), updateStore)
 import Select.Effects (FX)
 
 {-
@@ -81,17 +81,17 @@ component =
           if not st.open then pure a else a <$ case target of
 
             Index i -> do
-              H.modify $ updateState (_ { highlightedIndex = Just i } )
+              H.modify $ seeks (_ { highlightedIndex = Just i } )
 
             Next    -> do
               case st.highlightedIndex of
-                Just i | i /= st.lastIndex -> H.modify $ updateState (_ { highlightedIndex = Just (i + 1) })
-                otherwise -> H.modify $ updateState (_ { highlightedIndex = Just 0 })
+                Just i | i /= st.lastIndex -> H.modify $ seeks (_ { highlightedIndex = Just (i + 1) })
+                otherwise -> H.modify $ seeks (_ { highlightedIndex = Just 0 })
 
             Prev    -> do
               case st.highlightedIndex of
-                Just i | i /= 0 -> H.modify $ updateState (_ { highlightedIndex = Just (i - 1) })
-                otherwise -> H.modify $ updateState (_ { highlightedIndex = Just st.lastIndex })
+                Just i | i /= 0 -> H.modify $ seeks (_ { highlightedIndex = Just (i - 1) })
+                otherwise -> H.modify $ seeks (_ { highlightedIndex = Just st.lastIndex })
 
         Key (ev :: KE.KeyboardEvent) -> do
           (Tuple _ st) <- pure <<< runStore =<< H.get
@@ -105,7 +105,7 @@ component =
                 Just index -> eval $ Container (Select index) a
 
             "Escape" -> a <$ do
-              H.modify $ updateState (_ { open = false })
+              H.modify $ seeks (_ { open = false })
 
             "ArrowUp" -> a <$ do
               H.liftEff $ preventDefault ev
@@ -122,9 +122,9 @@ component =
 
           if not st.open then pure a else a <$ case ms of
             Down -> do
-              H.modify $ updateState (_ { mouseDown = true })
+              H.modify $ seeks (_ { mouseDown = true })
             Up -> do
-              H.modify $ updateState (_ { mouseDown = false })
+              H.modify $ seeks (_ { mouseDown = false })
 
         Blur -> do
           (Tuple _ st) <- pure <<< runStore =<< H.get
@@ -135,13 +135,13 @@ component =
         Visibility status -> a <$ case status of
           On     -> do
              H.liftAff $ log "set on"
-             H.modify $ updateState (_ { open = true })
+             H.modify $ seeks (_ { open = true })
           Off    -> do
              H.liftAff $ log "set off"
-             H.modify $ updateState (_ { open = false, highlightedIndex = Nothing })
+             H.modify $ seeks (_ { open = false, highlightedIndex = Nothing })
           Toggle ->  do
              H.liftAff $ log "toggle"
-             H.modify $ updateState (\st -> st { open = not st.open, highlightedIndex = Nothing })
+             H.modify $ seeks (\st -> st { open = not st.open, highlightedIndex = Nothing })
 
         ContainerReceiver i -> a <$ do
           -- Replaces the state entirely with a newly-initialized one.

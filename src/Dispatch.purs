@@ -106,14 +106,8 @@ emit :: ∀ a0 a1 o item e f. Applicative f => (o Unit -> f Unit) -> Dispatch it
 emit f (ParentQuery o _) a = a <$ f o
 emit _ _ a = pure a
 
-updateState f inputStore =
-  let (Tuple r oldState) = runStore inputStore
-   in store r <<< f $ oldState
-
-updateStore r f inputStore =
-  let (Tuple _ oldState) = runStore inputStore
-   in store r <<< f $ oldState
-
+updateStore :: ∀ state html. (state -> html) -> (state -> state) -> Store state html -> Store state html
+updateStore r f = (\(Tuple _ s) -> store r s) <<< runStore <<< seeks f
 
 
 --
