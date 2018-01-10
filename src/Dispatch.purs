@@ -2,18 +2,18 @@ module Select.Dispatch where
 
 import Prelude
 
+import Control.Comonad
+import Control.Comonad.Store
+import Control.Monad.Aff (Fiber)
+import Control.Monad.Aff.AVar (AVar)
+import Data.Identity (Identity(..))
+import Data.Maybe
+import Data.Time.Duration (Milliseconds)
+import Data.Tuple
 import DOM.Event.KeyboardEvent (KeyboardEvent)
 import Halogen as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Data.Maybe
-import Halogen as H
-import Control.Comonad
-import Data.Tuple
-import Control.Comonad.Store
-import Data.Time.Duration (Milliseconds)
-import Control.Monad.Aff.AVar (AVar)
-import Control.Monad.Aff (Fiber)
 import Select.Effects (Effects)
 
 {-
