@@ -10,6 +10,7 @@ import Control.Monad.Aff (Fiber)
 import Control.Monad.Aff.AVar (AVar)
 import Control.Monad.State (class MonadState)
 import DOM.Event.KeyboardEvent (KeyboardEvent)
+import DOM.Event.Types as E
 import Data.Identity (Identity(..))
 import Data.Time.Duration (Milliseconds)
 import Halogen as H
@@ -113,7 +114,7 @@ updateStore :: ∀ state html. (state -> html) -> (state -> state) -> Store stat
 updateStore r f = (\(Tuple _ s) -> store r s) <<< runStore <<< seeks f
 
 -- Helper to get and unpack the primitive state type from the Store type
-getState :: ∀ m s a. Monad m => MonadState (StoreT s Identity a) m => m (Tuple (s -> a) s)
+getState :: ∀ m s a. MonadState (Store s a) m => m (Tuple (s -> a) s)
 getState = pure <<< runStore =<< H.get
 
 
@@ -163,11 +164,44 @@ getContainerProps = augmentHTML
   ]
 
 -- -- Intended for anything that will be embedded into the container primitive
+{--getChildProps ::--}
+  {--∀ item o e p--}
+  {--. Array--}
+    {--( H.IProp--}
+      {--( onBlur ∷ E.FocusEvent--}
+      {--, tabIndex ∷ Int--}
+      {--| p--}
+      {--)--}
+      {--(Dispatch item o e Unit)--}
+    {--)--}
+  {--→ Array --}
+    {--( H.IProp--}
+      {--( onBlur ∷ E.FocusEvent--}
+      {--, tabIndex ∷ Int--}
+      {--| p--}
+      {--)--}
+      {--(Dispatch item o e Unit)--}
+    {--)--}
 getChildProps = augmentHTML
   [ HE.onBlur      $ HE.input_ $ Container $ Blur
   , HP.tabIndex 0
   ]
 
+{--getItemProps ::--}
+  {--∀ item o e p p'--}
+  {--. Int--}
+  {--→ Array (H.IProp p' (Dispatch item o e Unit))--}
+  {--→ Array--}
+      {--( H.IProp--}
+        {--( onClick ∷ E.MouseEvent--}
+        {--, onMouseOver ∷ E.MouseEvent--}
+        {--, onKeyDown ∷ E.KeyboardEvent--}
+        {--, onBlur ∷ E.FocusEvent--}
+        {--, tabIndex ∷ Int--}
+        {--| p--}
+        {--)--}
+        {--(Dispatch item o e Unit)--}
+      {--)--}
 getItemProps index = augmentHTML
   [ HE.onClick     $ HE.input_ $ Container $ Select index
   , HE.onMouseOver $ HE.input_ $ Container $ Highlight (Index index)
