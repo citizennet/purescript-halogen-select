@@ -2,7 +2,6 @@ module Calendar.Utils where
 
 import Prelude
 
-import Debug.Trace (trace, spy)
 import Data.Date (Date, Day, Year, canonicalDate, lastDayOfMonth, year, month, day, Weekday(..), weekday)
 import Data.DateTime (Month(..), adjust, date)
 import Data.DateTime.Instant (fromDate, toDateTime)
