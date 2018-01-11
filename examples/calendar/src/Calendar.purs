@@ -4,7 +4,9 @@ import Calendar.Utils
 import Prelude
 
 import CSS as CSS
+import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Console (log)
+import Control.Monad.Eff.Now
 import Data.Array (drop, head, last, mapWithIndex, reverse, take, (:), length)
 import Data.Date (Date, Day, Month(..), Weekday(..), Year, canonicalDate, day, lastDayOfMonth, month, weekday, year)
 import Data.DateTime (adjust, date)
@@ -39,23 +41,21 @@ The calendar component is an example.
 
 -}
 
+type State =
+  { targetDate :: Tuple Year Month }
+
 data Query e a
   = HandleContainer (C.Message CalendarItem (Query e) e) a
   | ToggleYear  Direction a
   | ToggleMonth Direction a
+  | SetTime a
 
 data Direction = Prev | Next
+
 
 type ParentHTML e = H.ParentHTML (Query e) (ChildQuery e) Unit (FX e)
 type ChildQuery e = Dispatch CalendarItem (Query e) e
 
-type State =
-  { targetDate :: Tuple Year Month
-  , statuses   :: Array CalendarItem }
-
-data Selection
-  = Single Date
-  | Range Date Date
 
 -- Calendar Items
 data CalendarItem
@@ -73,17 +73,22 @@ data BoundaryStatus
   = OutOfBounds
   | InBounds
 
+
+
 component :: ∀ e. H.Component HH.HTML (Query e) Unit Void (FX e)
 component =
-  H.parentComponent
-    { initialState: const initState
+  H.lifecycleParentComponent
+    { initialState
     , render
     , eval
     , receiver: const Nothing
+    , initializer: Just (H.action SetTime)
+    , finalizer: Nothing
     }
   where
-    initState :: State
-    initState = { targetDate: Tuple (unsafeMkYear 2018) (unsafeMkMonth 2), statuses: [] }
+    initialState :: Unit -> State
+    initialState = const
+      { targetDate: Tuple (unsafeMkYear 2019) (unsafeMkMonth 2) }
 
     eval :: (Query e) ~> H.ParentDSL State (Query e) (ChildQuery e) Unit Void (FX e)
     eval = case _ of
@@ -94,7 +99,6 @@ component =
         -- selected.
         C.ItemSelected item -> a <$ do
           let showCalendar (CalendarItem _ _ _ d) = show d
-          H.liftAff $ log "Selected!"
           H.liftAff $ log ("Selected! Choice was " <> showCalendar item)
 
       ToggleMonth dir a -> a <$ do
@@ -120,6 +124,13 @@ component =
                Prev -> prevYear (canonicalDate y m bottom)
 
         H.modify _ { targetDate = Tuple (year newDate) (month newDate) }
+
+      SetTime a -> do
+         x <- H.liftEff now
+         let (d :: Date) = date (toDateTime x)
+         H.modify _ { targetDate = Tuple (year d) (month d) }
+         pure a
+
 
     render :: State -> H.ParentHTML (Query e) (ChildQuery e) Unit (FX e)
     render st =
