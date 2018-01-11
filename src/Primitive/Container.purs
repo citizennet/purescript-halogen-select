@@ -2,19 +2,18 @@ module Select.Primitive.Container where
 
 import Prelude
 
+import Control.Comonad (extract)
+import Control.Comonad.Store (seeks, store)
 import Control.Monad.Aff.Console (log)
-import DOM.Classy.Event (preventDefault)
-import DOM.Event.KeyboardEvent as KE
-import Control.Comonad
-import Data.Tuple
-import Control.Comonad.Store
-
 import Data.Array (length, (!!))
 import Data.Maybe (Maybe(..))
+import Data.Tuple (Tuple(..))
+import DOM.Classy.Event (preventDefault)
+import DOM.Event.KeyboardEvent as KE
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
-import Select.Dispatch (ContainerQuery(..), Dispatch(..), MouseState(..), Target(..), VisibilityStatus(..), ContainerState(..), ContainerInput(..), updateStore, getState, State)
+import Select.Dispatch (ContainerQuery(..), Dispatch(..), MouseState(..), Target(..), VisibilityStatus(..), ContainerState, ContainerInput, updateStore, getState, State)
 import Select.Effects (FX)
 
 {-

@@ -1,17 +1,14 @@
 module Select.Dispatch where
 
-import Control.Comonad
-import Control.Comonad.Store
-import Data.Maybe
-import Data.Tuple
 import Prelude
 
+import Control.Comonad.Store (Store, runStore, seeks, store)
+import Data.Maybe (Maybe)
+import Data.Tuple (Tuple(..))
 import Control.Monad.Aff (Fiber)
 import Control.Monad.Aff.AVar (AVar)
 import Control.Monad.State (class MonadState)
 import DOM.Event.KeyboardEvent (KeyboardEvent)
-import DOM.Event.Types as E
-import Data.Identity (Identity(..))
 import Data.Time.Duration (Milliseconds)
 import Halogen as H
 import Halogen.HTML.Events as HE

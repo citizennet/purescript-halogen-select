@@ -2,19 +2,17 @@ module Select.Primitive.Search where
 
 import Prelude
 
-import Control.Monad.Aff (Error, Fiber, delay, error, forkAff, killFiber)
-import Control.Monad.Aff.AVar (AVar, makeEmptyVar, putVar, takeVar)
+import Control.Comonad (extract)
+import Control.Comonad.Store (seeks, store)
+import Control.Monad.Aff (delay, error, forkAff, killFiber)
+import Control.Monad.Aff.AVar (makeEmptyVar, putVar, takeVar)
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Time.Duration (Milliseconds)
-import Halogen (Component, ComponentDSL, ComponentHTML, component, get, liftAff, modify) as H
+import Data.Tuple (Tuple(..))
+import Halogen (Component, ComponentDSL, component, liftAff, modify) as H
 import Halogen.HTML as HH
-import Halogen.HTML.Events as HE
 import Halogen.Query.HalogenM (fork, raise) as H
 import Select.Dispatch (Dispatch(..), SearchQuery(..), SearchState, SearchInput, updateStore, getState, State)
-import Select.Effects (FX, Effects)
-import Control.Comonad
-import Data.Tuple
-import Control.Comonad.Store
+import Select.Effects (FX)
 
 {-
 
@@ -68,10 +66,10 @@ component =
                 _ <- H.liftAff $ takeVar var
                 H.modify $ seeks _ { debouncer = Nothing }
 
-                (Tuple _ st) <- getState
-                H.raise $ NewSearch st.search
+                (Tuple _ newState) <- getState
+                H.raise $ NewSearch newState.search
 
-              H.modify $ seeks \st -> st { debouncer = Just { var, fiber } }
+              H.modify $ seeks _ { debouncer = Just { var, fiber } }
 
             Just debouncer -> do
               let var = debouncer.var
