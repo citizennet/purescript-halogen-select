@@ -1,36 +1,25 @@
 module Calendar where
 
-import Calendar.Utils
 import Prelude
-
+import Calendar.Utils (alignByWeek, nextMonth, nextYear, prevMonth, prevYear, rowsFromArray, unsafeMkYear, unsafeMkMonth)
 import CSS as CSS
-import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Console (log)
-import Control.Monad.Eff.Now
-import Data.Array (drop, head, last, mapWithIndex, reverse, take, (:), length)
-import Data.Date (Date, Day, Month(..), Weekday(..), Year, canonicalDate, day, lastDayOfMonth, month, weekday, year)
-import Data.DateTime (adjust, date)
+import Control.Monad.Eff.Now (now)
+import Data.Array (drop, head, mapWithIndex, reverse, (:), length)
+import Data.Date (Date, Month, Year, canonicalDate, month, year)
+import Data.DateTime (date)
 import Data.DateTime.Instant (fromDate, toDateTime)
-import Data.Either (fromRight)
-import Data.Enum (downFrom, toEnum, upFrom)
-import Data.Foldable (foldr)
+import Data.Either (either)
 import Data.Formatter.DateTime (formatDateTime)
-import Data.Int (toNumber)
-import Data.Map as M
-import Data.Maybe (Maybe(..), fromJust, fromMaybe)
+import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.Monoid (mempty)
-import Data.Ord (abs)
-import Data.Time.Duration (Days(..))
-import Data.Traversable (traverse, traverse_)
 import Data.Tuple (Tuple(..), fst, snd)
-import Data.Unfoldable (class Unfoldable)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Partial.Unsafe (unsafePartial)
-import Select.Dispatch (ContainerQuery(..), Dispatch(..), VisibilityStatus(..), embed, emit, getChildProps, getContainerProps, getItemProps, getToggleProps, ContainerState)
+import Select.Dispatch (Dispatch, ContainerState, embed, emit, getChildProps, getContainerProps, getItemProps, getToggleProps)
 import Select.Effects (FX)
 import Select.Primitive.Container as C
 
@@ -74,7 +63,6 @@ data BoundaryStatus
   | InBounds
 
 
-
 component :: ∀ e. H.Component HH.HTML (Query e) Unit Void (FX e)
 component =
   H.lifecycleParentComponent
@@ -107,7 +95,7 @@ component =
         let y = fst st.targetDate
             m = snd st.targetDate
 
-        let (newDate :: Date) = case dir of
+        let newDate = case dir of
                Next -> nextMonth (canonicalDate y m bottom)
                Prev -> prevMonth (canonicalDate y m bottom)
 
@@ -119,7 +107,7 @@ component =
         let y = fst st.targetDate
             m = snd st.targetDate
 
-        let (newDate :: Date) = case dir of
+        let newDate = case dir of
                Next -> nextYear (canonicalDate y m bottom)
                Prev -> prevYear (canonicalDate y m bottom)
 
@@ -127,7 +115,7 @@ component =
 
       SetTime a -> do
          x <- H.liftEff now
-         let (d :: Date) = date (toDateTime x)
+         let d = date (toDateTime x)
          H.modify _ { targetDate = Tuple (year d) (month d) }
          pure a
 
@@ -171,7 +159,7 @@ component =
                    ]
 
           where
-            fmtMonthYear = (unsafePartial fromRight) <<< formatDateTime "MMMM YYYY" <<< toDateTime <<< fromDate
+            fmtMonthYear = (either (const "-") id) <<< formatDateTime "MMMM YYYY" <<< toDateTime <<< fromDate
             monthYear = fmtMonthYear (canonicalDate y m bottom)
 
             renderCalendar :: H.HTML Void (ChildQuery e)
@@ -198,8 +186,6 @@ component =
               , arrowButton (ToggleYear Next) ">>" (Just "mr2")
               ]
               where
-                -- Buttons next to the date.
-                arrowButton :: H.Action (Query e) -> String -> Maybe String -> _
                 arrowButton q t css =
                   HH.button
                   ( getChildProps
@@ -214,7 +200,6 @@ component =
                   [ HP.class_ $ HH.ClassName "w-60 b" ]
                   [ HH.text monthYear ]
 
-            calendarHeader :: _
             calendarHeader =
               HH.div
               [ HP.class_ $ HH.ClassName "flex pv3" ]
@@ -223,7 +208,7 @@ component =
                 headers = [ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" ]
 
             renderRows :: Array (Array CalendarItem) -> Array (H.HTML Void (ChildQuery e))
-            renderRows arr = go gridSize rowSize [] $ reverse arr
+            renderRows arr = go rows columns [] $ reverse arr
               where
                 renderRow :: Int -> Array CalendarItem -> H.HTML Void (ChildQuery e)
                 renderRow offset items =
@@ -231,16 +216,15 @@ component =
                     [ HP.class_ $ HH.ClassName "flex" ]
                     ( mapWithIndex (\i item -> renderItem (i + offset) item) items )
 
-                gridSize = length arr
-                rowSize  = length <<< (unsafePartial fromJust) <<< head $ arr
+                rows = length arr
+                columns = length <<< (maybe [] id) <<< head $ arr
 
-                go :: Int -> Int -> _ -> Array (Array CalendarItem) -> _
                 go 0 _      acc xs = acc
                 go n offset acc xs =
                   go
                     (n - 1)
                     offset
-                    ((renderRow ((n - 1) * offset) ((unsafePartial fromJust <<< head) xs)) : acc)
+                    ((renderRow ((n - 1) * offset) (((maybe [] id) <<< head) xs)) : acc)
                     (drop 1 xs)
 
 
@@ -255,8 +239,7 @@ component =
                 [ HH.text $ printDay item ]
               where
                 -- If the calendar item is selectable, augment the props with the correct click events.
-                attachItemProps :: Int -> CalendarItem -> _ -> _
-                attachItemProps index (CalendarItem Selectable _ _ _) props = getItemProps index props
+                attachItemProps i (CalendarItem Selectable _ _ _) props = getItemProps i props
                 attachItemProps _ _ props = props
 
                 -- Get the correct styles for a calendar item dependent on its statuses
@@ -283,7 +266,7 @@ component =
                 printDay (CalendarItem _ _ _ d) = printDay' d
                   where
                     printDay' :: Date -> String
-                    printDay' = (unsafePartial fromRight)
+                    printDay' = (either (const "-") id)
                       <<< formatDateTime "D"
                       <<< toDateTime
                       <<< fromDate
