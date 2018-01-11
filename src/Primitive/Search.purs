@@ -10,7 +10,7 @@ import Halogen (Component, ComponentDSL, ComponentHTML, component, get, liftAff,
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.Query.HalogenM (fork, raise) as H
-import Select.Dispatch (Dispatch(..), SearchQuery(..), SearchState, SearchInput, updateStore)
+import Select.Dispatch (Dispatch(..), SearchQuery(..), SearchState, SearchInput, updateStore, getState, State)
 import Select.Effects (FX, Effects)
 import Control.Comonad
 import Data.Tuple
@@ -21,8 +21,6 @@ import Control.Comonad.Store
 The Search primitive captures user input and returns it to the parent.
 
 -}
-
-type State item o e = Store (SearchState e) (H.ComponentHTML (Dispatch item o e))
 
 data Message item o e
   = Emit (Dispatch item o e Unit)
@@ -37,68 +35,56 @@ component =
     , receiver: const Nothing -- HE.input (Search <<< SearchReceiver)
     }
   where
-    initialState :: SearchInput item o e -> State item o e
+    initialState :: SearchInput item o e -> State (SearchState e) item o e
     initialState i = store i.render
       { search: fromMaybe "" i.search
       , ms: i.debounceTime
       , debouncer: Nothing
       }
 
-    eval :: (Dispatch item o e) ~> H.ComponentDSL (State item o e) (Dispatch item o e) (Message item o e) (FX e)
+    eval :: (Dispatch item o e) ~> H.ComponentDSL (State (SearchState e) item o e) (Dispatch item o e) (Message item o e) (FX e)
     eval = case _ of
-      -- The dispatch type matches this primitive -- the Search primitive
+      ParentQuery q a -> a <$ do
+        H.raise $ Emit (ParentQuery q unit)
+
+      Container q a -> a <$ do
+        H.raise $ Emit (Container q unit)
+
       Search q a -> case q of
-        TextInput str -> do
-          (Tuple _ st) <- pure <<< runStore =<< H.get
+        TextInput str -> a <$ do
+          (Tuple _ st) <- getState
           H.modify $ seeks _ { search = str }
 
           case st.debouncer of
             Nothing -> unit <$ do
-              (var :: AVar String) <- H.liftAff makeEmptyVar
-
-              (fiber :: Fiber (Effects e) Unit) <- H.liftAff $ forkAff do
+              var <- H.liftAff makeEmptyVar
+              fiber <- H.liftAff $ forkAff do
                   delay st.ms
-                  putVar str var
+                  putVar unit var
 
               -- This computation will fork and run later. When the var is finally filled,
               -- it will run the effect.
-              (x :: Error -> (FX e) Unit) <- H.fork $ do
-                -- This won't happen until there is something in the var to take
+              _ <- H.fork $ do
                 _ <- H.liftAff $ takeVar var
-
-                -- Reset the debouncer
                 H.modify $ seeks _ { debouncer = Nothing }
 
-                -- Run the effect, making sure to get from the state.
-                (Tuple _ st) <- pure <<< runStore =<< H.get
+                (Tuple _ st) <- getState
                 H.raise $ NewSearch st.search
 
-              -- In the meantime -- while the other fork is running -- create the new debouncer
-              -- in state so it can continue to be accessed.
               H.modify $ seeks \st -> st { debouncer = Just { var, fiber } }
-
 
             Just debouncer -> do
               let var = debouncer.var
               _ <- H.liftAff $ killFiber (error "Time's up!") debouncer.fiber
 
-              (fiber :: Fiber (Effects e) Unit) <- H.liftAff $ forkAff do
+              fiber <- H.liftAff $ forkAff do
                   delay st.ms
-                  putVar str var
+                  putVar unit var
 
               H.modify $ seeks _ { debouncer = Just { var, fiber } }
 
-          pure a
 
         -- Only update `render`. To send a new search to the field, use a query from
         -- the parent to set the text.
         SearchReceiver i -> a <$ do
            H.modify $ updateStore i.render id
-
-      -- Boilerplate for now...raise container queries back to the parent
-      Container q a -> a <$ do
-        H.raise $ Emit (Container q unit)
-
-      -- Boilerplate for now...raise parent queries back to the parent.
-      ParentQuery q a -> a <$ do
-        H.raise $ Emit (ParentQuery q unit)

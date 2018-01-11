@@ -32,6 +32,8 @@ data Dispatch item o e a
   | Search (SearchQuery item o e) a
   | Container (ContainerQuery item o e) a
 
+-- Primitives share the same Store type but can provide their own state type
+type State s item o e = Store s (H.ComponentHTML (Dispatch item o e))
 
 {-
 
@@ -51,7 +53,7 @@ type SearchState e =
   }
 
 type Debouncer e =
-  { var   :: AVar String
+  { var   :: AVar Unit
   , fiber :: Fiber (Effects e) Unit }
 
 type SearchInput item o e =
@@ -108,6 +110,8 @@ emit _ _ a = pure a
 
 updateStore :: ∀ state html. (state -> html) -> (state -> state) -> Store state html -> Store state html
 updateStore r f = (\(Tuple _ s) -> store r s) <<< runStore <<< seeks f
+
+getState = pure <<< runStore =<< H.get
 
 
 --
