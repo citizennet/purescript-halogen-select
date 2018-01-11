@@ -5,13 +5,13 @@ import Calendar.Utils (alignByWeek, nextMonth, nextYear, prevMonth, prevYear, ro
 import CSS as CSS
 import Control.Monad.Aff.Console (log)
 import Control.Monad.Eff.Now (now)
-import Data.Array (drop, head, mapWithIndex, reverse, (:), length)
+import Data.Array (mapWithIndex)
 import Data.Date (Date, Month, Year, canonicalDate, month, year)
 import Data.DateTime (date)
 import Data.DateTime.Instant (fromDate, toDateTime)
 import Data.Either (either)
 import Data.Formatter.DateTime (formatDateTime)
-import Data.Maybe (Maybe(..), maybe, fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Monoid (mempty)
 import Data.Tuple (Tuple(..), fst, snd)
 import Halogen as H
@@ -208,25 +208,13 @@ component =
                 headers = [ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" ]
 
             renderRows :: Array (Array CalendarItem) -> Array (H.HTML Void (ChildQuery e))
-            renderRows arr = go rows columns [] $ reverse arr
+            renderRows = mapWithIndex (\row subArr -> renderRow (row * 7) subArr)
               where
                 renderRow :: Int -> Array CalendarItem -> H.HTML Void (ChildQuery e)
                 renderRow offset items =
                   HH.div
                     [ HP.class_ $ HH.ClassName "flex" ]
-                    ( mapWithIndex (\i item -> renderItem (i + offset) item) items )
-
-                rows = length arr
-                columns = length <<< (maybe [] id) <<< head $ arr
-
-                go 0 _      acc xs = acc
-                go n offset acc xs =
-                  go
-                    (n - 1)
-                    offset
-                    ((renderRow ((n - 1) * offset) (((maybe [] id) <<< head) xs)) : acc)
-                    (drop 1 xs)
-
+                    ( mapWithIndex (\column item -> renderItem (column + offset) item) items )
 
             renderItem :: Int -> CalendarItem -> H.HTML Void (ChildQuery e)
             renderItem index item =
