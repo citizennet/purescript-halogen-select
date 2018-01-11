@@ -1,16 +1,17 @@
 module Select.Dispatch where
 
-import Prelude
-
 import Control.Comonad
 import Control.Comonad.Store
+import Data.Maybe
+import Data.Tuple
+import Prelude
+
 import Control.Monad.Aff (Fiber)
 import Control.Monad.Aff.AVar (AVar)
-import Data.Identity (Identity(..))
-import Data.Maybe
-import Data.Time.Duration (Milliseconds)
-import Data.Tuple
+import Control.Monad.State (class MonadState)
 import DOM.Event.KeyboardEvent (KeyboardEvent)
+import Data.Identity (Identity(..))
+import Data.Time.Duration (Milliseconds)
 import Halogen as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
@@ -111,6 +112,8 @@ emit _ _ a = pure a
 updateStore :: ∀ state html. (state -> html) -> (state -> state) -> Store state html -> Store state html
 updateStore r f = (\(Tuple _ s) -> store r s) <<< runStore <<< seeks f
 
+-- Helper to get and unpack the primitive state type from the Store type
+getState :: ∀ m s a. Monad m => MonadState (StoreT s Identity a) m => m (Tuple (s -> a) s)
 getState = pure <<< runStore =<< H.get
 
 
