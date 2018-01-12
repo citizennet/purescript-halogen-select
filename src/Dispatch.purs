@@ -9,6 +9,7 @@ import Control.Monad.Aff (Fiber)
 import Control.Monad.Aff.AVar (AVar)
 import Control.Monad.State (class MonadState)
 import DOM.Event.KeyboardEvent (KeyboardEvent)
+import DOM.Event.Types as ET
 import Data.Time.Duration (Milliseconds)
 import Halogen as H
 import Halogen.HTML.Events as HE
@@ -121,10 +122,11 @@ getState = pure <<< runStore =<< H.get
 --
 --
 
-augmentHTML :: forall t q q' -- q q' represents parent query wrapped by child query
-  . Array (H.IProp t (q q')) -- Our query type
- -> Array (H.IProp t (q q')) -- User query
- -> Array (H.IProp t (q q'))
+augmentHTML ::
+   ∀ props q
+   . Array (H.IProp props q)
+  -> Array (H.IProp props q)
+  -> Array (H.IProp props q)
 augmentHTML = flip (<>)
 
 -- Embed a parent query
@@ -132,6 +134,36 @@ embed :: ∀ item parentQuery e. H.Action parentQuery -> Unit -> Dispatch item p
 embed = ParentQuery <<< H.action
 
 -- Intended for use on the text input field.
+getInputProps ::
+   ∀ item o e p
+   . Array
+       ( H.IProp
+         ( onFocus :: ET.FocusEvent
+         , onKeyDown :: ET.KeyboardEvent
+         , onInput :: ET.Event
+         , value :: String
+         , onMouseDown :: ET.MouseEvent
+         , onMouseUp :: ET.MouseEvent
+         , onBlur :: ET.FocusEvent
+         , tabIndex :: Int
+         | p
+         )
+         (Dispatch item o e)
+       )
+  -> Array
+       ( H.IProp
+         ( onFocus :: ET.FocusEvent
+         , onKeyDown :: ET.KeyboardEvent
+         , onInput :: ET.Event
+         , value :: String
+         , onMouseDown :: ET.MouseEvent
+         , onMouseUp :: ET.MouseEvent
+         , onBlur :: ET.FocusEvent
+         , tabIndex :: Int
+         | p
+         )
+         (Dispatch item o e)
+       )
 getInputProps = augmentHTML
   [ HE.onFocus      $ HE.input_ $ Container $ Visibility Toggle
   , HE.onKeyDown    $ HE.input  $ \ev -> Container $ Key ev
@@ -143,6 +175,32 @@ getInputProps = augmentHTML
   ]
 
 -- Intended for use on a clickable toggle
+getToggleProps ::
+   ∀ item o e p
+   . Array
+       ( H.IProp
+         ( onClick :: ET.MouseEvent
+         , onKeyDown :: ET.KeyboardEvent
+         , onMouseDown :: ET.MouseEvent
+         , onMouseUp :: ET.MouseEvent
+         , onBlur :: ET.FocusEvent
+         , tabIndex :: Int
+         | p
+         )
+         (Dispatch item o e)
+       )
+  -> Array
+       ( H.IProp
+         ( onClick :: ET.MouseEvent
+         , onKeyDown :: ET.KeyboardEvent
+         , onMouseDown :: ET.MouseEvent
+         , onMouseUp :: ET.MouseEvent
+         , onBlur :: ET.FocusEvent
+         , tabIndex :: Int
+         | p
+         )
+         (Dispatch item o e)
+       )
 getToggleProps = augmentHTML
   [ HE.onClick      $ HE.input_ $ Container $ Visibility Toggle
   , HE.onKeyDown    $ HE.input  $ \ev -> Container $ Key ev
@@ -153,6 +211,28 @@ getToggleProps = augmentHTML
   ]
 
 -- Intended to be used on the container primitive itself
+getContainerProps ::
+   ∀ item o e p
+   . Array
+       ( H.IProp
+         ( onMouseDown :: ET.MouseEvent
+         , onMouseUp :: ET.MouseEvent
+         , onBlur :: ET.FocusEvent
+         , tabIndex :: Int
+         | p
+         )
+         (Dispatch item o e)
+       )
+  -> Array
+       ( H.IProp
+         ( onMouseDown :: ET.MouseEvent
+         , onMouseUp :: ET.MouseEvent
+         , onBlur :: ET.FocusEvent
+         , tabIndex :: Int
+         | p
+         )
+         (Dispatch item o e)
+       )
 getContainerProps = augmentHTML
   [ HE.onMouseDown $ HE.input_ $ Container $ Mouse Down
   , HE.onMouseUp   $ HE.input_ $ Container $ Mouse Up
@@ -160,45 +240,55 @@ getContainerProps = augmentHTML
   , HP.tabIndex 0
   ]
 
--- -- Intended for anything that will be embedded into the container primitive
-{--getChildProps ::--}
-  {--∀ item o e p--}
-  {--. Array--}
-    {--( H.IProp--}
-      {--( onBlur ∷ E.FocusEvent--}
-      {--, tabIndex ∷ Int--}
-      {--| p--}
-      {--)--}
-      {--(Dispatch item o e Unit)--}
-    {--)--}
-  {--→ Array --}
-    {--( H.IProp--}
-      {--( onBlur ∷ E.FocusEvent--}
-      {--, tabIndex ∷ Int--}
-      {--| p--}
-      {--)--}
-      {--(Dispatch item o e Unit)--}
-    {--)--}
+-- Intended for anything that will be embedded into the container primitive
+getChildProps ::
+   ∀ item o e p
+   . Array
+       ( H.IProp
+         ( onBlur :: ET.FocusEvent
+         , tabIndex :: Int
+         | p
+         )
+         (Dispatch item o e)
+       )
+  -> Array
+       ( H.IProp
+         ( onBlur :: ET.FocusEvent
+         , tabIndex :: Int
+         | p
+         )
+         (Dispatch item o e)
+       )
 getChildProps = augmentHTML
   [ HE.onBlur      $ HE.input_ $ Container $ Blur
   , HP.tabIndex 0
   ]
 
-{--getItemProps ::--}
-  {--∀ item o e p p'--}
-  {--. Int--}
-  {--→ Array (H.IProp p' (Dispatch item o e Unit))--}
-  {--→ Array--}
-      {--( H.IProp--}
-        {--( onClick ∷ E.MouseEvent--}
-        {--, onMouseOver ∷ E.MouseEvent--}
-        {--, onKeyDown ∷ E.KeyboardEvent--}
-        {--, onBlur ∷ E.FocusEvent--}
-        {--, tabIndex ∷ Int--}
-        {--| p--}
-        {--)--}
-        {--(Dispatch item o e Unit)--}
-      {--)--}
+getItemProps ::
+   ∀ item o e p
+   . Int
+  -> Array
+       ( H.IProp
+         ( onClick :: ET.MouseEvent
+         , onMouseOver :: ET.MouseEvent
+         , onKeyDown :: ET.KeyboardEvent
+         , onBlur :: ET.FocusEvent
+         , tabIndex :: Int
+         | p
+         )
+         (Dispatch item o e)
+       )
+  -> Array
+       ( H.IProp
+         ( onClick :: ET.MouseEvent
+         , onMouseOver :: ET.MouseEvent
+         , onKeyDown :: ET.KeyboardEvent
+         , onBlur :: ET.FocusEvent
+         , tabIndex :: Int
+         | p
+         )
+         (Dispatch item o e)
+       )
 getItemProps index = augmentHTML
   [ HE.onClick     $ HE.input_ $ Container $ Select index
   , HE.onMouseOver $ HE.input_ $ Container $ Highlight (Index index)
