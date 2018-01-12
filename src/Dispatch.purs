@@ -2,10 +2,19 @@ module Select.Dispatch where
 
 import Prelude
 
+import Control.Comonad.Store (Store, runStore, seeks, store)
+import Data.Maybe (Maybe)
+import Data.Tuple (Tuple(..))
+import Control.Monad.Aff (Fiber)
+import Control.Monad.Aff.AVar (AVar)
+import Control.Monad.State (class MonadState)
 import DOM.Event.KeyboardEvent (KeyboardEvent)
+import DOM.Event.Types as ET
+import Data.Time.Duration (Milliseconds)
 import Halogen as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
+import Select.Effects (Effects)
 
 {-
 
@@ -18,24 +27,55 @@ to share query types.
 -- primitives. In any given primitive, case on your specific query type, and return all
 -- others wrapped in Emit.
 
-data Dispatch item o a
+data Dispatch item o e a
   = ParentQuery (o Unit) a
-  | S (SearchQuery Unit) a
-  | C (ContainerQuery item Unit) a
+  | Search (SearchQuery item o e) a
+  | Container (ContainerQuery item o e) a
 
+-- Primitives share the same Store type but can provide their own state type
+type State s item o e = Store s (H.ComponentHTML (Dispatch item o e))
+
+{-
+
+SEARCH PRIMITIVE
+
+-}
 
 -- Primitive query types using `a` as a phantom argument to allow being used as an action
-data SearchQuery a
+data SearchQuery item o e
   = TextInput String
+  | SearchReceiver (SearchInput item o e)
 
-data ContainerQuery item a
+type SearchState e =
+  { search    :: String
+  , ms        :: Milliseconds
+  , debouncer :: Maybe (Debouncer e)
+  }
+
+type Debouncer e =
+  { var   :: AVar Unit
+  , fiber :: Fiber (Effects e) Unit }
+
+type SearchInput item o e =
+  { search :: Maybe String
+  , debounceTime :: Milliseconds
+  , render :: SearchState e -> H.ComponentHTML (Dispatch item o e) }
+
+
+{-
+
+CONTAINER PRIMITIVE
+
+-}
+
+data ContainerQuery item o e
   = Highlight   Target              -- Change the highlighted item
   | Select      Int                 -- Select a particular item
   | Key         KeyboardEvent       -- A key has been pressed
   | Mouse       MouseState          -- Update mousedown state
   | Blur                            -- Blur event
   | Visibility  VisibilityStatus    -- Open or close the menu
-  | SetItems    (Array (Item item)) -- Set the data (used by parent)
+  | ContainerReceiver (ContainerInput item o e)
 
 data Target
   = Next
@@ -51,79 +91,208 @@ data VisibilityStatus
   | Off
   | Toggle
 
-data Item item
-  = Selected item
-  | Selectable item
-  | Disabled item
+type ContainerState item =
+  { items            :: Array item
+  , open             :: Boolean
+  , highlightedIndex :: Maybe Int
+  , lastIndex        :: Int
+  , mouseDown        :: Boolean
+  }
 
-instance showItem :: Show item => Show (Item item) where
-  show (Selected item)   = "Selected: " <> show item
-  show (Selectable item) = "Selectable: " <> show item
-  show (Disabled item)   = "Disabled: " <> show item
+type ContainerInput item o e =
+  { items  :: Array item
+  , render :: ContainerState item -> H.ComponentHTML (Dispatch item o e) }
 
-instance eqItem :: Eq item => Eq (Item item) where
-  eq (Selected a) (Selected b) = eq a b
-  eq (Selectable a) (Selectable b) = eq a b
-  eq (Disabled a) (Disabled b) = eq a b
-  eq (Selected a) _ = false
-  eq (Selectable a) _ = false
-  eq (Disabled a) _ = false
+
+emit :: ∀ a0 a1 o item e f. Applicative f => (o Unit -> f Unit) -> Dispatch item o e a0 -> a1 -> f a1
+emit f (ParentQuery o _) a = a <$ f o
+emit _ _ a = pure a
+
+updateStore :: ∀ state html. (state -> html) -> (state -> state) -> Store state html -> Store state html
+updateStore r f = (\(Tuple _ s) -> store r s) <<< runStore <<< seeks f
+
+-- Helper to get and unpack the primitive state type from the Store type
+getState :: ∀ m s a. MonadState (Store s a) m => m (Tuple (s -> a) s)
+getState = pure <<< runStore =<< H.get
+
+
 --
 --
 -- RENDERING
 --
 --
 
-augmentHTML :: forall t q q' -- q q' represents parent query wrapped by child query
-  . Array (H.IProp t (q q')) -- Our query type
- -> Array (H.IProp t (q q')) -- User query
- -> Array (H.IProp t (q q'))
+augmentHTML ::
+   ∀ props q
+   . Array (H.IProp props q)
+  -> Array (H.IProp props q)
+  -> Array (H.IProp props q)
 augmentHTML = flip (<>)
 
 -- Embed a parent query
-embed :: ∀ item parentQuery. H.Action parentQuery -> Unit -> Dispatch item parentQuery Unit
+embed :: ∀ item parentQuery e. H.Action parentQuery -> Unit -> Dispatch item parentQuery e Unit
 embed = ParentQuery <<< H.action
 
 -- Intended for use on the text input field.
+getInputProps ::
+   ∀ item o e p
+   . Array
+       ( H.IProp
+         ( onFocus :: ET.FocusEvent
+         , onKeyDown :: ET.KeyboardEvent
+         , onInput :: ET.Event
+         , value :: String
+         , onMouseDown :: ET.MouseEvent
+         , onMouseUp :: ET.MouseEvent
+         , onBlur :: ET.FocusEvent
+         , tabIndex :: Int
+         | p
+         )
+         (Dispatch item o e)
+       )
+  -> Array
+       ( H.IProp
+         ( onFocus :: ET.FocusEvent
+         , onKeyDown :: ET.KeyboardEvent
+         , onInput :: ET.Event
+         , value :: String
+         , onMouseDown :: ET.MouseEvent
+         , onMouseUp :: ET.MouseEvent
+         , onBlur :: ET.FocusEvent
+         , tabIndex :: Int
+         | p
+         )
+         (Dispatch item o e)
+       )
 getInputProps = augmentHTML
-  [ HE.onFocus      $ HE.input_ $ C $ Visibility Toggle
-  , HE.onKeyDown    $ HE.input  $ \ev -> C $ Key ev
-  , HE.onValueInput $ HE.input  $ \ev -> S $ TextInput ev
-  , HE.onMouseDown  $ HE.input_ $ C $ Mouse Down
-  , HE.onMouseUp    $ HE.input_ $ C $ Mouse Up
-  , HE.onBlur       $ HE.input_ $ C $ Blur
+  [ HE.onFocus      $ HE.input_ $ Container $ Visibility Toggle
+  , HE.onKeyDown    $ HE.input  $ \ev -> Container $ Key ev
+  , HE.onValueInput $ HE.input  $ \ev -> Search $ TextInput ev
+  , HE.onMouseDown  $ HE.input_ $ Container $ Mouse Down
+  , HE.onMouseUp    $ HE.input_ $ Container $ Mouse Up
+  , HE.onBlur       $ HE.input_ $ Container $ Blur
   , HP.tabIndex 0
   ]
 
-
 -- Intended for use on a clickable toggle
+getToggleProps ::
+   ∀ item o e p
+   . Array
+       ( H.IProp
+         ( onClick :: ET.MouseEvent
+         , onKeyDown :: ET.KeyboardEvent
+         , onMouseDown :: ET.MouseEvent
+         , onMouseUp :: ET.MouseEvent
+         , onBlur :: ET.FocusEvent
+         , tabIndex :: Int
+         | p
+         )
+         (Dispatch item o e)
+       )
+  -> Array
+       ( H.IProp
+         ( onClick :: ET.MouseEvent
+         , onKeyDown :: ET.KeyboardEvent
+         , onMouseDown :: ET.MouseEvent
+         , onMouseUp :: ET.MouseEvent
+         , onBlur :: ET.FocusEvent
+         , tabIndex :: Int
+         | p
+         )
+         (Dispatch item o e)
+       )
 getToggleProps = augmentHTML
-  [ HE.onClick      $ HE.input_ $ C $ Visibility Toggle
-  , HE.onKeyDown    $ HE.input  $ \ev -> C $ Key ev
-  , HE.onMouseDown  $ HE.input_ $ C $ Mouse Down
-  , HE.onMouseUp    $ HE.input_ $ C $ Mouse Up
-  , HE.onBlur       $ HE.input_ $ C $ Blur
+  [ HE.onClick      $ HE.input_ $ Container $ Visibility Toggle
+  , HE.onKeyDown    $ HE.input  $ \ev -> Container $ Key ev
+  , HE.onMouseDown  $ HE.input_ $ Container $ Mouse Down
+  , HE.onMouseUp    $ HE.input_ $ Container $ Mouse Up
+  , HE.onBlur       $ HE.input_ $ Container $ Blur
   , HP.tabIndex 0
   ]
 
 -- Intended to be used on the container primitive itself
+getContainerProps ::
+   ∀ item o e p
+   . Array
+       ( H.IProp
+         ( onMouseDown :: ET.MouseEvent
+         , onMouseUp :: ET.MouseEvent
+         , onBlur :: ET.FocusEvent
+         , tabIndex :: Int
+         | p
+         )
+         (Dispatch item o e)
+       )
+  -> Array
+       ( H.IProp
+         ( onMouseDown :: ET.MouseEvent
+         , onMouseUp :: ET.MouseEvent
+         , onBlur :: ET.FocusEvent
+         , tabIndex :: Int
+         | p
+         )
+         (Dispatch item o e)
+       )
 getContainerProps = augmentHTML
-  [ HE.onMouseDown $ HE.input_ $ C $ Mouse Down
-  , HE.onMouseUp   $ HE.input_ $ C $ Mouse Up
-  , HE.onBlur      $ HE.input_ $ C $ Blur
+  [ HE.onMouseDown $ HE.input_ $ Container $ Mouse Down
+  , HE.onMouseUp   $ HE.input_ $ Container $ Mouse Up
+  , HE.onBlur      $ HE.input_ $ Container $ Blur
   , HP.tabIndex 0
   ]
 
--- -- Intended for anything that will be embedded into the container primitive
+-- Intended for anything that will be embedded into the container primitive
+getChildProps ::
+   ∀ item o e p
+   . Array
+       ( H.IProp
+         ( onBlur :: ET.FocusEvent
+         , tabIndex :: Int
+         | p
+         )
+         (Dispatch item o e)
+       )
+  -> Array
+       ( H.IProp
+         ( onBlur :: ET.FocusEvent
+         , tabIndex :: Int
+         | p
+         )
+         (Dispatch item o e)
+       )
 getChildProps = augmentHTML
-  [ HE.onBlur      $ HE.input_ $ C $ Blur
+  [ HE.onBlur      $ HE.input_ $ Container $ Blur
   , HP.tabIndex 0
   ]
 
+getItemProps ::
+   ∀ item o e p
+   . Int
+  -> Array
+       ( H.IProp
+         ( onClick :: ET.MouseEvent
+         , onMouseOver :: ET.MouseEvent
+         , onKeyDown :: ET.KeyboardEvent
+         , onBlur :: ET.FocusEvent
+         , tabIndex :: Int
+         | p
+         )
+         (Dispatch item o e)
+       )
+  -> Array
+       ( H.IProp
+         ( onClick :: ET.MouseEvent
+         , onMouseOver :: ET.MouseEvent
+         , onKeyDown :: ET.KeyboardEvent
+         , onBlur :: ET.FocusEvent
+         , tabIndex :: Int
+         | p
+         )
+         (Dispatch item o e)
+       )
 getItemProps index = augmentHTML
-  [ HE.onClick     $ HE.input_ $ C $ Select index
-  , HE.onMouseOver $ HE.input_ $ C $ Highlight (Index index)
-  , HE.onKeyDown   $ HE.input  $ \ev -> C $ Key ev
-  , HE.onBlur      $ HE.input_ $ C $ Blur
+  [ HE.onClick     $ HE.input_ $ Container $ Select index
+  , HE.onMouseOver $ HE.input_ $ Container $ Highlight (Index index)
+  , HE.onKeyDown   $ HE.input  $ \ev -> Container $ Key ev
+  , HE.onBlur      $ HE.input_ $ Container $ Blur
   , HP.tabIndex 0
   ]

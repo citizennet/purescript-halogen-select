@@ -2,21 +2,20 @@ module Dropdown where
 
 import Prelude
 
-import CSS as CSS
 import Control.Monad.Aff.Console (log, logShow)
+import CSS as CSS
 import DOM.Event.KeyboardEvent as KE
-import Data.Array (filter, mapWithIndex, (:))
-import Data.Foldable (length)
+import Data.Array ((:), difference, mapWithIndex)
 import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML as HH
-import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Select.Dispatch (ContainerQuery(..), Dispatch(..), getChildProps, getContainerProps, getItemProps, getToggleProps)
-import Select.Dispatch as D
+import Halogen.HTML.CSS as HC
+import Select.Dispatch (ContainerQuery(..), ContainerState, Dispatch(Container), emit, embed, getToggleProps, getContainerProps, getChildProps, getItemProps)
 import Select.Effects (FX)
-import Select.Primitive.Container as Container
+import Select.Primitive.Container as C
+
 
 {-
 
@@ -40,19 +39,17 @@ a minimal example like this one, the end user will need to:
 
 -}
 
--- 1. The parent must handle the Menu.Emit message with `eval q` and can
---    handle the Menu.Selected item message however they would like.
-data Query a
-  = NoOp a
-  | Log String a
-  | Handle (Container.Message String Query) a
+type DropdownItem = String
 
 type State =
-  { items    :: Array (D.Item String)
-  , selected :: Array String }
+  { items    :: Array DropdownItem
+  , selected :: Array DropdownItem }
 
+data Query e a
+  = Log String a
+  | HandleContainer (C.Message String (Query e) e) a
 
-component :: ∀ e. H.Component HH.HTML Query Unit Void (FX e)
+component :: ∀ e. H.Component HH.HTML (Query e) Unit Void (FX e)
 component =
   H.parentComponent
     { initialState: const initState
@@ -64,7 +61,7 @@ component =
     initState :: State
     initState = { items: testData, selected: [] }
 
-    render :: State -> H.ParentHTML Query (Dispatch String Query) Unit (FX e)
+    render :: State -> H.ParentHTML (Query e) (Dispatch DropdownItem (Query e) e) Unit (FX e)
     render st =
       HH.div
         [ HP.class_ $ HH.ClassName "mw8 sans-serif center" ]
@@ -74,10 +71,12 @@ component =
             ]
             [ HH.text "Menu Component"]
           , HH.p_
-            [ HH.text "Open the console to view outputs. Mouse over the toggle to trigger an embedded parent query. Click the toggle to open or close the menu. Click an item to select it (and remove it from the available options)." ]
+            [ HH.text "Open the console to view outputs. "
+            , HH.text "Mouse over the toggle to trigger an embedded parent query. "
+            , HH.text "Click the toggle to open or close the menu. Click an item to select it (and remove it from the available options)." ]
 
           -- The typeahead can be mounted anywhere
-          , HH.slot unit (Container.component renderContainer) { items: testData } (HE.input Handle) ]
+          , HH.slot unit C.component { items: testData, render: renderContainer } (HE.input HandleContainer) ]
 
           -- Selections are managed outside the component
           <> selected )
@@ -93,27 +92,15 @@ component =
     -- Here, Menu.Emit recursively calls the parent eval function.
     -- Menu.Selected item is handled by removing that item from
     -- the options and maintaining it here in state.
-    eval :: Query ~> H.ParentDSL State Query (Dispatch String Query) Unit Void (FX e)
+    eval :: (Query e) ~> H.ParentDSL State (Query e) (Dispatch DropdownItem (Query e) e) Unit Void (FX e)
     eval = case _ of
-      -- Dummy behavior to prove queries route back up properly
-      NoOp a -> pure a
-
       Log s a -> a <$ do
         H.liftAff $ log s
 
-      -- All child messages
-      Handle m a -> case m of
+      HandleContainer m a -> case m of
+        C.Emit q -> emit eval q a
 
-        -- This is expected to call `eval q`
-        Container.Emit q -> case q of
-          -- Evaluate the parent query if it exists.
-          D.ParentQuery q _ -> eval q *> pure a
-
-          -- The container won't emit anything else
-          _ -> pure a
-
-        -- The parent can do whatever they like here.
-        Container.ItemSelected item -> do
+        C.ItemSelected item -> do
           H.liftAff $ log ("Selected: " <> item)
           H.modify \st -> st { selected = ( item : st.selected ) }
 
@@ -121,10 +108,8 @@ component =
           H.liftAff $ logShow st.selected
           _  <- H.query unit
                   $ H.action
-                  $ C
-                  $ SetItems
-                  $ updateItems st.items st.selected
-
+                  $ Container
+                  $ ContainerReceiver { render: renderContainer, items: difference st.items st.selected }
           pure a
 
 
@@ -134,30 +119,26 @@ HELPERS
 
 -}
 
--- Brute force. Can be more elegant.
-updateItems :: Array (D.Item String) -> Array String -> Array (D.Item String)
-updateItems items selected = map (\i -> update i selected) items
-  where
-    -- If the item is in the selected list then updated it
-    update :: D.Item String -> Array String -> D.Item String
-    update item arr = if length (filter (\m -> m == str) arr) > 0 then D.Selected str else item
-      where
-        str = getStr item
+-- The parent must provide some input data.
+testData :: Array DropdownItem
+testData =
+  [ "Thomas Honeyman"
+  , "Dave Zuch"
+  , "Chris Cornwell"
+  , "Forest Toney"
+  , "Lee Leathers"
+  , "Kim Wu"
+  , "Rachel Blair"
+  , "Tara Strauss"
+  , "Sanket Sabnis"
+  , "Aaron Chu"
+  , "Vincent Busam"
+  , "Riley Gibbs"
+  , "THE COOKIE MONSTER DID NOTHING WRONG" ]
 
-{-
 
-CONFIGURATION
-
-The parent will need to fill out this configuration information to function
-correctly.
-
--}
-
--- The parent is mainly responsible for filling out a function with this type signature,
--- and attaching our queries. This can be done with our helper functions, or they can
--- attach everything as they see fit by hand.
-
-renderContainer :: (Container.State String) -> H.HTML Void (Dispatch String Query)
+-- Render function to pass to the child container component
+renderContainer :: ∀ e. (ContainerState String) -> H.HTML Void (Dispatch String (Query e) e)
 renderContainer st =
   HH.div_
     $ if not st.open
@@ -167,19 +148,19 @@ renderContainer st =
 
     -- Render whatever is going to provide the action for toggling the menu. Notably, this is
     -- NOT a primitive.
-    renderToggle :: H.HTML Void (Dispatch String Query)
+    renderToggle :: H.HTML Void (Dispatch String (Query e) e)
     renderToggle =
       HH.span
       ( getToggleProps
-        [ HE.onMouseOver $ HE.input_ $ D.embed (Log "I'm the parent.")
+        [ HE.onMouseOver $ HE.input_ $ embed (Log "I'm the parent.")
         , HP.class_      $ HH.ClassName "f5 link ba bw1 ph3 pv2 mb2 dib near-black pointer outline-0"
         ]
       )
         [ HH.text "Toggle" ]
 
     -- Render the container for the items
-    renderItems :: Array (H.HTML Void (Dispatch String Query))
-                -> H.HTML Void (Dispatch String Query)
+    renderItems :: Array (H.HTML Void (Dispatch DropdownItem (Query e) e))
+                -> H.HTML Void (Dispatch String (Query e) e)
     renderItems html =
       HH.div
         ( getContainerProps
@@ -197,7 +178,7 @@ renderContainer st =
                 [ HH.button
                     ( getChildProps
                       [ HP.class_ $ HH.ClassName "ma2 ba bw1 ph3 pv2 dib b--near-black pointer outline-0 link"
-                      , HE.onClick $ HE.input_ $ D.embed (Log "button in container clicked")
+                      , HE.onClick $ HE.input_ $ embed (Log "button in container clicked")
                       ]
                     )
                     [ HH.text "Click Me" ]
@@ -208,47 +189,11 @@ renderContainer st =
             html
         ]
 
-    renderItem :: Int -> D.Item String -> H.HTML Void (Dispatch String Query)
-    renderItem index item = HH.li item' [ HH.text str ]
+    renderItem :: Int -> DropdownItem -> H.HTML Void (Dispatch DropdownItem (Query e) e)
+    renderItem index item = HH.li item' [ HH.text item ]
       where
-        str :: String
-        str = getStr item
-
-        item' = case item of
-          D.Selectable str -> getItemProps index
+        item' =
+          getItemProps index
               [ HP.class_ $ HH.ClassName
                   $ "lh-copy pa2 ba bl-0 bt-0 br-0 b--dotted b--black-30"
                   <> if st.highlightedIndex == Just index then " bg-light-blue" else "" ]
-
-          D.Selected str -> getItemProps index
-              [ HP.class_ $ HH.ClassName
-                  $ "lh-copy pa2 ba bl-0 bt-0 br-0 b--dotted b--black-30 bg-washed-blue"
-                  <> if st.highlightedIndex == Just index then " bg-light-blue" else "" ]
-
-          D.Disabled str ->
-              [ HP.class_ $ HH.ClassName
-                  $ "lh-copy pa2 ba bl-0 bt-0 br-0 b--dotted black-30 b--black-30"
-                  <> if st.highlightedIndex == Just index then " bg-light-gray" else "" ]
-
-
-getStr :: D.Item String -> String
-getStr (D.Selected str)   = str
-getStr (D.Selectable str) = str
-getStr (D.Disabled str)   = str
-
--- The parent must provide some input data.
-testData :: Array (D.Item String)
-testData = map (\i -> D.Selectable i)
-  [ "Thomas Honeyman"
-  , "Dave Zuch"
-  , "Chris Cornwell"
-  , "Forest Toney"
-  , "Lee Leathers"
-  , "Kim Wu"
-  , "Rachel Blair"
-  , "Tara Strauss"
-  , "Sanket Sabnis"
-  , "Aaron Chu"
-  , "Vincent Busam"
-  , "Riley Gibbs"
-  , "THE COOKIE MONSTER DID NOTHING WRONG" ]
