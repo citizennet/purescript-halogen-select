@@ -19,6 +19,7 @@
     "type": "git",
     "url": "git://github.com/citizennet/purescript-halogen-select.git"
   },
+  "license": "Apache-2.0",
   "ignore": [
     "**/.*",
     "node_modules",
