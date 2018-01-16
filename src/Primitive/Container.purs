@@ -22,14 +22,17 @@ The Container primitive ...
 
 -}
 
--- All components must allow for emitting the parent's queries back up to the parent.
--- In addition, the dropdown supports selecting items from the list.
+-- | The Container sends the parent messages in two instances:
+-- | Emit: an embedded query has been triggered, and you must decide how to handle it; typically via evaluating
+-- | in the parent or re-routing the query to another primitive.
+-- | ItemSelected: an item has been selected from the container.
 data Message item o e
   = Emit (Dispatch item o e Unit)
   | ItemSelected item
 
--- The primitive handles state and transformations but defers all rendering to the parent. The
--- render function can be written using our helper functions to ensure the right events are included.
+-- | The primitive handles state and transformations but defers all rendering to the parent. The
+-- | render function can be written using our helper functions to ensure the right events are included. See the `Dispatch`
+-- | module for more information.
 component :: ∀ item o e. H.Component HH.HTML (Dispatch item o e) (ContainerInput item o e) (Message item o e) (FX e)
 component =
   H.component

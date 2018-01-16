@@ -1,4 +1,5 @@
 module Select.Primitive.Search where
+-- |
 
 import Prelude
 
@@ -20,10 +21,17 @@ The Search primitive captures user input and returns it to the parent.
 
 -}
 
+-- | The Search sends the parent messages in two instances:
+-- | Emit: an embedded query has been triggered, and you must decide how to handle it; typically via evaluating
+-- | in the parent or re-routing the query to another primitive.
+-- | NewSearch: some new text has been searched (this is automatically debounced).
 data Message item o e
   = Emit (Dispatch item o e Unit)
   | NewSearch String
 
+-- | The primitive handles state and transformations but defers all rendering to the parent. The
+-- | render function can be written using our helper functions to ensure the right events are included. See the `Dispatch`
+-- | module for more information.
 component :: ∀ item o e. H.Component HH.HTML (Dispatch item o e) (SearchInput item o e) (Message item o e) (FX e)
 component =
   H.component
