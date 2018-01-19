@@ -22,9 +22,9 @@ The Search primitive captures user input and returns it to the parent.
 -}
 
 -- | The Search sends the parent messages in two instances:
--- | Emit: an embedded query has been triggered, and you must decide how to handle it; typically via evaluating
--- | in the parent or re-routing the query to another primitive.
--- | NewSearch: some new text has been searched (this is automatically debounced).
+-- | - `Emit`: An embedded query has been triggered, and you must decide how to handle it; typically via evaluating
+-- |           in the parent or re-routing the query to another primitive.
+-- | - `NewSearch`: Some new text has been searched (this is automatically debounced).
 data Message item o e
   = Emit (Dispatch item o e Unit)
   | NewSearch String

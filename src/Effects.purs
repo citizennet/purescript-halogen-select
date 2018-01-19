@@ -11,5 +11,8 @@ import Network.HTTP.Affjax (AJAX)
 type FX e = Aff (Effects e)
 
 -- | The primitive Effects type. To extend your own component with this type, you might do:
+-- |
+-- | ```purescript
 -- | main :: ∀ e. Eff (HalogenEffects (Effects e)) Unit
+-- | ```
 type Effects e = ( dom :: DOM, console :: CONSOLE, ajax :: AJAX, avar :: AVAR, now :: NOW | e)
