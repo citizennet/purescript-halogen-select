@@ -23,9 +23,9 @@ The Container primitive ...
 -}
 
 -- | The Container sends the parent messages in two instances:
--- | Emit: an embedded query has been triggered, and you must decide how to handle it; typically via evaluating
--- | in the parent or re-routing the query to another primitive.
--- | ItemSelected: an item has been selected from the container.
+-- | - `Emit`: An embedded query has been triggered, and you must decide how to handle it; typically via evaluating
+-- |           in the parent or re-routing the query to another primitive.
+-- | - `ItemSelected`: An item has been selected from the container.
 data Message item o e
   = Emit (Dispatch item o e Unit)
   | ItemSelected item
@@ -127,4 +127,3 @@ component =
           H.modify
             $ updateStore i.render
             $ (_ { items = i.items, highlightedIndex = Nothing, lastIndex = length i.items - 1 })
-

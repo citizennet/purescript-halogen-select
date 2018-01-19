@@ -29,10 +29,10 @@ to share query types.
 -- | you will supply the Dispatch type as the primitive's query.
 -- | See the respective primitives for their available queries.
 -- |
--- | `item` - Your defined type of the items you are storing in the primitives
--- | `o` - The query type of the parent component containing the primitives
--- | `e` - The effects type of the primitives
--- | `a` - The Halogen return type, which must remain polymorphic as in all Halogen components.
+-- | - `item`: Your defined type of the items you are storing in the primitives
+-- | - `o`: The query type of the parent component containing the primitives
+-- | - `e`: The effects type of the primitives
+-- | - `a`: The Halogen return type, which must remain polymorphic as in all Halogen components.
 data Dispatch item o e a
   = ParentQuery (o Unit) a
   | Search (SearchQuery item o e) a
@@ -47,7 +47,7 @@ data Dispatch item o e a
 -- | function can only take `State` as its input, you need the render function available
 -- | via the comonad, StoreT.
 -- |
--- | `s` - The State type defined for the primitive.
+-- | - `s`: The state type defined for the primitive
 type State s item o e = Store s (H.ComponentHTML (Dispatch item o e))
 
 {-
@@ -59,17 +59,18 @@ SEARCH PRIMITIVE
 -- | The query type for the `Search` primitive. This primitive handles text input
 -- | and debouncing.
 -- |
--- | TextInput - handle new text input as a string
--- | SearchReceiver - update the component with new `Input` when the parent re-renders.
+-- | - `TextInput`: Handle new text input as a string
+-- | - `SearchReceiver`: Update the component with new `Input` when the parent re-renders
 data SearchQuery item o e
   = TextInput String
   | SearchReceiver (SearchInput item o e)
 
 -- | The `Search` primitive internal state
--- | - `search`: the `String` contained within the primitive
--- | - `ms`: number of milliseconds for the input to be debounced before passing
+-- |
+-- | - `search`: The `String` contained within the primitive
+-- | - `ms`: Number of milliseconds for the input to be debounced before passing
 -- |         a message to the parent. Set to 0.0 if you don't want debouncing.
--- | - `debouncer`: used to facilitate debouncing of the input
+-- | - `debouncer`: Used to facilitate debouncing of the input
 type SearchState e =
   { search    :: String
   , ms        :: Milliseconds
@@ -82,10 +83,11 @@ type Debouncer e =
   , fiber :: Fiber (Effects e) Unit }
 
 -- | The input type of the `Search` primitive
--- | - `search`: an optional initial value for the `search` key on the `SearchState`
--- | - `debounceTime`: a value in milliseconds for the debounce delay. Set to 0.0 for
+-- |
+-- | - `search`: An optional initial value for the `search` key on the `SearchState`
+-- | - `debounceTime`: A value in milliseconds for the debounce delay. Set to 0.0 for
 -- | no debouncing.
--- | - `render`: the render function for the primitive
+-- | - `render`: The render function for the primitive
 type SearchInput item o e =
   { search :: Maybe String
   , debounceTime :: Milliseconds
@@ -100,13 +102,13 @@ CONTAINER PRIMITIVE
 
 -- | The query type for the `Container` primitive.
 -- |
--- | Highlight - change the highlighted item to the next, previous, or a specific index.
--- | Select - select an item at the specified index
--- | Key - capture key events for arrow navigation, Escape to close, and Enter to select.
--- | Mouse - capture mouse events to close the menu or select an item
--- | Blur - trigger the DOM blur event
--- | Visibility - set the visibility by toggling, setting to on, or setting to off.
--- | ContainerReceiver - update the component on new `Input` when the parent re-renders.
+-- | - `Highlight`: Change the highlighted item to the next, previous, or a specific index.
+-- | - `Select`: Select an item at the specified index
+-- | - `Key`: Capture key events for arrow navigation, Escape to close, and Enter to select.
+-- | - `Mouse`: Capture mouse events to close the menu or select an item
+-- | - `Blur`: Trigger the DOM blur event
+-- | - `Visibility`: Set the visibility by toggling, setting to on, or setting to off.
+-- | - `ContainerReceiver`: Update the component on new `Input` when the parent re-renders.
 data ContainerQuery item o e
   = Highlight   Target
   | Select      Int
@@ -134,11 +136,12 @@ data VisibilityStatus
   | Toggle
 
 -- | The internal state of the `Container` primitive
--- | - `items`: an array of items held within the `Container`
--- | - `open`: whether the `Container` is visible
--- | - `highlightedIndex`: the index of the highlighted item, if one exists
--- | - `lastIndex`: the index of the last item in the `Container`
--- | - `mouseDown`: whether the mouse is clicked or not
+-- |
+-- | - `items`: An array of items held within the `Container`
+-- | - `open`: Whether the `Container` is visible
+-- | - `highlightedIndex`: The index of the highlighted item, if one exists
+-- | - `lastIndex`: The index of the last item in the `Container`
+-- | - `mouseDown`: Whether the mouse is clicked or not
 type ContainerState item =
   { items            :: Array item
   , open             :: Boolean
@@ -148,14 +151,15 @@ type ContainerState item =
   }
 
 -- | The input type of the `Container` primitive
--- | - `items`: the initial value of `items` in the `ContainerState`
--- | - `render`: the `render` function for the `Container` primitive
+-- |
+-- | - `items`: The initial value of `items` in the `ContainerState`
+-- | - `render`: The `render` function for the `Container` primitive
 type ContainerInput item o e =
   { items  :: Array item
   , render :: ContainerState item -> H.ComponentHTML (Dispatch item o e) }
 
 
--- | A helper function for conveniently evaluating a `ParentQuery` using the parent's `eval` function
+-- | A helper function for conveniently evaluating a `ParentQuery` using the parent's `eval` function.
 -- |
 -- | It accepts an `eval` function, a `Dispatch` query, and the `a` from the parent's context.
 -- |
@@ -167,16 +171,20 @@ emit :: ∀ a0 a1 o item e f. Applicative f => (o Unit -> f Unit) -> Dispatch it
 emit f (ParentQuery o _) a = a <$ f o
 emit _ _ a = pure a
 
--- | Helper for wholly updating the `State` (`Store`) of a primitive
+-- | Helper for wholly updating the `State` (`Store`) of a primitive.
 -- |
--- | Used when the `render` function needs to be updated
+-- | Used when the `render` function needs to be updated.
+-- |
 -- | Note: Use `seeks` if only the primitive's internal state needs to be updated (not the entire Store).
 updateStore :: ∀ state html. (state -> html) -> (state -> state) -> Store state html -> Store state html
 updateStore r f = (\(Tuple _ s) -> store r s) <<< runStore <<< seeks f
 
 -- | Helper to get and unpack the primitive state type from the Store type. When used with pattern matching,
 -- | you can access state with:
+-- |
+-- | ```purescript
 -- | (Tuple renderFunction state) <- getState
+-- | ```
 getState :: ∀ m s a. MonadState (Store s a) m => m (Tuple (s -> a) s)
 getState = pure <<< runStore =<< H.get
 
@@ -200,7 +208,10 @@ augmentHTML ::
 augmentHTML = flip (<>)
 
 -- | Embed a parent query into a `Dispatch` type. In use:
+-- |
+-- | ```purescript
 -- | [ onClick $ input_ $ embed YourQueryType ]
+-- | ```
 embed :: ∀ item parentQuery e. H.Action parentQuery -> Unit -> Dispatch item parentQuery e Unit
 embed = ParentQuery <<< H.action
 
@@ -315,7 +326,10 @@ getContainerProps = augmentHTML
 
 -- | Intended for anything that will be embedded into the container primitive. For example, if you embed
 -- | a button with your own functionality into the container primitive, you might do this:
+-- |
+-- | ```purescript
 -- | button ( getChildProps [ onClick $ input_ $ embed YourQueryType ] ) [ text "Button text" ]
+-- | ```
 getChildProps ::
    ∀ item o e p
    . Array
