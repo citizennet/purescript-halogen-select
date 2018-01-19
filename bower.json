@@ -32,16 +32,16 @@
     "purescript-affjax": "^5.0.0",
     "purescript-dom": "^4.13.2",
     "purescript-halogen-css": "^7.0.0",
-    "purescript-dom-classy": "^2.1.0"
+    "purescript-dom-classy": "^2.1.0",
+    "purescript-transformers": "^3.5.0",
+    "purescript-control": "^3.3.1",
+    "purescript-now": "^3.0.0"
   },
   "devDependencies": {
     "purescript-console": "^3.0.0",
     "purescript-css": "^3.3.0",
     "purescript-datetime": "^3.4.1",
     "purescript-formatters": "^3.0.1",
-    "purescript-now": "^3.0.0",
-    "purescript-transformers": "^3.5.0",
-    "purescript-control": "^3.3.1",
     "purescript-debug": "^3.0.0"
   }
 }
