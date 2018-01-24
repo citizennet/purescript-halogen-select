@@ -9,35 +9,36 @@ import Data.Foldable (length)
 import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..), contains)
 import Data.Time.Duration (Milliseconds(..))
+import Data.Either.Nested (Either2)
+import Data.Functor.Coproduct.Nested (Coproduct2)
+import Halogen.Component.ChildPath as CP
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.HTML.CSS as HC
-import Select.Dispatch (SearchState, ContainerState, ContainerQuery(..), Dispatch(..), emit, getInputProps, getContainerProps, getChildProps, getItemProps)
 import Select.Effects (FX)
 import Select.Primitive.Container as C
 import Select.Primitive.Search as S
 
-{-
-
--}
 
 type TypeaheadItem = String
 
-data Query e a
-  = HandleContainer (C.Message String (Query e) e) a
-  | HandleSearch    (S.Message String (Query e) e) a
+data Query a
+  = Log String a
+  | HandleContainer (C.Message Query TypeaheadItem) a
+  | HandleSearch    (S.Message Query TypeaheadItem) a
 
-data Slot = Slot Int
-derive instance eqSlot :: Eq Slot
-derive instance ordSlot :: Ord Slot
+type ChildQuery e = Coproduct2 (C.ContainerQuery Query TypeaheadItem) (S.SearchQuery Query TypeaheadItem e)
+type ChildSlot = Either2 Unit Unit
+
+type HTML e = H.ParentHTML Query (ChildQuery e) ChildSlot (FX e)
 
 type State =
   { items    :: Array TypeaheadItem
   , selected :: Array TypeaheadItem }
 
-component :: ∀ e. H.Component HH.HTML (Query e) Unit Void (FX e)
+component :: ∀ e. H.Component HH.HTML Query Unit Void (FX e)
 component =
   H.parentComponent
     { initialState: const initState
@@ -49,33 +50,28 @@ component =
     initState :: State
     initState = { items: testData, selected: [] }
 
-    render :: State -> H.ParentHTML (Query e) (Dispatch TypeaheadItem (Query e) e) Slot (FX e)
+    render :: State -> HTML e
     render st =
       HH.div
         [ HP.class_ $ HH.ClassName "mw8 sans-serif center" ]
         [ HH.h2
           [ HP.class_ $ HH.ClassName "black-80 f-headline-1" ]
           [ HH.text "Typeahead Component"]
-        , HH.slot (Slot 0) S.component { render: renderSearch, search: Nothing, debounceTime: Milliseconds 300.0 } ( HE.input HandleSearch )
-        , HH.slot (Slot 1) C.component { render: renderContainer, items: testData } ( HE.input HandleContainer )
+        , HH.slot' CP.cp2 unit S.component { render: renderSearch, search: Nothing, debounceTime: Milliseconds 300.0 } ( HE.input HandleSearch )
+        , HH.slot' CP.cp1 unit C.component { render: renderContainer, items: testData } ( HE.input HandleContainer )
         ]
 
-    eval :: (Query e) ~> H.ParentDSL State (Query e) (Dispatch TypeaheadItem (Query e) e) Slot Void (FX e)
+    eval :: Query ~> H.ParentDSL State Query (ChildQuery e) ChildSlot Void (FX e)
     eval = case _ of
+      Log str a -> a <$ do
+        H.liftAff $ log str
+
       HandleSearch m a -> case m of
-        -- Can't use EMIT here because the search toggle sends events to the container
-        S.Emit q -> case q of
-          -- A container event has occurred, so dispatch that to the container slot
-          Container c _ -> do
-            _ <- H.query (Slot 1)
-                   $ H.action
-                   $ Container c
-            pure a
+        S.ContainerQuery q -> do
+          _ <- H.query' CP.cp1 unit q
+          pure a
 
-          ParentQuery p _ -> a <$ eval p
-
-          -- Search won't emit itself, so it can be ignored safely.
-          _ -> pure a
+        S.Emit q -> eval q *> pure a
 
         -- A new search is done: filter the results!
         S.NewSearch s -> a <$ do
@@ -91,14 +87,13 @@ component =
                 | length available < 1 = s : available
                 | otherwise            = available
 
-          _ <- H.query (Slot 1)
+          _ <- H.query' CP.cp1 unit
                  $ H.action
-                 $ Container
-                 $ ContainerReceiver { render: renderContainer, items: newItems }
+                 $ C.ContainerReceiver { render: renderContainer, items: newItems }
           pure a
 
       HandleContainer m a -> case m of
-        C.Emit q -> emit eval q a
+        C.Emit q -> eval q *> pure a
 
         C.ItemSelected item -> a <$ do
           st <- H.get
@@ -107,10 +102,9 @@ component =
             else H.modify _ { items = ( item : st.items ), selected = ( item : st.selected ) }
 
           newSt <- H.get
-          _  <- H.query (Slot 1)
+          _  <- H.query' CP.cp1 unit
                   $ H.action
-                  $ Container
-                  $ ContainerReceiver { render: renderContainer, items: difference newSt.items newSt.selected }
+                  $ C.ContainerReceiver { render: renderContainer, items: difference newSt.items newSt.selected }
 
           H.liftAff $ log "List of selections..." *> logShow newSt.selected
 
@@ -150,12 +144,12 @@ testData =
 
 -- Render Functions
 -- The user is using the Search primitive, so they have to fill out a Search render function
-renderSearch :: ∀ i o e. (SearchState e) -> H.HTML Void (Dispatch i o e)
+renderSearch :: ∀ e. (S.SearchState e) -> H.HTML Void (S.SearchQuery Query TypeaheadItem e)
 renderSearch st =
-  HH.input ( getInputProps [] )
+  HH.input ( S.getInputProps [] )
 
 -- The user is using the Container primitive, so they have to fill out a Container render function
-renderContainer :: ∀ o e. (ContainerState TypeaheadItem) -> H.HTML Void (Dispatch TypeaheadItem o e)
+renderContainer :: (C.ContainerState TypeaheadItem) -> H.HTML Void (C.ContainerQuery Query TypeaheadItem)
 renderContainer st =
   HH.div_
     $ if not st.open
@@ -164,11 +158,11 @@ renderContainer st =
   where
 
     -- Render the container for the items
-    renderItems :: Array (H.HTML Void (Dispatch TypeaheadItem o e))
-                -> H.HTML Void (Dispatch TypeaheadItem o e)
+    renderItems :: Array (H.HTML Void (C.ContainerQuery Query TypeaheadItem))
+                -> H.HTML Void (C.ContainerQuery Query TypeaheadItem)
     renderItems html =
       HH.div
-        ( getContainerProps
+        ( C.getContainerProps
           [ HP.class_ $ HH.ClassName "measure ba br1 b--black-30 overflow-y-scroll outline-0"
           , HC.style $ CSS.maxHeight (CSS.px 300.0)
           ]
@@ -181,8 +175,9 @@ renderContainer st =
             , HH.div
                 [ HP.class_ $ HH.ClassName "fl w-50 tr" ]
                 [ HH.button
-                    ( getChildProps
-                      [ HP.class_ $ HH.ClassName "ma2 ba bw1 ph3 pv2 dib b--near-black pointer outline-0 link" ]
+                    ( C.getChildProps
+                      [ HP.class_ $ HH.ClassName "ma2 ba bw1 ph3 pv2 dib b--near-black pointer outline-0 link"
+                      , HE.onClick $ HE.input_ $ C.Raise $ H.action $ Log "I've been clicked!"  ]
                     )
                     [ HH.text "Click Me" ]
                 ]
@@ -197,11 +192,10 @@ renderContainer st =
                [ HH.p [HP.class_ $ HH.ClassName "lh-copy black-70 pa2"] [ HH.text "No results for that search." ] ]
         )
 
-    renderItem :: Int -> TypeaheadItem -> H.HTML Void (Dispatch TypeaheadItem o e)
+    renderItem :: Int -> TypeaheadItem -> H.HTML Void (C.ContainerQuery Query TypeaheadItem)
     renderItem index item = HH.li item' [ HH.text item ]
       where
-        item' =
-          getItemProps index
-            [ HP.class_ $ HH.ClassName
-              $ "lh-copy pa2 bb b--black-10"
-              <> if st.highlightedIndex == Just index then " bg-light-blue" else "" ]
+        item' = C.getItemProps index
+          [ HP.class_ $ HH.ClassName
+            $ "lh-copy pa2 bb b--black-10"
+            <> if st.highlightedIndex == Just index then " bg-light-blue" else "" ]

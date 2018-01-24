@@ -3,8 +3,9 @@ module Calendar where
 import Prelude
 import Calendar.Utils (alignByWeek, nextMonth, nextYear, prevMonth, prevYear, rowsFromArray, unsafeMkYear, unsafeMkMonth)
 import CSS as CSS
+import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Console (log)
-import Control.Monad.Eff.Now (now)
+import Control.Monad.Eff.Now (NOW, now)
 import Data.Array (mapWithIndex)
 import Data.Date (Date, Month, Year, canonicalDate, month, year)
 import Data.DateTime (date)
@@ -19,9 +20,8 @@ import Halogen.HTML as HH
 import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Select.Dispatch (Dispatch, ContainerState, embed, emit, getChildProps, getContainerProps, getItemProps, getToggleProps)
-import Select.Effects (FX)
 import Select.Primitive.Container as C
+import Select.Effects (Effects)
 
 
 {-
@@ -33,19 +33,21 @@ The calendar component is an example.
 type State =
   { targetDate :: Tuple Year Month }
 
-data Query e a
-  = HandleContainer (C.Message CalendarItem (Query e) e) a
+data Query a
+  = HandleContainer (C.Message Query CalendarItem) a
+  | ToContainer (C.ContainerQuery Query CalendarItem Unit) a
   | ToggleYear  Direction a
   | ToggleMonth Direction a
   | SetTime a
 
 data Direction = Prev | Next
 
+type FX e = Aff (CalendarEffects e)
+type CalendarEffects e = (Effects (now :: NOW | e))
+type ParentHTML e = H.ParentHTML Query ChildQuery Unit (FX e)
+type ChildQuery = C.ContainerQuery Query CalendarItem
 
-type ParentHTML e = H.ParentHTML (Query e) (ChildQuery e) Unit (FX e)
-type ChildQuery e = Dispatch CalendarItem (Query e) e
-
-
+----------
 -- Calendar Items
 data CalendarItem
   = CalendarItem SelectableStatus SelectedStatus BoundaryStatus Date
@@ -63,7 +65,7 @@ data BoundaryStatus
   | InBounds
 
 
-component :: ∀ e. H.Component HH.HTML (Query e) Unit Void (FX e)
+component :: ∀ e. H.Component HH.HTML Query Unit Void (FX e)
 component =
   H.lifecycleParentComponent
     { initialState
@@ -78,13 +80,13 @@ component =
     initialState = const
       { targetDate: Tuple (unsafeMkYear 2019) (unsafeMkMonth 2) }
 
-    eval :: (Query e) ~> H.ParentDSL State (Query e) (ChildQuery e) Unit Void (FX e)
+    eval :: Query ~> H.ParentDSL State Query ChildQuery Unit Void (FX e)
     eval = case _ of
-      HandleContainer m a -> case m of
-        C.Emit q -> emit eval q a
+      ToContainer q a -> H.query unit q *> pure a
 
-        -- The only other message raised by the container primitive is when an item has been
-        -- selected.
+      HandleContainer m a -> case m of
+        C.Emit q -> eval q *> pure a
+
         C.ItemSelected item -> a <$ do
           let showCalendar (CalendarItem _ _ _ d) = show d
           H.liftAff $ log ("Selected! Choice was " <> showCalendar item)
@@ -120,13 +122,14 @@ component =
          pure a
 
 
-    render :: State -> H.ParentHTML (Query e) (ChildQuery e) Unit (FX e)
+    render :: State -> H.ParentHTML Query ChildQuery Unit (FX e)
     render st =
       HH.div
         [ HP.class_ $ HH.ClassName "mw8 sans-serif center" ]
         [ HH.h2
           [ HP.class_ $ HH.ClassName "black-80 f-headline-1" ]
           [ HH.text "Calendar Component"]
+        , renderToggle
         , HH.slot
             unit
             C.component
@@ -140,32 +143,29 @@ component =
         targetYear  = fst st.targetDate
         targetMonth = snd st.targetDate
 
-        renderToggle :: H.HTML Void (ChildQuery e)
+        renderToggle :: H.ParentHTML Query ChildQuery Unit (FX e)
         renderToggle =
           HH.span
-          ( getToggleProps
+          ( C.getToggleProps ToContainer
             [ HP.class_ $ HH.ClassName "f5 link ba bw1 ph3 pv2 mb2 dib near-black pointer outline-0" ]
           )
           [ HH.text "Toggle" ]
 
         -- The user is using the Container primitive, so they have to fill out a Container render function
-        renderContainer :: Year -> Month -> (ContainerState CalendarItem) -> H.HTML Void (ChildQuery e)
+        renderContainer :: Year -> Month -> (C.ContainerState CalendarItem) -> H.HTML Void ChildQuery
         renderContainer y m cst =
           HH.div_
             $ if not cst.open
-              then [ renderToggle ]
-              else [ renderToggle
-                   , renderCalendar
-                   ]
-
+              then [ ]
+              else [ renderCalendar ]
           where
             fmtMonthYear = (either (const "-") id) <<< formatDateTime "MMMM YYYY" <<< toDateTime <<< fromDate
             monthYear = fmtMonthYear (canonicalDate y m bottom)
 
-            renderCalendar :: H.HTML Void (ChildQuery e)
+            renderCalendar :: H.HTML Void ChildQuery
             renderCalendar =
               HH.div
-                ( getContainerProps
+                ( C.getContainerProps
                   [ HP.class_ $ HH.ClassName "tc"
                   , HC.style  $ CSS.width (CSS.rem 28.0) ]
                 )
@@ -175,7 +175,7 @@ component =
                 ]
 
             -- Given a string ("Month YYYY"), creates the calendar navigation
-            calendarNav :: H.HTML Void (ChildQuery e)
+            calendarNav :: H.HTML Void ChildQuery
             calendarNav =
               HH.div
               [ HP.class_ $ HH.ClassName "flex pv3" ]
@@ -188,9 +188,9 @@ component =
               where
                 arrowButton q t css =
                   HH.button
-                  ( getChildProps
+                  ( C.getChildProps
                     [ HP.class_ $ HH.ClassName $ "w-10" <> fromMaybe "" (((<>) " ") <$> css)
-                    , HE.onClick $ HE.input_ $ embed q ]
+                    , HE.onClick $ HE.input_ $ C.Raise $ H.action q ]
                   )
                   [ HH.text t ]
 
@@ -207,16 +207,16 @@ component =
               where
                 headers = [ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" ]
 
-            renderRows :: Array (Array CalendarItem) -> Array (H.HTML Void (ChildQuery e))
+            renderRows :: Array (Array CalendarItem) -> Array (H.HTML Void ChildQuery)
             renderRows = mapWithIndex (\row subArr -> renderRow (row * 7) subArr)
               where
-                renderRow :: Int -> Array CalendarItem -> H.HTML Void (ChildQuery e)
+                renderRow :: Int -> Array CalendarItem -> H.HTML Void ChildQuery
                 renderRow offset items =
                   HH.div
                     [ HP.class_ $ HH.ClassName "flex" ]
                     ( mapWithIndex (\column item -> renderItem (column + offset) item) items )
 
-            renderItem :: Int -> CalendarItem -> H.HTML Void (ChildQuery e)
+            renderItem :: Int -> CalendarItem -> H.HTML Void ChildQuery
             renderItem index item =
               HH.div
                 -- Use raw style attribute for convenience.
@@ -227,7 +227,7 @@ component =
                 [ HH.text $ printDay item ]
               where
                 -- If the calendar item is selectable, augment the props with the correct click events.
-                attachItemProps i (CalendarItem Selectable _ _ _) props = getItemProps i props
+                attachItemProps i (CalendarItem Selectable _ _ _) props = C.getItemProps i props
                 attachItemProps _ _ props = props
 
                 -- Get the correct styles for a calendar item dependent on its statuses

@@ -3,7 +3,6 @@ module Select.Effects where
 import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.AVar (AVAR)
 import Control.Monad.Aff.Console (CONSOLE)
-import Control.Monad.Eff.Now (NOW)
 import DOM (DOM)
 import Network.HTTP.Affjax (AJAX)
 
@@ -15,4 +14,4 @@ type FX e = Aff (Effects e)
 -- | ```purescript
 -- | main :: ∀ e. Eff (HalogenEffects (Effects e)) Unit
 -- | ```
-type Effects e = ( dom :: DOM, console :: CONSOLE, ajax :: AJAX, avar :: AVAR, now :: NOW | e)
+type Effects e = ( dom :: DOM, console :: CONSOLE, ajax :: AJAX, avar :: AVAR | e)
