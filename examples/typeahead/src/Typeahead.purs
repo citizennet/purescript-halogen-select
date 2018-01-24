@@ -21,9 +21,6 @@ import Select.Effects (FX)
 import Select.Primitive.Container as C
 import Select.Primitive.Search as S
 
-{-
-
--}
 
 type TypeaheadItem = String
 

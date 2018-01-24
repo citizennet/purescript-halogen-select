@@ -3,15 +3,14 @@ module Select.Primitive.Search where
 import Prelude
 
 import Data.Time.Duration (Milliseconds)
-import Control.Monad.Aff (Fiber)
-import Control.Monad.Aff.AVar (AVar)
+import DOM.Event.Types as ET
 import Control.Comonad (extract)
-import Control.Comonad.Store (seeks, store, Store)
-import Control.Monad.Aff (delay, error, forkAff, killFiber)
-import Control.Monad.Aff.AVar (makeEmptyVar, putVar, takeVar)
+import Control.Comonad.Store (seeks, store)
+import Control.Monad.Aff (Fiber, delay, error, forkAff, killFiber)
+import Control.Monad.Aff.AVar (AVar, makeEmptyVar, putVar, takeVar)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Tuple (Tuple(..))
-import Halogen as H
+import Halogen (IProp, Component, ComponentDSL, ComponentHTML, action, component, liftAff, modify) as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
@@ -140,13 +139,42 @@ component =
       SearchReceiver i a -> H.modify (updateStore i.render id) *> pure a
 
 
-getInputProps = flip (<>)
-	[ HE.onFocus      $ HE.input_ $ FromContainer $ H.action $ C.Visibility C.Toggle
-	, HE.onKeyDown    $ HE.input  $ \ev -> FromContainer $ H.action $ C.Key ev
-	, HE.onValueInput $ HE.input  TextInput
-	, HE.onMouseDown  $ HE.input_ $ FromContainer $ H.action $ C.Mouse C.Down
-	, HE.onMouseUp    $ HE.input_ $ FromContainer $ H.action $ C.Mouse C.Up
-	, HE.onBlur       $ HE.input_ $ FromContainer $ H.action $ C.Blur
-	, HP.tabIndex 0
-	]
 
+getInputProps :: ∀ o item e e0
+   . Array
+      (H.IProp
+        ( onFocus :: ET.FocusEvent
+        , onKeyDown :: ET.KeyboardEvent
+        , onInput :: ET.Event
+        , value :: String
+        , onMouseDown :: ET.MouseEvent
+        , onMouseUp :: ET.MouseEvent
+        , onBlur :: ET.FocusEvent
+        , tabIndex :: Int
+        | e
+        )
+        (SearchQuery o item e0)
+      )
+  -> Array
+      (H.IProp
+        ( onFocus :: ET.FocusEvent
+        , onKeyDown :: ET.KeyboardEvent
+        , onInput :: ET.Event
+        , value :: String
+        , onMouseDown :: ET.MouseEvent
+        , onMouseUp :: ET.MouseEvent
+        , onBlur :: ET.FocusEvent
+        , tabIndex :: Int
+        | e
+        )
+        (SearchQuery o item e0)
+      )
+getInputProps = flip (<>)
+  [ HE.onFocus      $ HE.input_ $ FromContainer $ H.action $ C.Visibility C.Toggle
+  , HE.onKeyDown    $ HE.input  $ \ev -> FromContainer $ H.action $ C.Key ev
+  , HE.onValueInput $ HE.input  TextInput
+  , HE.onMouseDown  $ HE.input_ $ FromContainer $ H.action $ C.Mouse C.Down
+  , HE.onMouseUp    $ HE.input_ $ FromContainer $ H.action $ C.Mouse C.Up
+  , HE.onBlur       $ HE.input_ $ FromContainer $ H.action $ C.Blur
+  , HP.tabIndex 0
+  ]

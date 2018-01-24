@@ -143,7 +143,7 @@ component =
         targetYear  = fst st.targetDate
         targetMonth = snd st.targetDate
 
-        renderToggle :: _
+        renderToggle :: H.ParentHTML Query ChildQuery Unit (FX e)
         renderToggle =
           HH.span
           ( C.getToggleProps ToContainer

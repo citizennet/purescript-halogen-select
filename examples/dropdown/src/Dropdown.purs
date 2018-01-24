@@ -7,7 +7,6 @@ import CSS as CSS
 import DOM.Event.KeyboardEvent as KE
 import Data.Array ((:), difference, mapWithIndex)
 import Data.Maybe (Maybe(..))
-import Data.Either (Either(..))
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
@@ -15,7 +14,6 @@ import Halogen.HTML.Properties as HP
 import Halogen.HTML.CSS as HC
 import Select.Effects (FX)
 import Select.Primitive.Container as C
-
 
 type DropdownItem = String
 
@@ -119,57 +117,58 @@ testData =
 
 -- Render whatever is going to provide the action for toggling the menu. Notably, this is
 -- NOT a primitive.
+renderToggle :: ∀ e. HTML e
 renderToggle =
-	HH.span
-		( C.getToggleProps ToContainer
-			[ HE.onMouseOver $ HE.input_ $ Log "I'm the parent."
-			, HP.class_      $ HH.ClassName "f5 link ba bw1 ph3 pv2 mb2 dib near-black pointer outline-0"
-			]
-		)
-		[ HH.text "Toggle" ]
+  HH.span
+    ( C.getToggleProps ToContainer
+      [ HE.onMouseOver $ HE.input_ $ Log "I'm the parent."
+      , HP.class_      $ HH.ClassName "f5 link ba bw1 ph3 pv2 mb2 dib near-black pointer outline-0"
+      ]
+    )
+    [ HH.text "Toggle" ]
 
 -- Render function to pass to the child container component
 renderContainer :: (C.ContainerState DropdownItem) -> H.HTML Void (C.ContainerQuery Query DropdownItem)
 renderContainer st =
   HH.div_
-	$ if not st.open
-			then [ ]
-			else [ renderItems $ renderItem `mapWithIndex` st.items ]
+  $ if not st.open
+    then [ ]
+    else [ renderItems $ renderItem `mapWithIndex` st.items ]
   where
-		-- Render the container for the items
-		renderItems :: Array (H.HTML Void (C.ContainerQuery Query DropdownItem)) -> H.HTML Void (C.ContainerQuery Query DropdownItem)
-		renderItems html =
-			HH.div
-				( C.getContainerProps
-					[ HP.class_ $ HH.ClassName "measure ba br1 b--black-30 overflow-y-scroll pb3 outline-0"
-					, HC.style $ CSS.maxHeight (CSS.px 300.0)
-					]
-				)
-				[ HH.div
-						[ HP.class_ $ HH.ClassName "cf" ]
-						[ HH.h4
-							[ HP.class_ $ HH.ClassName "ph2 pv3 ma0 fl w-50" ]
-							[ HH.text "Choose One" ]
-						, HH.div
-								[ HP.class_ $ HH.ClassName "fl w-50 tr" ]
-								[ HH.button
-									( C.getChildProps
-										[ HP.class_ $ HH.ClassName "ma2 ba bw1 ph3 pv2 dib b--near-black pointer outline-0 link"
-										, HE.onClick $ HE.input_ $ C.Raise $ H.action $ Log "button in container clicked"
-										]
-									)
-									[ HH.text "Click Me" ]
-								]
-						]
-				, HH.ul
-						[ HP.class_ $ HH.ClassName "list pl0 mt0 bt b--black-30" ]
-						html
-				]
+    -- Render the container for the items
+    renderItems :: Array (H.HTML Void (C.ContainerQuery Query DropdownItem)) -> H.HTML Void (C.ContainerQuery Query DropdownItem)
+    renderItems html =
+      HH.div
+        ( C.getContainerProps
+          [ HP.class_ $ HH.ClassName "measure ba br1 b--black-30 overflow-y-scroll pb3 outline-0"
+          , HC.style $ CSS.maxHeight (CSS.px 300.0)
+        ]
+        )
+      [ HH.div
+        [ HP.class_ $ HH.ClassName "cf" ]
+        [ HH.h4
+          [ HP.class_ $ HH.ClassName "ph2 pv3 ma0 fl w-50" ]
+          [ HH.text "Choose One" ]
+        , HH.div
+          [ HP.class_ $ HH.ClassName "fl w-50 tr" ]
+          [ HH.button
+            ( C.getChildProps
+              [ HP.class_ $ HH.ClassName "ma2 ba bw1 ph3 pv2 dib b--near-black pointer outline-0 link"
+              , HE.onClick $ HE.input_ $ C.Raise $ H.action $ Log "button in container clicked"
+              ]
+            )
+            [ HH.text "Click Me" ]
+          ]
+        ]
+        , HH.ul
+          [ HP.class_ $ HH.ClassName "list pl0 mt0 bt b--black-30" ]
+          html
+      ]
 
-		renderItem :: Int -> DropdownItem -> H.HTML Void (C.ContainerQuery Query DropdownItem)
-		renderItem index item = HH.li item' [ HH.text item ]
-			where
-				item' = C.getItemProps index
-					[ HP.class_ $ HH.ClassName
-						$ "lh-copy pa2 ba bl-0 bt-0 br-0 b--dotted b--black-30"
-						<> if st.highlightedIndex == Just index then " bg-light-blue" else "" ]
+    renderItem :: Int -> DropdownItem -> H.HTML Void (C.ContainerQuery Query DropdownItem)
+    renderItem index item = HH.li item' [ HH.text item ]
+      where
+        item' = C.getItemProps index
+          [ HP.class_ $ HH.ClassName
+            $ "lh-copy pa2 ba bl-0 bt-0 br-0 b--dotted b--black-30"
+            <> if st.highlightedIndex == Just index then " bg-light-blue" else "" ]
