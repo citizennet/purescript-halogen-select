@@ -1,4 +1,4 @@
-module Select.Primitive.State where
+module Select.Primitives.State where
 
 import Prelude (pure, (<<<), (=<<))
 

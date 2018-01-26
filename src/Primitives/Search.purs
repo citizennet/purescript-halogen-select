@@ -1,4 +1,4 @@
-module Select.Primitive.Search where
+module Select.Primitives.Search where
 
 import Prelude
 
@@ -15,8 +15,8 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.Query.HalogenM (fork, raise) as H
-import Select.Primitive.State (State, updateStore, getState)
-import Select.Primitive.Container as C
+import Select.Primitives.State (State, updateStore, getState)
+import Select.Primitives.Container as C
 import Select.Effects (Effects, FX)
 
 {-
