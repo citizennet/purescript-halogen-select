@@ -2,11 +2,14 @@ module Select.Components.Typeahead where
 
 import Prelude
 
-import Data.Monoid (class Monoid)
 import Data.Maybe (Maybe, fromMaybe)
+import Data.Foldable (class Foldable, foldMap)
+import Data.Monoid (class Monoid, mempty)
 import Data.Either (Either(..))
 import Data.Either.Nested (Either2)
 import Data.Functor.Coproduct.Nested (Coproduct2)
+import Data.String (Pattern(..), contains)
+import Data.Time.Duration (Milliseconds)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
@@ -16,6 +19,23 @@ import Select.Primitives.Container as Container
 import Select.Primitives.Search as Search
 
 ----------
+-- Motivation
+
+--  This module provides a pre-built typeahead component. It hides the necessary wiring of the Container and Search
+--  primitives, and can be used 'out of the box' with a default configuration record. However, it is entirely up
+--  to you whether you want to use that record.
+--
+--  You can also provide handler functions to insert into 'eval' for each important case: a new search from the
+--  search field or a new item selection from the container. As always, you are responsible for providing the
+--  render functions for each relevant primitive.
+--
+--  Your handler functions should provide your state management (they should decide how items can be selected, etc.),
+--  and this hides the state from the parent unless they explicitly ask for it with `GetSelections`.
+--
+--  In use: provide render functions, provide configuration or handlers, provide items, and you're good to go.
+
+
+----------
 -- Component Types
 
 -- Newtype because of the self-reference in config function.
@@ -23,8 +43,12 @@ newtype State f item e = State
   { items :: f item
   , selections :: f item
   , search :: String
-  , config :: TypeaheadConfig f item e
+  , slots :: Tuple MountSearch MountContainer
+  , config :: Config f item e
   }
+
+--  searchSlot = HH.slot' CP.cp2 unit S.component { render: renderSearch, search: Nothing, debounceTime: Milliseconds 300.0 } ( HE.input HandleSearch )
+--  containerSlot = HH.slot' CP.cp1 unit C.component { render: renderContainer, items: testData } ( HE.input HandleContainer )
 
 data Query f item e a
   = HandleContainer (Container.Message (Query f item e) item) a
@@ -34,21 +58,18 @@ data Query f item e a
   | TypeaheadReceiver (TypeaheadInput f item e) a
 
 -- TODO: Responsible for:
--- component + input types for search slot
--- component + input types for container slot
--- component + input types for selections slot
--- render function for overall typeahead
+-- input types for search and container primitives (will use these to construct own state)
+-- MAYBE: own renderer? better to keep in an unstyled div, right?
+-- MAYBE: component + input types for selections slot
 type TypeaheadInput f item e =
-  { items :: f item
-  , search :: Maybe String
-  , selections :: f item
-  , config :: TypeaheadConfig f item e
+  { searchPrim :: Search.SearchInput (Query f item e) item e
+  , containerPrim :: Container.ContainerInput (Query f item e) item
+  , config :: EvalConfig f item e
   }
 
 data TypeaheadMessage item
   = ItemSelected item
   | ItemRemoved item
-
 
 -- The idea: maintain an Either where you either provide
 -- a configuration record, relying on default functionality
@@ -56,7 +77,7 @@ data TypeaheadMessage item
 -- for the two important child messages (new search or
 -- item selected)
 
-type TypeaheadConfig f item e =
+type EvalConfig f item e =
   Either (HandlerRecord f item e) ConfigRecord
 
 -- Some standard functionality is baked in to the component
@@ -75,6 +96,7 @@ data MatchType
   | CaseInsensitive
   | Fuzzy
 
+-- Can be used in validation logic
 data SelectLimit
   = One
   | Limit Int
@@ -158,7 +180,11 @@ derive instance ordPrimitiveSlot :: Ord PrimitiveSlot
 ----------
 -- Component definition
 
-component :: ∀ f item e. Functor f => Monoid item => TypeaheadComponent f item e
+-- You are expected to provide items in some Foldable / Functor instance
+-- so our default functions can operate on them. The most common are likely to
+-- be Array or Maybe.
+
+component :: ∀ f item e. Applicative f => Foldable f => Monoid (f item) => Show item => TypeaheadComponent f item e
 component =
   H.parentComponent
     { initialState
@@ -170,8 +196,10 @@ component =
     initialState :: TypeaheadInput f item e -> State f item e
     initialState i = State
       { items: i.items
+      , debounceTime: i.debounceTime
       , search: fromMaybe "" i.search
       , selections: i.selections
+      , render: i.render
       , config: i.config
       }
 
@@ -187,7 +215,7 @@ component =
         -- Evaluate an embedded parent query
         Container.Emit query -> eval query *> pure a
 
-        -- TODO
+        -- TODO:
         -- Handle a new item selection
         Container.ItemSelected item -> pure a
 
@@ -225,19 +253,36 @@ component =
 
 
 ----------
+-- Helper functions
+
+-- There is no default foldable filter function, but by bringing in the additional
+-- applicative and monoid constraints, this becomes possible
+filter :: ∀ f item
+  . Applicative f => Foldable f => Monoid (f item) =>
+  (item -> Boolean) -> f item -> f item
+filter p = foldMap (\a -> if p a then pure a else mempty)
+
+----------
 -- Helper eval functions
 
 -- These functions feed from the configuration options and allow for a variety of
 -- behaviors out of the box. However, if you need more fine-grained control over
 -- state and behaviors, you can provide custom handlers.
 
-newSearchFn :: ∀ f item e. Functor f => String -> TypeaheadDSL f item e Unit
+newSearchFn :: ∀ f item e. Applicative f => Foldable f => Monoid (f item) => Show item => String -> TypeaheadDSL f item e Unit
 newSearchFn text = do
-  H.modify $ \(State st) -> State $ st { search = text }
---
+  (State st) <- H.get
+
+  let matches = filter (\item -> contains (Pattern text) (show item)) st.items
+
+  -- Update the selections
+  H.modify $ \(State st') -> State
+    $ st' { search = text
+          , items = matches }
+
   -- Send the new items to the container
   _ <- H.query' CP.cp1 (Slot ContainerSlot)
         $ H.action
         $ Container.Visibility Container.Off
---
+
   pure unit
