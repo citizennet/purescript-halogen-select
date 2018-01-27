@@ -2,12 +2,11 @@ module Select.Components.Typeahead where
 
 import Prelude
 
+import Data.Monoid (class Monoid)
+import Data.Maybe (Maybe, fromMaybe)
 import Data.Either (Either(..))
 import Data.Either.Nested (Either2)
 import Data.Functor.Coproduct.Nested (Coproduct2)
-import Data.Maybe (Maybe(..))
-import Data.Array (filter, difference, length, (:))
-import Data.String (Pattern(..), contains)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
@@ -19,31 +18,31 @@ import Select.Primitives.Search as Search
 ----------
 -- Component Types
 
--- TODO:
--- This will need to change to Store because the render
--- function will also be passed in.
-type State item e =
-  { items :: Array item
-  , selections :: Array item
+-- Newtype because of the self-reference in config function.
+newtype State f item e = State
+  { items :: f item
+  , selections :: f item
   , search :: String
-  , config :: TypeaheadConfig item e
+  , config :: TypeaheadConfig f item e
   }
 
-data Query item e a
-  = HandleContainer (Container.Message (Query item e) item) a
-  | HandleSearch (Search.Message (Query item e) item) a
+data Query f item e a
+  = HandleContainer (Container.Message (Query f item e) item) a
+  | HandleSearch (Search.Message (Query f item e) item) a
   | Remove item a
-  | Selections (Array item -> a)
-  | TypeaheadReceiver (TypeaheadInput item e) a
+  | Selections (f item -> a)
+  | TypeaheadReceiver (TypeaheadInput f item e) a
 
 -- TODO: Responsible for:
 -- component + input types for search slot
 -- component + input types for container slot
 -- component + input types for selections slot
 -- render function for overall typeahead
-type TypeaheadInput item e =
-  { items :: Array item
-  , config :: TypeaheadConfig item e
+type TypeaheadInput f item e =
+  { items :: f item
+  , search :: Maybe String
+  , selections :: f item
+  , config :: TypeaheadConfig f item e
   }
 
 data TypeaheadMessage item
@@ -57,21 +56,21 @@ data TypeaheadMessage item
 -- for the two important child messages (new search or
 -- item selected)
 
-type TypeaheadConfig item e =
-  Either (HandlerRecord item e) (ConfigRecord item)
+type TypeaheadConfig f item e =
+  Either (HandlerRecord f item e) ConfigRecord
 
 -- Some standard functionality is baked in to the component
 -- and can be configured if the user wants a more 'out of the
 -- box' experience. This is a sample.
-type ConfigRecord item =
+type ConfigRecord =
   { insertable  :: Boolean        -- If no match, insert?
-  , matchType   :: MatchType item -- Function to match
+  , matchType   :: MatchType       -- Function to match
   , keepOpen    :: Boolean        -- Stay open on selection?
   , selectLimit :: SelectLimit    -- One | Limit n | Many
   , duplicates  :: Boolean        -- Allow duplicates?
   }
 
-data MatchType item
+data MatchType
   = Exact
   | CaseInsensitive
   | Fuzzy
@@ -82,7 +81,7 @@ data SelectLimit
   | Many
 
 -- A default config can help minimize their efforts.
-defaultConfig :: ∀ item. ConfigRecord item
+defaultConfig :: ConfigRecord
 defaultConfig =
   { insertable: false
   , matchType: Fuzzy
@@ -96,66 +95,51 @@ defaultConfig =
 -- and slot types, though this is certainly a more 'advanced'
 -- case.
 
-type HandlerRecord item e =
-  { explicitA :: item -> SubDSL item e Unit }
-
--- newSearch :: ∀ item e a. String -> a -> TypeaheadDSL item e a
-
---  type HandlerRecord item e =
---    { explicitA :: String -> a -> TypeaheadDSL item e a  -- Explicitly pass in the 'a'?
---    , impredicativeA :: (forall a. String -> TypeaheadDSL item e a)  -- Impredicative types?
---    , void :: String -> TypeaheadDSL item e Unit  -- Specialize to unit?
---    , onlyState :: (State item e) -> String -> (State item e) -- Only modify state
---    }
+type HandlerRecord f item e =
+  { newSearch :: String -> TypeaheadDSL f item e Unit
+  , itemSelected :: item -> TypeaheadDSL f item e Unit
+  }
 
 
 ----------
 -- Convenience component types
 
-type TypeaheadComponent item e =
+type TypeaheadComponent f item e =
   H.Component
     HH.HTML
-    (Query item e)
-    (TypeaheadInput item e)
+    (Query f item e)
+    (TypeaheadInput f item e)
     (TypeaheadMessage item)
     (FX e)
 
-type TypeaheadHTML item e =
+type TypeaheadHTML f item e =
   H.ParentHTML
-    (Query item e)
-    (ChildQuery item e)
+    (Query f item e)
+    (ChildQuery f item e)
     ChildSlot
     (FX e)
 
-type TypeaheadDSL item e =
+type TypeaheadDSL f item e =
   H.ParentDSL
-    (State item e)
-    (Query item e)
-    (ChildQuery item e)
+    (State f item e)
+    (Query f item e)
+    (ChildQuery f item e)
     ChildSlot
     (TypeaheadMessage item)
     (FX e)
 
-type SubDSL item e =
-  H.ParentDSL
-    Unit
-    (Query item e)
-    (ChildQuery item e)
-    ChildSlot
-    (TypeaheadMessage item)
-    (FX e)
 
 ----------
 -- Child types
 
-type ContainerQuery item e =
-  Container.ContainerQuery (Query item e) item
+type ContainerQuery f item e =
+  Container.ContainerQuery (Query f item e) item
 
-type SearchQuery item e =
-  Search.SearchQuery (Query item e) item e
+type SearchQuery f item e =
+  Search.SearchQuery (Query f item e) item e
 
-type ChildQuery item e =
-  Coproduct2 (ContainerQuery item e) (SearchQuery item e)
+type ChildQuery f item e =
+  Coproduct2 (ContainerQuery f item e) (SearchQuery f item e)
 
 type ChildSlot =
   Either2 Slot Slot
@@ -174,19 +158,7 @@ derive instance ordPrimitiveSlot :: Ord PrimitiveSlot
 ----------
 -- Component definition
 
---  type HandlerRecord item e =
---    { explicitA :: item -> HalogenM (State item e) (Query item e) (ChildQuery item e) ChildSlot (TypeaheadMessage item) (Aff (Effects e)) Unit }
---
---  newtype HalogenM
---    s                     (State item e)
---    (f :: Type -> Type)   (Query item e)           -- awaiting a
---    g                     (ChildQuery item e)
---    p                     ChildSlot
---    o                     (TypeaheadMessage item)
---    m                     (Aff (Effects e))        -- awaiting a
---    a                     a
-
-component :: ∀ item e. TypeaheadComponent item e
+component :: ∀ f item e. Functor f => Monoid item => TypeaheadComponent f item e
 component =
   H.parentComponent
     { initialState
@@ -195,18 +167,18 @@ component =
     , receiver: HE.input TypeaheadReceiver
     }
   where
-    initialState :: TypeaheadInput item e -> State item e
-    initialState i =
+    initialState :: TypeaheadInput f item e -> State f item e
+    initialState i = State
       { items: i.items
-      , search: ""
-      , selections: []
+      , search: fromMaybe "" i.search
+      , selections: i.selections
       , config: i.config
       }
 
-    render :: State item e -> TypeaheadHTML item e
-    render state = HH.span_ []
+    render :: State f item e -> TypeaheadHTML f item e
+    render _ = HH.span_ []
 
-    eval :: Query item e ~> TypeaheadDSL item e
+    eval :: Query f item e ~> TypeaheadDSL f item e
     eval = case _ of
 
       -- Handle messages from the container.
@@ -233,15 +205,18 @@ component =
         -- TODO
         -- Handle a new search
         Search.NewSearch text -> do
-           newSearch text
-           pure a
+          (State st) <- H.get
+          case st.config of
+             Left { newSearch } -> newSearch text
+             Right _ -> newSearchFn text
+          pure a
 
       -- Handle a 'remove' event on the selections list.
       Remove item a -> pure a
 
       -- Return the current selections to the parent.
       Selections reply -> do
-        st <- H.get
+        (State st) <- H.get
         pure $ reply st.selections
 
       -- Reset the state with new input.
@@ -256,15 +231,13 @@ component =
 -- behaviors out of the box. However, if you need more fine-grained control over
 -- state and behaviors, you can provide custom handlers.
 
-newSearch :: ∀ item e. String -> TypeaheadDSL item e Unit
-newSearch text = do
-  H.modify _ { search = text }
-
-  st <- H.get
-
+newSearchFn :: ∀ f item e. Functor f => String -> TypeaheadDSL f item e Unit
+newSearchFn text = do
+  H.modify $ \(State st) -> State $ st { search = text }
+--
   -- Send the new items to the container
   _ <- H.query' CP.cp1 (Slot ContainerSlot)
         $ H.action
         $ Container.Visibility Container.Off
-
+--
   pure unit
