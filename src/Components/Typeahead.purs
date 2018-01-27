@@ -5,6 +5,9 @@ import Prelude
 import Data.Either (Either(..))
 import Data.Either.Nested (Either2)
 import Data.Functor.Coproduct.Nested (Coproduct2)
+import Data.Maybe (Maybe(..))
+import Data.Array (filter, difference, length, (:))
+import Data.String (Pattern(..), contains)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
@@ -23,7 +26,8 @@ type State item e =
   { items :: Array item
   , selections :: Array item
   , search :: String
-  , config :: TypeaheadConfig item e  }
+  , config :: TypeaheadConfig item e
+  }
 
 data Query item e a
   = HandleContainer (Container.Message (Query item e) item) a
@@ -45,7 +49,6 @@ type TypeaheadInput item e =
 data TypeaheadMessage item
   = ItemSelected item
   | ItemRemoved item
-  | GetSelections (Array item)
 
 
 -- The idea: maintain an Either where you either provide
@@ -72,7 +75,6 @@ data MatchType item
   = Exact
   | CaseInsensitive
   | Fuzzy
-  | Custom (String -> Array item -> Array item)
 
 data SelectLimit
   = One
@@ -93,10 +95,18 @@ defaultConfig =
 -- two most important queries, with full access to the state
 -- and slot types, though this is certainly a more 'advanced'
 -- case.
+
 type HandlerRecord item e =
-  { newSearch :: Query item e ~> TypeaheadDSL item e
-  , itemSelected :: Query item e ~> TypeaheadDSL item e
-  }
+  { explicitA :: item -> TypeaheadDSL item e Unit }
+
+-- newSearch :: ∀ item e a. String -> a -> TypeaheadDSL item e a
+
+--  type HandlerRecord item e =
+--    { explicitA :: String -> a -> TypeaheadDSL item e a  -- Explicitly pass in the 'a'?
+--    , impredicativeA :: (forall a. String -> TypeaheadDSL item e a)  -- Impredicative types?
+--    , void :: String -> TypeaheadDSL item e Unit  -- Specialize to unit?
+--    , onlyState :: (State item e) -> String -> (State item e) -- Only modify state
+--    }
 
 
 ----------
@@ -155,6 +165,18 @@ derive instance ordPrimitiveSlot :: Ord PrimitiveSlot
 ----------
 -- Component definition
 
+type HandlerRecord item e =
+  { explicitA :: item -> HalogenM (State item e) (Query item e) (ChildQuery item e) ChildSlot (TypeaheadMessage item) (Aff (Effects e)) Unit }
+
+newtype HalogenM
+  s                     (State item e)
+  (f :: Type -> Type)   (Query item e)           -- awaiting a
+  g                     (ChildQuery item e)
+  p                     ChildSlot
+  o                     (TypeaheadMessage item)
+  m                     (Aff (Effects e))        -- awaiting a
+  a                     a
+
 component :: ∀ item e. TypeaheadComponent item e
 component =
   H.parentComponent
@@ -169,9 +191,10 @@ component =
       { items: i.items
       , search: ""
       , selections: []
-      , config: i.config }
+      , config: i.config
+      }
 
-    render :: (State item e) -> TypeaheadHTML item e
+    render :: State item e -> TypeaheadHTML item e
     render state = HH.span_ []
 
     eval :: Query item e ~> TypeaheadDSL item e
@@ -200,7 +223,9 @@ component =
 
         -- TODO
         -- Handle a new search
-        Search.NewSearch text -> pure a
+        Search.NewSearch text -> do
+           newSearch text
+           pure a
 
       -- Handle a 'remove' event on the selections list.
       Remove item a -> pure a
@@ -212,3 +237,25 @@ component =
 
       -- Reset the state with new input.
       TypeaheadReceiver input a -> pure a
+
+
+
+----------
+-- Helper eval functions
+
+-- These functions feed from the configuration options and allow for a variety of
+-- behaviors out of the box. However, if you need more fine-grained control over
+-- state and behaviors, you can provide custom handlers.
+
+newSearch :: ∀ item e. String -> TypeaheadDSL item e Unit
+newSearch text = do
+  H.modify _ { search = text }
+
+  st <- H.get
+
+  -- Send the new items to the container
+  _ <- H.query' CP.cp1 (Slot ContainerSlot)
+        $ H.action
+        $ Container.Visibility Container.Off
+
+  pure unit
