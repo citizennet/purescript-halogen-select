@@ -97,7 +97,7 @@ defaultConfig =
 -- case.
 
 type HandlerRecord item e =
-  { explicitA :: item -> TypeaheadDSL item e Unit }
+  { explicitA :: item -> SubDSL item e Unit }
 
 -- newSearch :: ∀ item e a. String -> a -> TypeaheadDSL item e a
 
@@ -136,6 +136,15 @@ type TypeaheadDSL item e =
     (TypeaheadMessage item)
     (FX e)
 
+type SubDSL item e =
+  H.ParentDSL
+    Unit
+    (Query item e)
+    (ChildQuery item e)
+    ChildSlot
+    (TypeaheadMessage item)
+    (FX e)
+
 ----------
 -- Child types
 
@@ -165,17 +174,17 @@ derive instance ordPrimitiveSlot :: Ord PrimitiveSlot
 ----------
 -- Component definition
 
-type HandlerRecord item e =
-  { explicitA :: item -> HalogenM (State item e) (Query item e) (ChildQuery item e) ChildSlot (TypeaheadMessage item) (Aff (Effects e)) Unit }
-
-newtype HalogenM
-  s                     (State item e)
-  (f :: Type -> Type)   (Query item e)           -- awaiting a
-  g                     (ChildQuery item e)
-  p                     ChildSlot
-  o                     (TypeaheadMessage item)
-  m                     (Aff (Effects e))        -- awaiting a
-  a                     a
+--  type HandlerRecord item e =
+--    { explicitA :: item -> HalogenM (State item e) (Query item e) (ChildQuery item e) ChildSlot (TypeaheadMessage item) (Aff (Effects e)) Unit }
+--
+--  newtype HalogenM
+--    s                     (State item e)
+--    (f :: Type -> Type)   (Query item e)           -- awaiting a
+--    g                     (ChildQuery item e)
+--    p                     ChildSlot
+--    o                     (TypeaheadMessage item)
+--    m                     (Aff (Effects e))        -- awaiting a
+--    a                     a
 
 component :: ∀ item e. TypeaheadComponent item e
 component =
