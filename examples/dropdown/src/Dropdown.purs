@@ -13,7 +13,7 @@ import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.HTML.CSS as HC
 import Select.Effects (FX)
-import Select.Primitive.Container as C
+import Select.Primitives.Container as C
 
 type DropdownItem = String
 

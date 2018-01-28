@@ -40,6 +40,7 @@ data ContainerQuery o item a
   | Mouse MouseState a
   | Blur a
   | Visibility VisibilityStatus a
+  | ReplaceItems (Array item) a
   | Raise (o Unit) a
   | ContainerReceiver (ContainerInput o item) a
 
@@ -190,6 +191,9 @@ component =
         Off    -> H.modify $ seeks (_ { open = false, highlightedIndex = Nothing })
         Toggle -> H.modify $ seeks (\st -> st { open = not st.open
                                               , highlightedIndex = Nothing })
+
+      ReplaceItems newItems a -> a <$ do
+        H.modify $ seeks (_ { items = newItems })
 
       ContainerReceiver i a -> a <$ do
         H.modify

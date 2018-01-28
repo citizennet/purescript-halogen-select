@@ -2,9 +2,9 @@ module Select.Components.Typeahead where
 
 import Prelude
 
-import Data.Maybe (Maybe, fromMaybe)
-import Data.Foldable (class Foldable, foldMap)
-import Data.Monoid (class Monoid, mempty)
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Tuple
+import Data.Array (filter, (:))
 import Data.Either (Either(..))
 import Data.Either.Nested (Either2)
 import Data.Functor.Coproduct.Nested (Coproduct2)
@@ -39,37 +39,47 @@ import Select.Primitives.Search as Search
 -- Component Types
 
 -- Newtype because of the self-reference in config function.
-newtype State f item e = State
-  { items :: f item
-  , selections :: f item
+newtype State o item e = State
+  { items :: Array item
+  , selections :: SelectionType item
+  , debounceTime :: Milliseconds
   , search :: String
-  , slots :: Tuple MountSearch MountContainer
-  , config :: Config f item e
+  , slots  :: Slots o item e
+  , config :: EvalConfig o item e
   }
 
---  searchSlot = HH.slot' CP.cp2 unit S.component { render: renderSearch, search: Nothing, debounceTime: Milliseconds 300.0 } ( HE.input HandleSearch )
---  containerSlot = HH.slot' CP.cp1 unit C.component { render: renderContainer, items: testData } ( HE.input HandleContainer )
+type Slots o item e =
+  { search    :: TypeaheadHTML o item e
+  , container :: TypeaheadHTML o item e }
 
-data Query f item e a
-  = HandleContainer (Container.Message (Query f item e) item) a
-  | HandleSearch (Search.Message (Query f item e) item) a
+
+-- Could also provide 'Limit Int' for restricted lists
+data SelectionType item
+  = One (Maybe item)
+  | Many (Array item)
+
+data Query o item e a
+  = HandleContainer (Container.Message o item) a
+  | HandleSearch (Search.Message o item) a
   | Remove item a
-  | Selections (f item -> a)
-  | TypeaheadReceiver (TypeaheadInput f item e) a
+  | Selections (SelectionType item -> a)
+  | TypeaheadReceiver (TypeaheadInput o item e) a
 
 -- TODO: Responsible for:
 -- input types for search and container primitives (will use these to construct own state)
 -- MAYBE: own renderer? better to keep in an unstyled div, right?
 -- MAYBE: component + input types for selections slot
-type TypeaheadInput f item e =
-  { searchPrim :: Search.SearchInput (Query f item e) item e
-  , containerPrim :: Container.ContainerInput (Query f item e) item
-  , config :: EvalConfig f item e
+type TypeaheadInput o item e =
+  { searchPrim :: Search.SearchInput o item e
+  , containerPrim :: Container.ContainerInput o item
+  , initialSelection :: SelectionType item
+  , config :: EvalConfig o item e
   }
 
-data TypeaheadMessage item
+data TypeaheadMessage o item
   = ItemSelected item
   | ItemRemoved item
+  | Emit (o Unit)
 
 -- The idea: maintain an Either where you either provide
 -- a configuration record, relying on default functionality
@@ -77,8 +87,8 @@ data TypeaheadMessage item
 -- for the two important child messages (new search or
 -- item selected)
 
-type EvalConfig f item e =
-  Either (HandlerRecord f item e) ConfigRecord
+type EvalConfig o item e =
+  Either (HandlerRecord o item e) ConfigRecord
 
 -- Some standard functionality is baked in to the component
 -- and can be configured if the user wants a more 'out of the
@@ -87,7 +97,6 @@ type ConfigRecord =
   { insertable  :: Boolean        -- If no match, insert?
   , matchType   :: MatchType       -- Function to match
   , keepOpen    :: Boolean        -- Stay open on selection?
-  , selectLimit :: SelectLimit    -- One | Limit n | Many
   , duplicates  :: Boolean        -- Allow duplicates?
   }
 
@@ -96,19 +105,12 @@ data MatchType
   | CaseInsensitive
   | Fuzzy
 
--- Can be used in validation logic
-data SelectLimit
-  = One
-  | Limit Int
-  | Many
-
 -- A default config can help minimize their efforts.
 defaultConfig :: ConfigRecord
 defaultConfig =
   { insertable: false
   , matchType: Fuzzy
   , keepOpen: true
-  , selectLimit: Many
   , duplicates: false
   }
 
@@ -117,51 +119,51 @@ defaultConfig =
 -- and slot types, though this is certainly a more 'advanced'
 -- case.
 
-type HandlerRecord f item e =
-  { newSearch :: String -> TypeaheadDSL f item e Unit
-  , itemSelected :: item -> TypeaheadDSL f item e Unit
+type HandlerRecord o item e =
+  { newSearch :: String -> TypeaheadDSL o item e Unit
+  , itemSelected :: item -> TypeaheadDSL o item e Unit
   }
 
 
 ----------
 -- Convenience component types
 
-type TypeaheadComponent f item e =
+type TypeaheadComponent o item e =
   H.Component
     HH.HTML
-    (Query f item e)
-    (TypeaheadInput f item e)
-    (TypeaheadMessage item)
+    (Query o item e)
+    (TypeaheadInput o item e)
+    (TypeaheadMessage o item)
     (FX e)
 
-type TypeaheadHTML f item e =
+type TypeaheadHTML o item e =
   H.ParentHTML
-    (Query f item e)
-    (ChildQuery f item e)
+    (Query o item e)
+    (ChildQuery o item e)
     ChildSlot
     (FX e)
 
-type TypeaheadDSL f item e =
+type TypeaheadDSL o item e =
   H.ParentDSL
-    (State f item e)
-    (Query f item e)
-    (ChildQuery f item e)
+    (State o item e)
+    (Query o item e)
+    (ChildQuery o item e)
     ChildSlot
-    (TypeaheadMessage item)
+    (TypeaheadMessage o item)
     (FX e)
 
 
 ----------
 -- Child types
 
-type ContainerQuery f item e =
-  Container.ContainerQuery (Query f item e) item
+type ContainerQuery o item =
+  Container.ContainerQuery o item
 
-type SearchQuery f item e =
-  Search.SearchQuery (Query f item e) item e
+type SearchQuery o item e =
+  Search.SearchQuery o item e
 
-type ChildQuery f item e =
-  Coproduct2 (ContainerQuery f item e) (SearchQuery f item e)
+type ChildQuery o item e =
+  Coproduct2 (ContainerQuery o item) (SearchQuery o item e)
 
 type ChildSlot =
   Either2 Slot Slot
@@ -184,7 +186,8 @@ derive instance ordPrimitiveSlot :: Ord PrimitiveSlot
 -- so our default functions can operate on them. The most common are likely to
 -- be Array or Maybe.
 
-component :: ∀ f item e. Applicative f => Foldable f => Monoid (f item) => Show item => TypeaheadComponent f item e
+component :: ∀ o item e
+  . Eq item => Show item => TypeaheadComponent o item e
 component =
   H.parentComponent
     { initialState
@@ -193,37 +196,59 @@ component =
     , receiver: HE.input TypeaheadReceiver
     }
   where
-    initialState :: TypeaheadInput f item e -> State f item e
-    initialState i = State
-      { items: i.items
-      , debounceTime: i.debounceTime
-      , search: fromMaybe "" i.search
-      , selections: i.selections
-      , render: i.render
-      , config: i.config
+    initialState :: TypeaheadInput o item e -> State o item e
+    initialState { searchPrim, containerPrim, initialSelection, config } = State
+      { items: containerPrim.items
+      , selections: initialSelection
+      , debounceTime: searchPrim.debounceTime
+      , search: fromMaybe "" searchPrim.search
+      , slots:
+        { search:
+            HH.slot'
+              CP.cp2
+              (Slot SearchSlot)
+              Search.component
+              searchPrim
+              (HE.input HandleSearch)
+        , container:
+            HH.slot'
+              CP.cp1
+              (Slot ContainerSlot)
+              Container.component
+              containerPrim
+              (HE.input HandleContainer)
+        }
+      , config: config
       }
 
-    render :: State f item e -> TypeaheadHTML f item e
-    render _ = HH.span_ []
+    render :: State o item e -> TypeaheadHTML o item e
+    render (State st) =
+      HH.div_ [ st.slots.search
+              , st.slots.container ]
 
-    eval :: Query f item e ~> TypeaheadDSL f item e
+    eval :: Query o item e ~> TypeaheadDSL o item e
     eval = case _ of
 
       -- Handle messages from the container.
       HandleContainer message a -> case message of
 
         -- Evaluate an embedded parent query
-        Container.Emit query -> eval query *> pure a
+        Container.Emit query -> H.raise (Emit query) *> pure a
 
         -- TODO:
         -- Handle a new item selection
-        Container.ItemSelected item -> pure a
+        Container.ItemSelected item -> a <$ do
+          H.raise $ ItemSelected item
+          (State st) <- H.get
+          case st.config of
+             Left { itemSelected } -> itemSelected item
+             Right _ -> itemSelectedFn item
 
       -- Handle messages from the search.
       HandleSearch message a -> case message of
 
         -- Evaluate an embedded parent query
-        Search.Emit query -> eval query *> pure a
+        Search.Emit query -> H.raise (Emit query) *> pure a
 
         -- Route a container query to its correct slot.
         Search.ContainerQuery query -> do
@@ -232,35 +257,34 @@ component =
 
         -- TODO
         -- Handle a new search
-        Search.NewSearch text -> do
+        Search.NewSearch text -> a <$ do
           (State st) <- H.get
           case st.config of
              Left { newSearch } -> newSearch text
              Right _ -> newSearchFn text
-          pure a
 
       -- Handle a 'remove' event on the selections list.
-      Remove item a -> pure a
+      Remove item a -> a <$ do
+        (State st) <- H.get
+
+        let newSelections = st.selections
+            newItems = item : st.items
+
+        H.modify \(State st') -> State
+          $ st' { items = newItems
+                , selections = newSelections }
+
+        H.raise $ ItemRemoved item
 
       -- Return the current selections to the parent.
       Selections reply -> do
         (State st) <- H.get
         pure $ reply st.selections
 
-      -- Reset the state with new input.
-      TypeaheadReceiver input a -> pure a
+      -- Overwrite the state with new input.
+      TypeaheadReceiver input a -> a <$ do
+        H.put (initialState input)
 
-
-
-----------
--- Helper functions
-
--- There is no default foldable filter function, but by bringing in the additional
--- applicative and monoid constraints, this becomes possible
-filter :: ∀ f item
-  . Applicative f => Foldable f => Monoid (f item) =>
-  (item -> Boolean) -> f item -> f item
-filter p = foldMap (\a -> if p a then pure a else mempty)
 
 ----------
 -- Helper eval functions
@@ -269,20 +293,42 @@ filter p = foldMap (\a -> if p a then pure a else mempty)
 -- behaviors out of the box. However, if you need more fine-grained control over
 -- state and behaviors, you can provide custom handlers.
 
-newSearchFn :: ∀ f item e. Applicative f => Foldable f => Monoid (f item) => Show item => String -> TypeaheadDSL f item e Unit
+
+-- Searching requires the ability to compare the item to a string. We can require a Show
+-- instance, or perhaps our own type class for "CompareString", where you can provide
+-- some function to turn your item into a string, including just "show"
+newSearchFn :: ∀ o item e. Eq item => Show item => String -> TypeaheadDSL o item e Unit
 newSearchFn text = do
   (State st) <- H.get
 
   let matches = filter (\item -> contains (Pattern text) (show item)) st.items
 
   -- Update the selections
-  H.modify $ \(State st') -> State
-    $ st' { search = text
-          , items = matches }
+  H.modify $ \(State st') -> State $ st' { search = text }
 
   -- Send the new items to the container
   _ <- H.query' CP.cp1 (Slot ContainerSlot)
         $ H.action
-        $ Container.Visibility Container.Off
+        $ Container.ReplaceItems matches
+
+  pure unit
+
+
+-- Manages a selection depending on what kind of select this is.
+itemSelectedFn :: ∀ o item e. Eq item => item -> TypeaheadDSL o item e Unit
+itemSelectedFn item = do
+  (State st) <- H.get
+
+  let (Tuple newSelections newItems) = case st.selections of
+        One Nothing  -> Tuple (One $ Just item) (filter ((/=) item) st.items)
+        One (Just i) -> Tuple (One $ Just item) ((:) i $ filter ((/=) item) st.items)
+        Many xs      -> Tuple (Many $ item : xs) (filter ((/=) item) st.items)
+
+  H.modify \(State st') -> State $ st' { selections = newSelections }
+
+  -- Send the new items to the container
+  _ <- H.query' CP.cp1 (Slot ContainerSlot)
+        $ H.action
+        $ Container.ReplaceItems newItems
 
   pure unit

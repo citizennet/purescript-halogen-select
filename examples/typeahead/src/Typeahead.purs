@@ -2,35 +2,31 @@ module Typeahead where
 
 import Prelude
 
-import Control.Monad.Aff.Console (log, logShow)
+import Control.Monad.Aff.Console (log)
 import CSS as CSS
-import Data.Array (mapWithIndex, difference, filter, (:))
+import Data.Array (mapWithIndex)
 import Data.Foldable (length)
+import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
-import Data.String (Pattern(..), contains)
 import Data.Time.Duration (Milliseconds(..))
-import Data.Either.Nested (Either2)
-import Data.Functor.Coproduct.Nested (Coproduct2)
-import Halogen.Component.ChildPath as CP
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.HTML.CSS as HC
 import Select.Effects (FX)
-import Select.Primitive.Container as C
-import Select.Primitive.Search as S
-
+import Select.Components.Typeahead as TA
+import Select.Primitives.Container as C
+import Select.Primitives.Search as S
 
 type TypeaheadItem = String
 
 data Query a
   = Log String a
-  | HandleContainer (C.Message Query TypeaheadItem) a
-  | HandleSearch    (S.Message Query TypeaheadItem) a
+  | HandleTypeahead (TA.TypeaheadMessage Query TypeaheadItem) a
 
-type ChildQuery e = Coproduct2 (C.ContainerQuery Query TypeaheadItem) (S.SearchQuery Query TypeaheadItem e)
-type ChildSlot = Either2 Unit Unit
+type ChildQuery e = TA.Query Query TypeaheadItem e
+type ChildSlot = Unit
 
 type HTML e = H.ParentHTML Query (ChildQuery e) ChildSlot (FX e)
 
@@ -57,66 +53,36 @@ component =
         [ HH.h2
           [ HP.class_ $ HH.ClassName "black-80 f-headline-1" ]
           [ HH.text "Typeahead Component"]
-        , HH.slot' CP.cp2 unit S.component { render: renderSearch, search: Nothing, debounceTime: Milliseconds 300.0 } ( HE.input HandleSearch )
-        , HH.slot' CP.cp1 unit C.component { render: renderContainer, items: testData } ( HE.input HandleContainer )
+        , HH.slot
+            unit
+            TA.component
+            { searchPrim: searchPrim
+            , containerPrim: containerPrim
+            , initialSelection: TA.Many []
+            , config: Right TA.defaultConfig
+            }
+            (HE.input HandleTypeahead)
         ]
+
+    searchPrim =
+      { render: renderSearch
+      , search: Nothing
+      , debounceTime: Milliseconds 300.0 }
+
+    containerPrim =
+      { render: renderContainer
+      , items: testData }
 
     eval :: Query ~> H.ParentDSL State Query (ChildQuery e) ChildSlot Void (FX e)
     eval = case _ of
       Log str a -> a <$ do
         H.liftAff $ log str
 
-      HandleSearch m a -> case m of
-        S.ContainerQuery q -> do
-          _ <- H.query' CP.cp1 unit q
-          pure a
+      HandleTypeahead message a -> a <$ case message of
+        TA.Emit query -> eval query
+        TA.ItemSelected item -> H.liftAff $ log $ "Selected: " <> item
+        TA.ItemRemoved  item -> H.liftAff $ log $ "Removed: " <> item
 
-        S.Emit q -> eval q *> pure a
-
-        -- A new search is done: filter the results!
-        S.NewSearch s -> a <$ do
-          st <- H.get
-
-          H.liftAff $ log $ "New search performed: " <> s
-
-          let filtered  = filterItems s st.items
-          let available = difference filtered st.selected
-
-          -- Allow insertion of elements
-          let newItems
-                | length available < 1 = s : available
-                | otherwise            = available
-
-          _ <- H.query' CP.cp1 unit
-                 $ H.action
-                 $ C.ContainerReceiver { render: renderContainer, items: newItems }
-          pure a
-
-      HandleContainer m a -> case m of
-        C.Emit q -> eval q *> pure a
-
-        C.ItemSelected item -> a <$ do
-          st <- H.get
-          if length (filter ((==) item) st.items) > 0
-            then H.modify _ { selected = ( item : st.selected ) }
-            else H.modify _ { items = ( item : st.items ), selected = ( item : st.selected ) }
-
-          newSt <- H.get
-          _  <- H.query' CP.cp1 unit
-                  $ H.action
-                  $ C.ContainerReceiver { render: renderContainer, items: difference newSt.items newSt.selected }
-
-          H.liftAff $ log "List of selections..." *> logShow newSt.selected
-
-
-{-
-
-HELPERS
-
--}
-
-filterItems :: TypeaheadItem -> Array TypeaheadItem -> Array TypeaheadItem
-filterItems str = filter (\i -> contains (Pattern str) i)
 
 {-
 
