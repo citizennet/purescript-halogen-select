@@ -25,7 +25,7 @@ data Query a
   = Log String a
   | HandleTypeahead (TA.TypeaheadMessage Query TypeaheadItem) a
 
-type ChildQuery e = TA.Query Query TypeaheadItem e
+type ChildQuery e = TA.TypeaheadQuery Query TypeaheadItem e
 type ChildSlot = Unit
 
 type HTML e = H.ParentHTML Query (ChildQuery e) ChildSlot (FX e)
@@ -56,22 +56,15 @@ component =
         , HH.slot
             unit
             TA.component
-            { searchPrim: searchPrim
-            , containerPrim: containerPrim
+            { items: testData
+            , debounceTime: Milliseconds 0.0
+            , search: Nothing
             , initialSelection: TA.Many []
+            , render: renderTypeahead
             , config: Right TA.defaultConfig
             }
             (HE.input HandleTypeahead)
         ]
-
-    searchPrim =
-      { render: renderSearch
-      , search: Nothing
-      , debounceTime: Milliseconds 300.0 }
-
-    containerPrim =
-      { render: renderContainer
-      , items: testData }
 
     eval :: Query ~> H.ParentDSL State Query (ChildQuery e) ChildSlot Void (FX e)
     eval = case _ of
@@ -90,6 +83,15 @@ Config
 
 -}
 
+searchPrim =
+  { render: renderSearch
+  , search: Nothing
+  , debounceTime: Milliseconds 300.0 }
+
+containerPrim =
+  { render: renderContainer
+  , items: testData }
+
 testData :: Array TypeaheadItem
 testData =
   [ "Thomas Honeyman"
@@ -107,8 +109,13 @@ testData =
   , "THE COOKIE MONSTER DID NOTHING WRONG"
   ]
 
-
+----------
 -- Render Functions
+
+-- Simple renderer for the typeahead. Render anything you want here, but you're expected to mount the
+-- search and container slots.
+renderTypeahead _ = HH.div_ [ TA.searchSlot searchPrim, TA.containerSlot containerPrim ]
+
 -- The user is using the Search primitive, so they have to fill out a Search render function
 renderSearch :: ∀ e. (S.SearchState e) -> H.HTML Void (S.SearchQuery Query TypeaheadItem e)
 renderSearch st =

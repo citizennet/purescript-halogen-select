@@ -18,11 +18,6 @@ import Halogen.HTML.Properties as HP
 import Select.Primitives.State (updateStore, getState, State)
 import Select.Effects (FX)
 
-{-
-
-The Container primitive ...
-
--}
 
 -- | The query type for the `Container` primitive.
 -- |
