@@ -3,7 +3,7 @@ module Select.Components.Typeahead where
 import Prelude
 
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Tuple
+import Data.Tuple (Tuple(..))
 import Data.Array (filter, (:))
 import Data.Either (Either(..))
 import Data.Either.Nested (Either2)
@@ -68,7 +68,6 @@ data Query o item e a
 -- TODO: Responsible for:
 -- input types for search and container primitives (will use these to construct own state)
 -- MAYBE: own renderer? better to keep in an unstyled div, right?
--- MAYBE: component + input types for selections slot
 type TypeaheadInput o item e =
   { searchPrim :: Search.SearchInput o item e
   , containerPrim :: Container.ContainerInput o item
@@ -95,7 +94,7 @@ type EvalConfig o item e =
 -- box' experience. This is a sample.
 type ConfigRecord =
   { insertable  :: Boolean        -- If no match, insert?
-  , matchType   :: MatchType       -- Function to match
+  , matchType   :: MatchType      -- Function to match
   , keepOpen    :: Boolean        -- Stay open on selection?
   , duplicates  :: Boolean        -- Allow duplicates?
   }
