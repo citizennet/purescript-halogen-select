@@ -3,6 +3,7 @@ module Typeahead where
 import Prelude
 
 import Control.Monad.Aff.Console (log)
+import Data.Newtype
 import CSS as CSS
 import Data.Array (mapWithIndex)
 import Data.Foldable (length)
@@ -19,7 +20,11 @@ import Select.Components.Typeahead as TA
 import Select.Primitives.Container as C
 import Select.Primitives.Search as S
 
-type TypeaheadItem = String
+newtype TypeaheadItem = TypeaheadItem { id :: Int, name :: String }
+derive instance newtypeTypeaheadItem :: Newtype TypeaheadItem
+derive instance eqTypeaheadItem :: Eq TypeaheadItem
+instance stringComparableTypeaheadItem :: TA.StringComparable TypeaheadItem where
+  toString = (_.name <<< unwrap)
 
 data Query a
   = Log String a
@@ -73,8 +78,8 @@ component =
 
       HandleTypeahead message a -> a <$ case message of
         TA.Emit query -> eval query
-        TA.ItemSelected item -> H.liftAff $ log $ "Selected: " <> item
-        TA.ItemRemoved  item -> H.liftAff $ log $ "Removed: " <> item
+        TA.ItemSelected item -> H.liftAff $ log $ "Selected: " <> _.name item
+        TA.ItemRemoved  item -> H.liftAff $ log $ "Removed: " <> _.name item
 
 
 {-
@@ -83,43 +88,47 @@ Config
 
 -}
 
-searchPrim =
-  { render: renderSearch
-  , search: Nothing
-  , debounceTime: Milliseconds 300.0 }
-
-containerPrim =
-  { render: renderContainer
-  , items: testData }
-
 testData :: Array TypeaheadItem
 testData =
-  [ "Thomas Honeyman"
-  , "Dave Zuch"
-  , "Chris Cornwell"
-  , "Forest Toney"
-  , "Lee Leathers"
-  , "Kim Wu"
-  , "Rachel Blair"
-  , "Tara Strauss"
-  , "Sanket Sabnis"
-  , "Aaron Chu"
-  , "Vincent Busam"
-  , "Riley Gibbs"
-  , "THE COOKIE MONSTER DID NOTHING WRONG"
+  [ { id: 0, name: "Thomas Honeyman" }
+  , { id: 1, name: "Dave Zuch" }
+  , { id: 2, name: "Chris Cornwell" }
+  , { id: 3, name: "Forest Toney" }
+  , { id: 4, name: "Lee Leathers" }
+  , { id: 5, name: "Kim Wu" }
+  , { id: 6, name: "Tara Strauss" }
+  , { id: 7, name: "Sanket Sabnis" }
+  , { id: 8, name: "Aaron Chu" }
+  , { id: 9, name: "Vincent Busam" }
+  , { id: 10, name: "Riley Gibbs" }
+  , { id: 11, name: "Qian Liu" }
   ]
 
 ----------
 -- Render Functions
 
--- Simple renderer for the typeahead. Render anything you want here, but you're expected to mount the
--- search and container slots.
+-- Simple renderer for the typeahead. Render anything you want here,
+-- but you're expected to mount the search and container slots.
+renderTypeahead :: forall e
+  . TA.TypeaheadState Query TypeaheadItem e
+ -> TA.TypeaheadHTML Query TypeaheadItem e
 renderTypeahead _ = HH.div_ [ TA.searchSlot searchPrim, TA.containerSlot containerPrim ]
+  where
+    searchPrim =
+      { render: renderSearch
+      , search: Nothing
+      , debounceTime: Milliseconds 300.0 }
+
+    containerPrim =
+      { render: renderContainer
+      , items: testData }
+
 
 -- The user is using the Search primitive, so they have to fill out a Search render function
 renderSearch :: ∀ e. (S.SearchState e) -> H.HTML Void (S.SearchQuery Query TypeaheadItem e)
 renderSearch st =
   HH.input ( S.getInputProps [] )
+
 
 -- The user is using the Container primitive, so they have to fill out a Container render function
 renderContainer :: (C.ContainerState TypeaheadItem) -> H.HTML Void (C.ContainerQuery Query TypeaheadItem)
@@ -166,7 +175,7 @@ renderContainer st =
         )
 
     renderItem :: Int -> TypeaheadItem -> H.HTML Void (C.ContainerQuery Query TypeaheadItem)
-    renderItem index item = HH.li item' [ HH.text item ]
+    renderItem index item = HH.li item' [ HH.text (_.name item) ]
       where
         item' = C.getItemProps index
           [ HP.class_ $ HH.ClassName
