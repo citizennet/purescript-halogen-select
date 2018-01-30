@@ -20,7 +20,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Select.Primitive.Container as C
+import Select.Primitives.Container as C
 import Select.Effects (Effects)
 
 

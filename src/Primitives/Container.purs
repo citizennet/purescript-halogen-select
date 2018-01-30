@@ -1,4 +1,4 @@
-module Select.Primitive.Container where
+module Select.Primitives.Container where
 
 import Prelude
 
@@ -15,14 +15,9 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Select.Primitive.State (updateStore, getState, State)
+import Select.Primitives.State (updateStore, getState, State)
 import Select.Effects (FX)
 
-{-
-
-The Container primitive ...
-
--}
 
 -- | The query type for the `Container` primitive.
 -- |
@@ -40,6 +35,7 @@ data ContainerQuery o item a
   | Mouse MouseState a
   | Blur a
   | Visibility VisibilityStatus a
+  | ReplaceItems (Array item) a
   | Raise (o Unit) a
   | ContainerReceiver (ContainerInput o item) a
 
@@ -190,6 +186,9 @@ component =
         Off    -> H.modify $ seeks (_ { open = false, highlightedIndex = Nothing })
         Toggle -> H.modify $ seeks (\st -> st { open = not st.open
                                               , highlightedIndex = Nothing })
+
+      ReplaceItems newItems a -> a <$ do
+        H.modify $ seeks (_ { items = newItems })
 
       ContainerReceiver i a -> a <$ do
         H.modify
