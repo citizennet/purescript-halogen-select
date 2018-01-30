@@ -32,8 +32,8 @@ The Search primitive captures user input and returns it to the parent.
 -- | - `SearchReceiver`: Update the component with new `Input` when the parent re-renders
 data SearchQuery o item e a
   = TextInput String a
-  | FromContainer (C.ContainerQuery o item Unit) a
   | Raise (o Unit) a
+  | FromContainer (C.ContainerQuery o item Unit) a
   | SearchReceiver (SearchInput o item e) a
 
 -- | The `Search` primitive internal state
@@ -95,10 +95,6 @@ component =
 
     eval :: (SearchQuery o item e) ~> H.ComponentDSL (State (SearchState e) (SearchQuery o item e)) (SearchQuery o item e) (Message o item) (FX e)
     eval = case _ of
-      FromContainer q a -> do
-        H.raise (ContainerQuery q)
-        pure a
-
       TextInput str a -> a <$ do
         (Tuple _ st) <- getState
         H.modify $ seeks _ { search = str }
@@ -130,6 +126,10 @@ component =
                 putVar unit var
 
             H.modify $ seeks _ { debouncer = Just { var, fiber } }
+
+      FromContainer q a -> do
+        H.raise (ContainerQuery q)
+        pure a
 
       -- Raise the embedded query
       Raise q a -> H.raise (Emit q) *> pure a
