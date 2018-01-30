@@ -2,36 +2,35 @@ module Typeahead where
 
 import Prelude
 
-import Control.Monad.Aff.Console (log)
-import Data.Newtype
+import Control.Monad.Aff.Console (log, logShow)
 import CSS as CSS
-import Data.Array (mapWithIndex)
+import Data.Array (mapWithIndex, difference, filter, (:))
 import Data.Foldable (length)
-import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
+import Data.String (Pattern(..), contains)
 import Data.Time.Duration (Milliseconds(..))
+import Data.Either.Nested (Either2)
+import Data.Functor.Coproduct.Nested (Coproduct2)
+import Halogen.Component.ChildPath as CP
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.HTML.CSS as HC
 import Select.Effects (FX)
-import Select.Components.Typeahead as TA
 import Select.Primitives.Container as C
 import Select.Primitives.Search as S
 
-newtype TypeaheadItem = TypeaheadItem { id :: Int, name :: String }
-derive instance newtypeTypeaheadItem :: Newtype TypeaheadItem
-derive instance eqTypeaheadItem :: Eq TypeaheadItem
-instance stringComparableTypeaheadItem :: TA.StringComparable TypeaheadItem where
-  toString = (_.name <<< unwrap)
+
+type TypeaheadItem = String
 
 data Query a
   = Log String a
-  | HandleTypeahead (TA.TypeaheadMessage Query TypeaheadItem) a
+  | HandleContainer (C.Message Query TypeaheadItem) a
+  | HandleSearch    (S.Message Query TypeaheadItem) a
 
-type ChildQuery e = TA.TypeaheadQuery Query TypeaheadItem e
-type ChildSlot = Unit
+type ChildQuery e = Coproduct2 (C.ContainerQuery Query TypeaheadItem) (S.SearchQuery Query TypeaheadItem e)
+type ChildSlot = Either2 Unit Unit
 
 type HTML e = H.ParentHTML Query (ChildQuery e) ChildSlot (FX e)
 
@@ -58,17 +57,8 @@ component =
         [ HH.h2
           [ HP.class_ $ HH.ClassName "black-80 f-headline-1" ]
           [ HH.text "Typeahead Component"]
-        , HH.slot
-            unit
-            TA.component
-            { items: testData
-            , debounceTime: Milliseconds 0.0
-            , search: Nothing
-            , initialSelection: TA.Many []
-            , render: renderTypeahead
-            , config: Right TA.defaultConfig
-            }
-            (HE.input HandleTypeahead)
+        , HH.slot' CP.cp2 unit S.component { render: renderSearch, search: Nothing, debounceTime: Milliseconds 300.0 } ( HE.input HandleSearch )
+        , HH.slot' CP.cp1 unit C.component { render: renderContainer, items: testData } ( HE.input HandleContainer )
         ]
 
     eval :: Query ~> H.ParentDSL State Query (ChildQuery e) ChildSlot Void (FX e)
@@ -76,11 +66,57 @@ component =
       Log str a -> a <$ do
         H.liftAff $ log str
 
-      HandleTypeahead message a -> a <$ case message of
-        TA.Emit query -> eval query
-        TA.ItemSelected item -> H.liftAff $ log $ "Selected: " <> _.name item
-        TA.ItemRemoved  item -> H.liftAff $ log $ "Removed: " <> _.name item
+      HandleSearch m a -> case m of
+        S.ContainerQuery q -> do
+          _ <- H.query' CP.cp1 unit q
+          pure a
 
+        S.Emit q -> eval q *> pure a
+
+        -- A new search is done: filter the results!
+        S.NewSearch s -> a <$ do
+          st <- H.get
+
+          H.liftAff $ log $ "New search performed: " <> s
+
+          let filtered  = filterItems s st.items
+          let available = difference filtered st.selected
+
+          -- Allow insertion of elements
+          let newItems
+                | length available < 1 = s : available
+                | otherwise            = available
+
+          _ <- H.query' CP.cp1 unit
+                 $ H.action
+                 $ C.ContainerReceiver { render: renderContainer, items: newItems }
+          pure a
+
+      HandleContainer m a -> case m of
+        C.Emit q -> eval q *> pure a
+
+        C.ItemSelected item -> a <$ do
+          st <- H.get
+          if length (filter ((==) item) st.items) > 0
+            then H.modify _ { selected = ( item : st.selected ) }
+            else H.modify _ { items = ( item : st.items ), selected = ( item : st.selected ) }
+
+          newSt <- H.get
+          _  <- H.query' CP.cp1 unit
+                  $ H.action
+                  $ C.ContainerReceiver { render: renderContainer, items: difference newSt.items newSt.selected }
+
+          H.liftAff $ log "List of selections..." *> logShow newSt.selected
+
+
+{-
+
+HELPERS
+
+-}
+
+filterItems :: TypeaheadItem -> Array TypeaheadItem -> Array TypeaheadItem
+filterItems str = filter (\i -> contains (Pattern str) i)
 
 {-
 
@@ -90,45 +126,26 @@ Config
 
 testData :: Array TypeaheadItem
 testData =
-  [ { id: 0, name: "Thomas Honeyman" }
-  , { id: 1, name: "Dave Zuch" }
-  , { id: 2, name: "Chris Cornwell" }
-  , { id: 3, name: "Forest Toney" }
-  , { id: 4, name: "Lee Leathers" }
-  , { id: 5, name: "Kim Wu" }
-  , { id: 6, name: "Tara Strauss" }
-  , { id: 7, name: "Sanket Sabnis" }
-  , { id: 8, name: "Aaron Chu" }
-  , { id: 9, name: "Vincent Busam" }
-  , { id: 10, name: "Riley Gibbs" }
-  , { id: 11, name: "Qian Liu" }
+  [ "Thomas Honeyman"
+  , "Dave Zuch"
+  , "Chris Cornwell"
+  , "Forest Toney"
+  , "Lee Leathers"
+  , "Kim Wu"
+  , "Rachel Blair"
+  , "Tara Strauss"
+  , "Sanket Sabnis"
+  , "Aaron Chu"
+  , "Vincent Busam"
+  , "Riley Gibbs"
   ]
 
-----------
+
 -- Render Functions
-
--- Simple renderer for the typeahead. Render anything you want here,
--- but you're expected to mount the search and container slots.
-renderTypeahead :: forall e
-  . TA.TypeaheadState Query TypeaheadItem e
- -> TA.TypeaheadHTML Query TypeaheadItem e
-renderTypeahead _ = HH.div_ [ TA.searchSlot searchPrim, TA.containerSlot containerPrim ]
-  where
-    searchPrim =
-      { render: renderSearch
-      , search: Nothing
-      , debounceTime: Milliseconds 300.0 }
-
-    containerPrim =
-      { render: renderContainer
-      , items: testData }
-
-
 -- The user is using the Search primitive, so they have to fill out a Search render function
 renderSearch :: ∀ e. (S.SearchState e) -> H.HTML Void (S.SearchQuery Query TypeaheadItem e)
 renderSearch st =
   HH.input ( S.getInputProps [] )
-
 
 -- The user is using the Container primitive, so they have to fill out a Container render function
 renderContainer :: (C.ContainerState TypeaheadItem) -> H.HTML Void (C.ContainerQuery Query TypeaheadItem)
@@ -175,7 +192,7 @@ renderContainer st =
         )
 
     renderItem :: Int -> TypeaheadItem -> H.HTML Void (C.ContainerQuery Query TypeaheadItem)
-    renderItem index item = HH.li item' [ HH.text (_.name item) ]
+    renderItem index item = HH.li item' [ HH.text item ]
       where
         item' = C.getItemProps index
           [ HP.class_ $ HH.ClassName
