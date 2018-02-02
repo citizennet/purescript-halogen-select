@@ -6,7 +6,7 @@ import Data.Time.Duration (Milliseconds)
 import DOM.Event.Types as ET
 import Control.Comonad (extract)
 import Control.Comonad.Store (seeks, store)
-import Control.Monad.Aff (Fiber, delay, error, forkAff, killFiber)
+import Control.Monad.Aff (Aff, Fiber, delay, error, forkAff, killFiber)
 import Control.Monad.Aff.AVar (AVar, makeEmptyVar, putVar, takeVar)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Tuple (Tuple(..))
@@ -17,7 +17,7 @@ import Halogen.HTML.Properties as HP
 import Halogen.Query.HalogenM (fork, raise) as H
 import Select.Primitives.State (State, updateStore, getState)
 import Select.Primitives.Container as C
-import Select.Effects (Effects, FX)
+import Select.Effects (Effects)
 
 {-
 
@@ -51,7 +51,7 @@ type SearchState e =
 -- | The `Debouncer` type alias, used to debounce user input in the `Search` primitive.
 type Debouncer e =
   { var   :: AVar Unit
-  , fiber :: Fiber (Effects e) Unit }
+  , fiber :: Fiber e Unit }
 
 -- | The input type of the `Search` primitive
 -- |
@@ -77,7 +77,7 @@ data Message o item
 -- | The primitive handles state and transformations but defers all rendering to the parent. The
 -- | render function can be written using our helper functions to ensure the right events are included. See the `Dispatch`
 -- | module for more information.
-component :: ∀ o item e. H.Component HH.HTML (SearchQuery o item e) (SearchInput o item e) (Message o item) (FX e)
+component :: ∀ o item e. H.Component HH.HTML (SearchQuery o item e) (SearchInput o item e) (Message o item) (Aff (Effects e))
 component =
   H.component
     { initialState
@@ -93,7 +93,7 @@ component =
       , debouncer: Nothing
       }
 
-    eval :: (SearchQuery o item e) ~> H.ComponentDSL (State (SearchState e) (SearchQuery o item e)) (SearchQuery o item e) (Message o item) (FX e)
+    eval :: (SearchQuery o item e) ~> H.ComponentDSL (State (SearchState e) (SearchQuery o item e)) (SearchQuery o item e) (Message o item) (Aff (Effects e))
     eval = case _ of
       TextInput str a -> a <$ do
         (Tuple _ st) <- getState
