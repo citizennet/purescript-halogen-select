@@ -8,6 +8,7 @@ import Control.Comonad (extract)
 import Control.Comonad.Store (seeks, store)
 import Control.Monad.Aff (Aff, Fiber, delay, error, forkAff, killFiber)
 import Control.Monad.Aff.AVar (AVar, makeEmptyVar, putVar, takeVar)
+import Control.Monad.Aff.Class (class MonadAff)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Tuple (Tuple(..))
 import Halogen (IProp, Component, ComponentDSL, ComponentHTML, action, component, liftAff, modify) as H
@@ -74,10 +75,19 @@ data Message o item
   | ContainerQuery (C.ContainerQuery o item Unit)
   | Emit (o Unit)
 
+
 -- | The primitive handles state and transformations but defers all rendering to the parent. The
 -- | render function can be written using our helper functions to ensure the right events are included. See the `Dispatch`
 -- | module for more information.
-component :: ∀ o item e. H.Component HH.HTML (SearchQuery o item e) (SearchInput o item e) (Message o item) (Aff (Effects e))
+
+component :: ∀ o item e m
+  . MonadAff (Effects e) m
+ => H.Component
+     HH.HTML
+     (SearchQuery o item (Effects e))
+     (SearchInput o item (Effects e))
+     (Message o item)
+     m
 component =
   H.component
     { initialState
@@ -86,14 +96,23 @@ component =
     , receiver: HE.input SearchReceiver
     }
   where
-    initialState :: SearchInput o item e -> State (SearchState e) (SearchQuery o item e)
+    initialState
+      :: SearchInput o item (Effects e)
+      -> State (SearchState (Effects e)) (SearchQuery o item (Effects e))
     initialState i = store i.render
       { search: fromMaybe "" i.search
       , ms: i.debounceTime
       , debouncer: Nothing
       }
 
-    eval :: (SearchQuery o item e) ~> H.ComponentDSL (State (SearchState e) (SearchQuery o item e)) (SearchQuery o item e) (Message o item) (Aff (Effects e))
+    eval
+      :: (SearchQuery o item (Effects e))
+      ~> H.ComponentDSL
+          (State (SearchState (Effects e))
+          (SearchQuery o item (Effects e)))
+          (SearchQuery o item (Effects e))
+          (Message o item)
+          m
     eval = case _ of
       TextInput str a -> a <$ do
         (Tuple _ st) <- getState

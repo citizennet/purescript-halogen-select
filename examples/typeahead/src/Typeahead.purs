@@ -2,6 +2,8 @@ module Typeahead where
 
 import Prelude
 
+import Control.Monad.Eff.Now (NOW, now)
+import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Aff.Console (log, logShow)
 import CSS as CSS
 import Data.Array (mapWithIndex, difference, filter, (:))
@@ -17,7 +19,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.HTML.CSS as HC
-import Select.Effects (FX)
+import Select.Effects (Effects)
 import Select.Primitives.Container as C
 import Select.Primitives.Search as S
 
@@ -29,16 +31,18 @@ data Query a
   | HandleContainer (C.Message Query TypeaheadItem) a
   | HandleSearch    (S.Message Query TypeaheadItem) a
 
-type ChildQuery e = Coproduct2 (C.ContainerQuery Query TypeaheadItem) (S.SearchQuery Query TypeaheadItem e)
+type ChildQuery e = Coproduct2 (C.ContainerQuery Query TypeaheadItem) (S.SearchQuery Query TypeaheadItem (Effects e))
 type ChildSlot = Either2 Unit Unit
 
-type HTML e = H.ParentHTML Query (ChildQuery e) ChildSlot (FX e)
+type HTML m e = H.ParentHTML Query (ChildQuery e) ChildSlot m
 
 type State =
   { items    :: Array TypeaheadItem
   , selected :: Array TypeaheadItem }
 
-component :: ∀ e. H.Component HH.HTML Query Unit Void (FX e)
+component :: ∀ e m
+  . MonadAff ( Effects e ) m
+ => H.Component HH.HTML Query Unit Void m
 component =
   H.parentComponent
     { initialState: const initState
@@ -50,18 +54,28 @@ component =
     initState :: State
     initState = { items: testData, selected: [] }
 
-    render :: State -> HTML e
+    render :: State -> HTML m e
     render st =
       HH.div
         [ HP.class_ $ HH.ClassName "mw8 sans-serif center" ]
         [ HH.h2
           [ HP.class_ $ HH.ClassName "black-80 f-headline-1" ]
           [ HH.text "Typeahead Component"]
-        , HH.slot' CP.cp2 unit S.component { render: renderSearch, search: Nothing, debounceTime: Milliseconds 300.0 } ( HE.input HandleSearch )
-        , HH.slot' CP.cp1 unit C.component { render: renderContainer, items: testData } ( HE.input HandleContainer )
+        , HH.slot'
+            CP.cp2
+            unit
+            S.component
+            { render: renderSearch, search: Nothing, debounceTime: Milliseconds 300.0 }
+            ( HE.input HandleSearch )
+        , HH.slot'
+            CP.cp1
+            unit
+            C.component
+            { render: renderContainer, items: testData }
+            ( HE.input HandleContainer )
         ]
 
-    eval :: Query ~> H.ParentDSL State Query (ChildQuery e) ChildSlot Void (FX e)
+    eval :: Query ~> H.ParentDSL State Query (ChildQuery e) ChildSlot Void m
     eval = case _ of
       Log str a -> a <$ do
         H.liftAff $ log str
@@ -77,6 +91,7 @@ component =
         S.NewSearch s -> a <$ do
           st <- H.get
 
+          x <- H.liftEff now
           H.liftAff $ log $ "New search performed: " <> s
 
           let filtered  = filterItems s st.items
