@@ -1,5 +1,6 @@
 module Select.Effects where
 
+import Control.Monad.Eff.Exception (EXCEPTION)
 import Control.Monad.Eff.Ref (REF)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.AVar (AVAR)
@@ -12,4 +13,4 @@ import Network.HTTP.Affjax (AJAX)
 -- | ```purescript
 -- | main :: ∀ e. Eff (HalogenEffects (Effects e)) Unit
 -- | ```
-type Effects eff = ( dom :: DOM, console :: CONSOLE, ajax :: AJAX, avar :: AVAR, ref :: REF | eff )
+type Effects eff = ( dom :: DOM, console :: CONSOLE, ajax :: AJAX, avar :: AVAR, ref :: REF, exception :: EXCEPTION | eff )

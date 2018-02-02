@@ -6,9 +6,9 @@ import Control.Monad.Eff (Eff)
 import Halogen.Aff as HA
 import Halogen.VDom.Driver (runUI)
 import Select.Effects (Effects)
-import Typeahead (component)
+import Typeahead (TypeaheadEffects, component)
 
-main :: Eff _ Unit
+main :: ∀ e. Eff (TypeaheadEffects e) Unit
 main = HA.runHalogenAff do
   body <- HA.awaitBody
   runUI component unit body
