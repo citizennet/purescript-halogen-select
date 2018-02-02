@@ -8,7 +8,7 @@ import Halogen.VDom.Driver (runUI)
 import Dropdown (component)
 import Select.Effects (Effects)
 
-main :: ∀ e. Eff (HA.HalogenEffects (Effects e)) Unit
+main :: ∀ e. Eff (Effects e) Unit
 main = HA.runHalogenAff do
   body <- HA.awaitBody
   runUI component unit body

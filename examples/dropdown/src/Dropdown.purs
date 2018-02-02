@@ -2,6 +2,7 @@ module Dropdown where
 
 import Prelude
 
+import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Console (log, logShow)
 import CSS as CSS
 import DOM.Event.KeyboardEvent as KE
@@ -12,7 +13,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.HTML.CSS as HC
-import Select.Effects (FX)
+import Select.Effects (Effects)
 import Select.Primitives.Container as C
 
 type DropdownItem = String
@@ -26,9 +27,7 @@ data Query a
   | HandleContainer (C.Message Query DropdownItem) a
   | ToContainer (C.ContainerQuery Query DropdownItem Unit) a
 
-type HTML e = H.ParentHTML Query (C.ContainerQuery Query DropdownItem) Unit (FX e)
-
-component :: ∀ e. H.Component HH.HTML Query Unit Void (FX e)
+component :: ∀ e. H.Component HH.HTML Query Unit Void (Aff (Effects e))
 component =
   H.parentComponent
     { initialState: const initState
@@ -40,7 +39,7 @@ component =
     initState :: State
     initState = { items: testData, selected: [] }
 
-    render :: State -> H.ParentHTML Query (C.ContainerQuery Query DropdownItem) Unit (FX e)
+    render :: State -> H.ParentHTML Query (C.ContainerQuery Query DropdownItem) Unit (Aff (Effects e))
     render st =
       HH.div
         [ HP.class_ $ HH.ClassName "mw8 sans-serif center" ]
@@ -69,7 +68,7 @@ component =
     -- Here, Menu.Emit recursively calls the parent eval function.
     -- Menu.Selected item is handled by removing that item from
     -- the options and maintaining it here in state.
-    eval :: Query ~> H.ParentDSL State Query (C.ContainerQuery Query DropdownItem) Unit Void (FX e)
+    eval :: Query ~> H.ParentDSL State Query (C.ContainerQuery Query DropdownItem) Unit Void (Aff (Effects e))
     eval = case _ of
       Log s a -> H.liftAff (log s) *> pure a
 
@@ -117,7 +116,7 @@ testData =
 
 -- Render whatever is going to provide the action for toggling the menu. Notably, this is
 -- NOT a primitive.
-renderToggle :: ∀ e. HTML e
+renderToggle :: ∀ e. H.ParentHTML Query (C.ContainerQuery Query DropdownItem) Unit (Aff (Effects e))
 renderToggle =
   HH.span
     ( C.getToggleProps ToContainer

@@ -1,3 +1,9 @@
+-- | The Container primitive contains an array of items that can be selected. As
+-- | you provide the render functions, this array of items could be anything from
+-- | a dropdown list to a calendar grid. The primitive provides keyboard and click
+-- | behaviors for highlighting and selecting items and will be used in nearly every
+-- | selection component you write.
+
 module Select.Primitives.Container where
 
 import Prelude
@@ -20,7 +26,17 @@ import Select.Primitives.State (updateStore, getState, State)
 import Select.Effects (Effects)
 
 
--- | The query type for the `Container` primitive.
+-- | The query type for the `Container` primitive. This primitive handles selections
+-- | and keyboard navigation.
+-- |
+-- | Arguments:
+-- |
+-- | - `o`: The type of the parent query to embed. This is usually the component that
+-- | -      mounts the search primitive, but it could also be the query type of some
+-- |        higher component.
+-- | - `item`: Your custom item type, used by your renderers.
+-- |
+-- | Constructors:
 -- |
 -- | - `Highlight`: Change the highlighted item to the next, previous, or a specific index.
 -- | - `Select`: Select an item at the specified index
@@ -28,6 +44,8 @@ import Select.Effects (Effects)
 -- | - `Mouse`: Capture mouse events to close the menu or select an item
 -- | - `Blur`: Trigger the DOM blur event
 -- | - `Visibility`: Set the visibility by toggling, setting to on, or setting to off.
+-- | - `ReplaceItems`: Replace the array of items.
+-- | - `Raise`: Embed a parent query that can be returned to the parent for evaluation.
 -- | - `ContainerReceiver`: Update the component on new `Input` when the parent re-renders.
 data ContainerQuery o item a
   = Highlight Target a
@@ -40,18 +58,25 @@ data ContainerQuery o item a
   | Raise (o Unit) a
   | ContainerReceiver (ContainerInput o item) a
 
--- | For targeting items in the container via the `ContainerQuery`'s `Highlight` constructor
+-- | Navigation for the container's `Highlight` query.
+-- |
+-- | Note: in `eval`, this wraps around, so providing `Highlight Next` on the
+-- | last item in the array will highlight the first item in the array.
 data Target
   = Next
   | Prev
   | Index Int
 
--- | For maintaining the state of the mouse in the `Container`
+-- | Maintain the state of the mouse in the container's `Mouse` query.
 data MouseState
   = Down
   | Up
 
--- | For showing or hiding the `Container`
+-- | Possible visibility statuses for the container's `Visibility` query.
+-- |
+-- | `On`: Set the container to be visible (use this to "open" the container)
+-- | `Off`: Set the container to be visible (use this to "close" the container)
+-- | `Toggle`: Toggle between "open" and "closed".
 data VisibilityStatus
   = On
   | Off
@@ -81,17 +106,22 @@ type ContainerInput o item =
   , render :: ContainerState item -> H.ComponentHTML (ContainerQuery o item) }
 
 
--- | The Container sends the parent messages in two instances:
--- | - `Emit`: An embedded query has been triggered, and you must decide how to handle it; typically via evaluating
--- |           in the parent or re-routing the query to another primitive.
--- | - `ItemSelected`: An item has been selected from the container.
+-- | Messages emitted by the container primitive to notify the parent of important events.
+-- |
+-- | - `ItemSelected`: An item has been selected in the container. This does not indicate the item
+-- |                   has been removed; if you would like the item to also be removed from the
+-- |                   container, make sure to query `ReplaceItems` from the parent.
+-- | - `Emit`: A parent query has been triggered and should be evaluated by the parent. Typically:
+-- |
+-- | ```purescript
+-- | eval (HandleContainer (Emit q) next) = eval q *> pure next
+-- | ```
 data Message o item
   = ItemSelected item
   | Emit (o Unit)
 
 -- | The primitive handles state and transformations but defers all rendering to the parent. The
--- | render function can be written using our helper functions to ensure the right events are included. See the `Dispatch`
--- | module for more information.
+-- | render function can be written using our helper functions to ensure the right events are included.
 component :: ∀ item o e m
   . MonadAff ( Effects e ) m
  => H.Component HH.HTML (ContainerQuery o item) (ContainerInput o item) (Message o item) m
@@ -207,8 +237,20 @@ component =
               , lastIndex = length i.items - 1 }
 
 
--- | Intended for use on a clickable toggle to show/hide the `Container` primitive. If
--- | you are using a text field to manage the container, use `getInputProps` instead.
+-- | Attach properties to a DOM node that will maintain focus and capture key and click events
+-- | for the container. If you are using the search primitive, this helper is unnecessary.
+-- |
+-- | Note: This function will overwrite any properties of the same name that are already set. Use
+-- | it directly on the list of properties for the node that will serve as the toggle.
+-- |
+-- | Note: The toggle is not rendered within the container component. Instead, you should define
+-- | a query on the parent that routes events to the relevant container, and provide that query
+-- | as the first argument to this function.
+-- |
+-- | ```purescript
+-- | -- ToContainer is a parent query you have defined that, in eval, sends queries to the container.
+-- | span (getToggleProps ToContainer [ class_ $ ClassName "my-class" ]) [ text "Button" ]
+-- | ```
 getToggleProps :: ∀ o item e f.
    (ContainerQuery o item Unit -> Unit -> f Unit)
    -> Array
@@ -244,7 +286,20 @@ getToggleProps q = flip (<>)
   , HP.tabIndex 0
   ]
 
--- | Intended to allow you to embed whatever you want into the container
+-- | A helper to embed your own HTML and queries inside the container's render function. It
+-- | will ensure that your events do not inadvertently steal focus or trigger a blur on the
+-- | container. Useful to embed buttons and other arbitrary HTML within the container.
+-- |
+-- | To embed your own queries, remember to use the `Raise` query from the container to wrap
+-- | them. This will ensure they are re-raised to the parent.
+-- |
+-- | Use directly on the properties for the element you are embedding:
+-- |
+-- | ```purescript
+-- | button (getChildProps [ onClick $ input_ $ Raise $ action $ MyQuery "Do something" ]) [ text "Button" ]
+-- | ```
+-- |
+-- | Note: This will overwrite any properties of the same name.
 getChildProps :: ∀ o item e.
   Array
     (H.IProp
@@ -268,7 +323,15 @@ getChildProps = flip (<>)
   , HP.tabIndex 0
   ]
 
--- | Intended to be used on the container primitive to capture key, click, highlighting, and other events
+-- | Attach properties to the HTML element that encloses the container. This makes sure you can
+-- | select items without blurring the container, unless you want to. It is used in conjunction
+-- | with the getItemProps helper, which you should attach to each item in the container.
+-- |
+-- | ```purescript
+-- | div (getContainerProps [ class_ (ClassName "my-class") ]) [ ... further html ... ]
+-- | ```
+-- |
+-- | Note: This function will overwrite any properties of the same name that are already set.
 getContainerProps :: ∀ o item e.
    Array
      (H.IProp
@@ -298,7 +361,27 @@ getContainerProps = flip (<>)
   , HP.tabIndex 0
   ]
 
--- | Intended to be used on items inside the container
+-- | Attach events to an item in the container to support selection, highlighting, and key
+-- | events (like Enter to select). Used in conjunction with `getContainerProps`.
+-- |
+-- | This function requires an index. It's usually easiest to provide a renderer that uses
+-- | `mapWithIndex` to ensure indexes are provided properly.
+-- |
+-- | ```purescript
+-- | renderItems arrayOfItems = renderItem `mapWithIndex` arrayOfItems
+-- | renderItem index item = li (getItemProps index [ class_ (ClassName "item-class") ]) [ text item ]
+-- | ```
+-- |
+-- | You should provide CSS to highlight items without requiring hovers, so that arrow keys
+-- | can properly maintain highlights. To do that, use the container's state to check if the
+-- | item being rendered has the same index as the highlight, and if so, apply your class:
+-- |
+-- | ```purescript
+-- | -- in renderItem...
+-- | if state.highlightedIndex == Just index then "highlight-class" else "no-highlight-class"
+-- | ```
+-- |
+-- | Note: This function will overwrite any properties of the same name that are already set.
 getItemProps :: ∀ o item e
   . Int
   -> Array

@@ -42,9 +42,8 @@ data Query a
 
 data Direction = Prev | Next
 
-type FX e = Aff (CalendarEffects e)
-type CalendarEffects e = (Effects (now :: NOW | e))
-type ParentHTML e = H.ParentHTML Query ChildQuery Unit (FX e)
+type CalendarEffects e = (now :: NOW | Effects e)
+type ParentHTML e = H.ParentHTML Query ChildQuery Unit (Aff (CalendarEffects e))
 type ChildQuery = C.ContainerQuery Query CalendarItem
 
 ----------
@@ -65,7 +64,7 @@ data BoundaryStatus
   | InBounds
 
 
-component :: ∀ e. H.Component HH.HTML Query Unit Void (FX e)
+component :: ∀ e. H.Component HH.HTML Query Unit Void (Aff (CalendarEffects e))
 component =
   H.lifecycleParentComponent
     { initialState
@@ -80,7 +79,7 @@ component =
     initialState = const
       { targetDate: Tuple (unsafeMkYear 2019) (unsafeMkMonth 2) }
 
-    eval :: Query ~> H.ParentDSL State Query ChildQuery Unit Void (FX e)
+    eval :: Query ~> H.ParentDSL State Query ChildQuery Unit Void (Aff (CalendarEffects e))
     eval = case _ of
       ToContainer q a -> H.query unit q *> pure a
 
@@ -122,7 +121,7 @@ component =
          pure a
 
 
-    render :: State -> H.ParentHTML Query ChildQuery Unit (FX e)
+    render :: State -> H.ParentHTML Query ChildQuery Unit (Aff (CalendarEffects e))
     render st =
       HH.div
         [ HP.class_ $ HH.ClassName "mw8 sans-serif center" ]
@@ -143,7 +142,7 @@ component =
         targetYear  = fst st.targetDate
         targetMonth = snd st.targetDate
 
-        renderToggle :: H.ParentHTML Query ChildQuery Unit (FX e)
+        renderToggle :: H.ParentHTML Query ChildQuery Unit (Aff (CalendarEffects e))
         renderToggle =
           HH.span
           ( C.getToggleProps ToContainer

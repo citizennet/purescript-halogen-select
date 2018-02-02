@@ -91,6 +91,7 @@ component =
 
           x <- H.liftEff now
           H.liftAff $ log $ "New search performed: " <> s
+          H.liftAff $ log $ "Time: " <> show x
 
           let filtered  = filterItems s st.items
           let available = difference filtered st.selected

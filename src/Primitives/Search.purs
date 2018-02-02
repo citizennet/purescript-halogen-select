@@ -1,3 +1,7 @@
+-- | The Search primitive captures and debounces user input. It can be used in conjunction
+-- | with the Container primitive to make search-driven selection components like
+-- | typeaheads, image pickers, and date pickers.
+
 module Select.Primitives.Search where
 
 import Prelude
@@ -20,56 +24,97 @@ import Select.Primitives.State (State, updateStore, getState)
 import Select.Primitives.Container as C
 import Select.Effects (Effects)
 
-{-
-
-The Search primitive captures user input and returns it to the parent.
-
--}
-
 -- | The query type for the `Search` primitive. This primitive handles text input
--- | and debouncing.
+-- | and debouncing. It has a special query for the purpose of embedding Container
+-- | queries, used to route key events to the container from an input field.
+-- |
+-- | Arguments:
+-- |
+-- | - `o`: The type of the parent query to embed. This is usually the component that
+-- | -      mounts the search primitive, but it could also be the query type of some
+-- |        higher component.
+-- | - `item`: Your custom item type, used by your renderers.
+-- | - `eff`: The row of effects to use in the primitive. You are expected to provide your
+-- |          rows wrapped in the select Effects type:
+-- |
+-- | ```purescript
+-- | type ChildQuery eff = SearchQuery MyQuery MyItem (Effects eff)
+-- | ```
+-- |
+-- | Constructors:
 -- |
 -- | - `TextInput`: Handle new text input as a string
+-- | - `Raise`: Embed a parent query that can be returned to the parent for evaluation
+-- | - `FromContainer`: Embed a container query that can be routed to a container slot
 -- | - `SearchReceiver`: Update the component with new `Input` when the parent re-renders
-data SearchQuery o item e a
+data SearchQuery o item eff a
   = TextInput String a
   | Raise (o Unit) a
   | FromContainer (C.ContainerQuery o item Unit) a
-  | SearchReceiver (SearchInput o item e) a
+  | SearchReceiver (SearchInput o item eff) a
 
--- | The `Search` primitive internal state
+-- | The `Search` primitive internal state.
 -- |
--- | - `search`: The `String` contained within the primitive
+-- | Arguments:
+-- |
+-- | - `eff`: The row of effects used in the primivite. This needs to be wrapped in the
+-- |          effects type in practice:
+-- |
+-- | ```purescript
+-- | forall e. SearchState (Effects e)
+-- | ```
+-- |
+-- | Fields:
+-- |
+-- | - `search`: The `String` contained within the primitive. This is captured from user
+-- |             input, or can be set by the parent.
 -- | - `ms`: Number of milliseconds for the input to be debounced before passing
 -- |         a message to the parent. Set to 0.0 if you don't want debouncing.
--- | - `debouncer`: Used to facilitate debouncing of the input
-type SearchState e =
+-- | - `debouncer`: Facilitates debouncing for the input field.
+type SearchState eff =
   { search    :: String
   , ms        :: Milliseconds
-  , debouncer :: Maybe (Debouncer e)
+  , debouncer :: Maybe (Debouncer eff)
   }
 
 -- | The `Debouncer` type alias, used to debounce user input in the `Search` primitive.
-type Debouncer e =
+type Debouncer eff =
   { var   :: AVar Unit
-  , fiber :: Fiber e Unit }
+  , fiber :: Fiber eff Unit }
 
 -- | The input type of the `Search` primitive
 -- |
+-- | Fields:
+-- |
 -- | - `search`: An optional initial value for the `search` key on the `SearchState`
 -- | - `debounceTime`: A value in milliseconds for the debounce delay. Set to 0.0 for
--- | no debouncing.
+-- |                   no debouncing.
 -- | - `render`: The render function for the primitive
-type SearchInput o item e =
+type SearchInput o item eff =
   { search :: Maybe String
   , debounceTime :: Milliseconds
-  , render :: SearchState e -> H.ComponentHTML (SearchQuery o item e) }
+  , render :: SearchState eff -> H.ComponentHTML (SearchQuery o item eff) }
 
 
--- | The Search sends the parent messages in two instances:
--- | - `Emit`: An embedded query has been triggered, and you must decide how to handle it; typically via evaluating
--- |           in the parent or re-routing the query to another primitive.
--- | - `NewSearch`: Some new text has been searched (this is automatically debounced).
+-- | The possible messages a parent can evaluate from the search primitive.
+-- |
+-- | Constructors:
+-- |
+-- | - `NewSearch`: The user has entered a new search and it has passed the debouncer.
+-- | - `ContainerQuery`: The user has triggered an embedded container query, like using arrow
+-- |                     keys or Enter to select an item. Usually, you will route this to the
+-- |                     container associated with your search primitive.
+-- |
+-- | ```purescript
+-- | eval (HandleSearch (Emit q))
+-- | ```
+-- |
+-- | - `Emit`: An embedded parent query has been triggered. This can be evaluated automatically
+-- |           with this code in the parent's eval function:
+-- |
+-- | ```purescript
+-- | eval (HandleSearch (Emit q))
+-- | ```
 data Message o item
   = NewSearch String
   | ContainerQuery (C.ContainerQuery o item Unit)
@@ -77,15 +122,13 @@ data Message o item
 
 
 -- | The primitive handles state and transformations but defers all rendering to the parent. The
--- | render function can be written using our helper functions to ensure the right events are included. See the `Dispatch`
--- | module for more information.
-
-component :: ∀ o item e m
-  . MonadAff (Effects e) m
+-- | render function can be written using our helper functions to ensure the right events are included.
+component :: ∀ o item eff m
+  . MonadAff (Effects eff) m
  => H.Component
      HH.HTML
-     (SearchQuery o item (Effects e))
-     (SearchInput o item (Effects e))
+     (SearchQuery o item (Effects eff))
+     (SearchInput o item (Effects eff))
      (Message o item)
      m
 component =
@@ -97,8 +140,8 @@ component =
     }
   where
     initialState
-      :: SearchInput o item (Effects e)
-      -> State (SearchState (Effects e)) (SearchQuery o item (Effects e))
+      :: SearchInput o item (Effects eff)
+      -> State (SearchState (Effects eff)) (SearchQuery o item (Effects eff))
     initialState i = store i.render
       { search: fromMaybe "" i.search
       , ms: i.debounceTime
@@ -106,11 +149,11 @@ component =
       }
 
     eval
-      :: (SearchQuery o item (Effects e))
+      :: (SearchQuery o item (Effects eff))
       ~> H.ComponentDSL
-          (State (SearchState (Effects e))
-          (SearchQuery o item (Effects e)))
-          (SearchQuery o item (Effects e))
+          (State (SearchState (Effects eff))
+          (SearchQuery o item (Effects eff)))
+          (SearchQuery o item (Effects eff))
           (Message o item)
           m
     eval = case _ of
@@ -158,8 +201,15 @@ component =
       SearchReceiver i a -> H.modify (updateStore i.render id) *> pure a
 
 
-
-getInputProps :: ∀ o item e e0
+-- | Attach the necessary properties to the input field you render in the page. This
+-- | should be used directly on the input field's list of properties:
+-- |
+-- | ```purescript
+-- | input_ $ getInputProps [ class_ (ClassName "my-class"), placeholder "Search..." ]
+-- | ```
+-- |
+-- | Note: This will overwrite any existing properties of the same name.
+getInputProps :: ∀ o item e eff
    . Array
       (H.IProp
         ( onFocus :: ET.FocusEvent
@@ -172,7 +222,7 @@ getInputProps :: ∀ o item e e0
         , tabIndex :: Int
         | e
         )
-        (SearchQuery o item e0)
+        (SearchQuery o item eff)
       )
   -> Array
       (H.IProp
@@ -186,7 +236,7 @@ getInputProps :: ∀ o item e e0
         , tabIndex :: Int
         | e
         )
-        (SearchQuery o item e0)
+        (SearchQuery o item eff)
       )
 getInputProps = flip (<>)
   [ HE.onFocus      $ HE.input_ $ FromContainer $ H.action $ C.Visibility C.Toggle
