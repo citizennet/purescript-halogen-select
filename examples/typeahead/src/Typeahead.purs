@@ -2,6 +2,7 @@ module Example.Typeahead.Child where
 
 import Prelude
 
+import Control.Monad.Eff.Timer (setTimeout, TIMER)
 import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Aff.Console (log, logShow)
 import CSS as CSS
@@ -23,6 +24,7 @@ import Select.Primitives.Search as S
 import Select.Effects (Effects)
 
 type TypeaheadItem = String
+type TypeaheadEffects e = (timer :: TIMER | Effects e)
 
 data Query a
   = Log String a
@@ -32,7 +34,7 @@ data Query a
 type ChildSlot = Either2 Unit Unit
 type ChildQuery e
   = Coproduct2 (C.ContainerQuery Query TypeaheadItem)
-               (S.SearchQuery Query TypeaheadItem (Effects e))
+               (S.SearchQuery Query TypeaheadItem (TypeaheadEffects e))
 
 type State =
   { items    :: Array TypeaheadItem
@@ -44,7 +46,7 @@ data Message
   = SomethingHappened
 
 component :: ∀ m e
-  . MonadAff ( Effects e ) m
+  . MonadAff ( TypeaheadEffects e ) m
  => H.Component HH.HTML Query Input Message m
 component =
   H.parentComponent
@@ -109,7 +111,11 @@ component =
           _ <- H.query' CP.cp1 unit
                  $ H.action
                  $ C.ContainerReceiver { render: renderContainer, items: newItems }
+
+          -- Test custom effects
+          _ <- H.liftEff $ setTimeout 100 (pure unit)
           pure a
+
 
       HandleContainer m a -> case m of
         C.Emit q -> eval q *> pure a

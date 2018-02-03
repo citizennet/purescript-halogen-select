@@ -11,9 +11,8 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 
 import Example.Typeahead.Child as Child
-import Select.Effects (Effects)
 
-type MyEffects e = ( now :: NOW | Effects e)
+type MyEffects e = ( now :: NOW | Child.TypeaheadEffects e)
 
 data Query a
   = HandleTypeahead Int Child.Message a
