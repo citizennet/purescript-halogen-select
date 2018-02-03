@@ -1,17 +1,24 @@
 module Select.Effects where
 
+import Control.Monad.Eff.Exception (EXCEPTION)
+import Control.Monad.Eff.Ref (REF)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.AVar (AVAR)
 import Control.Monad.Aff.Console (CONSOLE)
 import DOM (DOM)
 import Network.HTTP.Affjax (AJAX)
 
--- | The primitive Effects type, wrapped in Aff. This is used for convenience over Effects.
-type FX e = Aff (Effects e)
-
--- | The primitive Effects type. To extend your own component with this type, you might do:
+-- | The effect rows used in all primitives. To extend this type in a parent component, you
+-- | can add your own effects:
 -- |
 -- | ```purescript
--- | main :: ∀ e. Eff (HalogenEffects (Effects e)) Unit
+-- | type MyEffects e = ( effect :: EFFECT | Effects e )
 -- | ```
-type Effects e = ( dom :: DOM, console :: CONSOLE, ajax :: AJAX, avar :: AVAR | e)
+-- |
+-- | Note: When using the Search primitive, make sure you provide effects extended by Effects, rather than your own
+-- | effects directly. Using the above MyEffects example:
+-- |
+-- | ```purescript
+-- | type ChildQuery e = SearchQuery MyQuery MyItem (MyEffects e)
+-- | ```
+type Effects eff = ( dom :: DOM, console :: CONSOLE, ajax :: AJAX, avar :: AVAR, ref :: REF, exception :: EXCEPTION | eff )

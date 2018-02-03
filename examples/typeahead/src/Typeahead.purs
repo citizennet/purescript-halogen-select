@@ -1,7 +1,9 @@
-module Typeahead where
+module Example.Typeahead.Child where
 
 import Prelude
 
+import Control.Monad.Eff.Timer (setTimeout, TIMER)
+import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Aff.Console (log, logShow)
 import CSS as CSS
 import Data.Array (mapWithIndex, difference, filter, (:))
@@ -17,51 +19,70 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.HTML.CSS as HC
-import Select.Effects (FX)
 import Select.Primitives.Container as C
 import Select.Primitives.Search as S
-
+import Select.Effects (Effects)
 
 type TypeaheadItem = String
+type TypeaheadEffects e = (timer :: TIMER | Effects e)
 
 data Query a
   = Log String a
   | HandleContainer (C.Message Query TypeaheadItem) a
   | HandleSearch    (S.Message Query TypeaheadItem) a
 
-type ChildQuery e = Coproduct2 (C.ContainerQuery Query TypeaheadItem) (S.SearchQuery Query TypeaheadItem e)
 type ChildSlot = Either2 Unit Unit
-
-type HTML e = H.ParentHTML Query (ChildQuery e) ChildSlot (FX e)
+type ChildQuery e
+  = Coproduct2 (C.ContainerQuery Query TypeaheadItem)
+               (S.SearchQuery Query TypeaheadItem (TypeaheadEffects e))
 
 type State =
   { items    :: Array TypeaheadItem
   , selected :: Array TypeaheadItem }
 
-component :: ∀ e. H.Component HH.HTML Query Unit Void (FX e)
+type Input = Array String
+
+data Message
+  = SomethingHappened
+
+component :: ∀ m e
+  . MonadAff ( TypeaheadEffects e ) m
+ => H.Component HH.HTML Query Input Message m
 component =
   H.parentComponent
-    { initialState: const initState
+    { initialState
     , render
     , eval
     , receiver: const Nothing
     }
   where
-    initState :: State
-    initState = { items: testData, selected: [] }
+    initialState :: Input -> State
+    initialState i = { items: i, selected: [] }
 
-    render :: State -> HTML e
+    render :: State -> H.ParentHTML Query (ChildQuery e) ChildSlot m
     render st =
       HH.div
         [ HP.class_ $ HH.ClassName "mw8 sans-serif center" ]
         [ HH.h2
           [ HP.class_ $ HH.ClassName "black-80 f-headline-1" ]
           [ HH.text "Typeahead Component"]
-        , HH.slot' CP.cp2 unit S.component { render: renderSearch, search: Nothing, debounceTime: Milliseconds 300.0 } ( HE.input HandleSearch )
-        , HH.slot' CP.cp1 unit C.component { render: renderContainer, items: testData } ( HE.input HandleContainer )
+        , HH.ul_
+          ( map (\elem -> HH.li_ [ HH.text elem ]) st.selected )
+        , HH.slot'
+            CP.cp2
+            unit
+            S.component
+            { render: renderSearch, search: Nothing, debounceTime: Milliseconds 300.0 }
+            ( HE.input HandleSearch )
+        , HH.slot'
+            CP.cp1
+            unit
+            C.component
+            { render: renderContainer, items: st.items }
+            ( HE.input HandleContainer )
         ]
 
-    eval :: Query ~> H.ParentDSL State Query (ChildQuery e) ChildSlot Void (FX e)
+    eval :: Query ~> H.ParentDSL State Query (ChildQuery e) ChildSlot Message m
     eval = case _ of
       Log str a -> a <$ do
         H.liftAff $ log str
@@ -90,7 +111,11 @@ component =
           _ <- H.query' CP.cp1 unit
                  $ H.action
                  $ C.ContainerReceiver { render: renderContainer, items: newItems }
+
+          -- Test custom effects
+          _ <- H.liftEff $ setTimeout 100 (pure unit)
           pure a
+
 
       HandleContainer m a -> case m of
         C.Emit q -> eval q *> pure a
@@ -123,23 +148,6 @@ filterItems str = filter (\i -> contains (Pattern str) i)
 Config
 
 -}
-
-testData :: Array TypeaheadItem
-testData =
-  [ "Thomas Honeyman"
-  , "Dave Zuch"
-  , "Chris Cornwell"
-  , "Forest Toney"
-  , "Lee Leathers"
-  , "Kim Wu"
-  , "Rachel Blair"
-  , "Tara Strauss"
-  , "Sanket Sabnis"
-  , "Aaron Chu"
-  , "Vincent Busam"
-  , "Riley Gibbs"
-  ]
-
 
 -- Render Functions
 -- The user is using the Search primitive, so they have to fill out a Search render function
