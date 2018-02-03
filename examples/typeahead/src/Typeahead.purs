@@ -1,8 +1,7 @@
-module Typeahead where
+module Example.Typeahead.Child where
 
 import Prelude
 
-import Control.Monad.Eff.Now (NOW, now)
 import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Aff.Console (log, logShow)
 import CSS as CSS
@@ -24,33 +23,39 @@ import Select.Primitives.Search as S
 import Select.Effects (Effects)
 
 type TypeaheadItem = String
-type TypeaheadEffects e = ( now :: NOW | Effects e )
 
 data Query a
   = Log String a
   | HandleContainer (C.Message Query TypeaheadItem) a
   | HandleSearch    (S.Message Query TypeaheadItem) a
 
-type ChildQuery e = Coproduct2 (C.ContainerQuery Query TypeaheadItem) (S.SearchQuery Query TypeaheadItem (TypeaheadEffects e))
 type ChildSlot = Either2 Unit Unit
+type ChildQuery e
+  = Coproduct2 (C.ContainerQuery Query TypeaheadItem)
+               (S.SearchQuery Query TypeaheadItem (Effects e))
 
 type State =
   { items    :: Array TypeaheadItem
   , selected :: Array TypeaheadItem }
 
+type Input = Array String
+
+data Message
+  = SomethingHappened
+
 component :: ∀ m e
-  . MonadAff ( TypeaheadEffects e ) m
- => H.Component HH.HTML Query Unit Void m
+  . MonadAff ( Effects e ) m
+ => H.Component HH.HTML Query Input Message m
 component =
   H.parentComponent
-    { initialState: const initState
+    { initialState
     , render
     , eval
     , receiver: const Nothing
     }
   where
-    initState :: State
-    initState = { items: testData, selected: [] }
+    initialState :: Input -> State
+    initialState i = { items: i, selected: [] }
 
     render :: State -> H.ParentHTML Query (ChildQuery e) ChildSlot m
     render st =
@@ -59,6 +64,8 @@ component =
         [ HH.h2
           [ HP.class_ $ HH.ClassName "black-80 f-headline-1" ]
           [ HH.text "Typeahead Component"]
+        , HH.ul_
+          ( map (\elem -> HH.li_ [ HH.text elem ]) st.selected )
         , HH.slot'
             CP.cp2
             unit
@@ -69,11 +76,11 @@ component =
             CP.cp1
             unit
             C.component
-            { render: renderContainer, items: testData }
+            { render: renderContainer, items: st.items }
             ( HE.input HandleContainer )
         ]
 
-    eval :: Query ~> H.ParentDSL State Query (ChildQuery e) ChildSlot Void m
+    eval :: Query ~> H.ParentDSL State Query (ChildQuery e) ChildSlot Message m
     eval = case _ of
       Log str a -> a <$ do
         H.liftAff $ log str
@@ -89,9 +96,7 @@ component =
         S.NewSearch s -> a <$ do
           st <- H.get
 
-          x <- H.liftEff now
           H.liftAff $ log $ "New search performed: " <> s
-          H.liftAff $ log $ "Time: " <> show x
 
           let filtered  = filterItems s st.items
           let available = difference filtered st.selected
@@ -137,23 +142,6 @@ filterItems str = filter (\i -> contains (Pattern str) i)
 Config
 
 -}
-
-testData :: Array TypeaheadItem
-testData =
-  [ "Thomas Honeyman"
-  , "Dave Zuch"
-  , "Chris Cornwell"
-  , "Forest Toney"
-  , "Lee Leathers"
-  , "Kim Wu"
-  , "Rachel Blair"
-  , "Tara Strauss"
-  , "Sanket Sabnis"
-  , "Aaron Chu"
-  , "Vincent Busam"
-  , "Riley Gibbs"
-  ]
-
 
 -- Render Functions
 -- The user is using the Search primitive, so they have to fill out a Search render function
