@@ -3,8 +3,9 @@ module Dropdown where
 import Prelude
 
 import Control.Monad.Aff (Aff)
-import Control.Monad.Aff.Console (log, logShow)
+import Control.Monad.Aff.Console (log, logShow, CONSOLE)
 import CSS as CSS
+import DOM (DOM)
 import DOM.Event.KeyboardEvent as KE
 import Data.Array ((:), difference, mapWithIndex)
 import Data.Maybe (Maybe(..))
@@ -13,10 +14,10 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.HTML.CSS as HC
-import Select.Effects (Effects)
 import Select.Primitives.Container as C
 
 type DropdownItem = String
+type Effects eff = ( dom :: DOM, console :: CONSOLE | eff )
 
 type State =
   { items    :: Array DropdownItem

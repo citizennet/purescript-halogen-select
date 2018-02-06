@@ -2,7 +2,7 @@ module Example.Typeahead.Parent where
 
 import Prelude
 
-import Control.Monad.Eff.Now (NOW, now)
+import Control.Monad.Eff.Now (NOW)
 import Control.Monad.Aff.Class (class MonadAff)
 import Data.Maybe (Maybe(..))
 

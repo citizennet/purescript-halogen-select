@@ -10,7 +10,8 @@ import Prelude
 
 import Control.Comonad (extract)
 import Control.Comonad.Store (seeks, store)
-import Control.Monad.Aff.Console (log)
+import Control.Monad.Aff.Console (log, CONSOLE)
+import DOM (DOM)
 import Control.Monad.Aff.Class (class MonadAff)
 import Data.Array (length, (!!))
 import Data.Maybe (Maybe(..))
@@ -23,7 +24,6 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Select.Primitives.State (updateStore, getState, State)
-import Select.Effects (Effects)
 
 
 -- | The query type for the `Container` primitive. This primitive handles selections
@@ -122,8 +122,8 @@ data Message o item
 
 -- | The primitive handles state and transformations but defers all rendering to the parent. The
 -- | render function can be written using our helper functions to ensure the right events are included.
-component :: ∀ item o e m
-  . MonadAff ( Effects e ) m
+component :: ∀ o item eff m
+  . MonadAff ( console :: CONSOLE, dom :: DOM | eff ) m
  => H.Component HH.HTML (ContainerQuery o item) (ContainerInput o item) (Message o item) m
 component =
   H.component
