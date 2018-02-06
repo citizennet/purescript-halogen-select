@@ -23,8 +23,6 @@ import Halogen.Query.HalogenM (fork, raise) as H
 import Select.Primitives.State (State, updateStore, getState)
 import Select.Primitives.Container as C
 
-type SearchEffects eff = ( avar :: AVAR | eff )
-
 -- | The query type for the `Search` primitive. This primitive handles text input
 -- | and debouncing. It has a special query for the purpose of embedding Container
 -- | queries, used to route key events to the container from an input field.
@@ -35,11 +33,11 @@ type SearchEffects eff = ( avar :: AVAR | eff )
 -- | -      mounts the search primitive, but it could also be the query type of some
 -- |        higher component.
 -- | - `item`: Your custom item type, used by your renderers.
--- | - `eff`: The row of effects to use in the primitive. You are expected to provide your
--- |          rows wrapped in the select SearchEffects type:
+-- | - `eff`: The extensible row of effects to used in the primitive. You should pass
+-- |          your own effects.
 -- |
 -- | ```purescript
--- | type ChildQuery eff = SearchQuery MyQuery MyItem (SearchEffects eff)
+-- | type ChildQuery eff = SearchQuery MyQuery MyItem (YourEffects eff)
 -- | ```
 -- |
 -- | Constructors:
@@ -58,7 +56,7 @@ data SearchQuery o item eff a
 -- |
 -- | Arguments:
 -- |
--- | - `eff`: The extensible row of effects used in the primitive for debouncing. You should pass
+-- | - `eff`: The extensible row of effects used in the primitive. You should pass
 -- |          your own effects.
 -- |
 -- | Fields:
@@ -121,11 +119,11 @@ data Message o item
 -- | The primitive handles state and transformations but defers all rendering to the parent. The
 -- | render function can be written using our helper functions to ensure the right events are included.
 component :: ∀ o item eff m
-  . MonadAff (SearchEffects eff) m
+  . MonadAff (avar :: AVAR | eff) m
  => H.Component
      HH.HTML
-     (SearchQuery o item (SearchEffects eff))
-     (SearchInput o item (SearchEffects eff))
+     (SearchQuery o item (avar :: AVAR | eff))
+     (SearchInput o item (avar :: AVAR | eff))
      (Message o item)
      m
 component =
@@ -137,8 +135,10 @@ component =
     }
   where
     initialState
-      :: SearchInput o item (SearchEffects eff)
-      -> State (SearchState (SearchEffects eff)) (SearchQuery o item (SearchEffects eff))
+      :: SearchInput o item (avar :: AVAR | eff)
+      -> State
+          (SearchState (avar :: AVAR | eff))
+          (SearchQuery o item (avar :: AVAR | eff))
     initialState i = store i.render
       { search: fromMaybe "" i.search
       , ms: i.debounceTime
@@ -146,10 +146,12 @@ component =
       }
 
     eval
-      :: (SearchQuery o item (SearchEffects eff))
+      :: (SearchQuery o item (avar :: AVAR | eff))
       ~> H.ComponentDSL
-          (State (SearchState (SearchEffects eff)) (SearchQuery o item (SearchEffects eff)))
-          (SearchQuery o item (SearchEffects eff))
+          (State
+            (SearchState (avar :: AVAR | eff))
+            (SearchQuery o item (avar :: AVAR | eff)))
+          (SearchQuery o item (avar :: AVAR | eff))
           (Message o item)
           m
     eval = case _ of
