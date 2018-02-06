@@ -10,7 +10,6 @@ import Prelude
 
 import Control.Comonad (extract)
 import Control.Comonad.Store (seeks, store)
-import Control.Monad.Aff.Console (log, CONSOLE)
 import DOM (DOM)
 import Control.Monad.Aff.Class (class MonadAff)
 import Data.Array (length, (!!))
@@ -123,7 +122,7 @@ data Message o item
 -- | The primitive handles state and transformations but defers all rendering to the parent. The
 -- | render function can be written using our helper functions to ensure the right events are included.
 component :: ∀ o item eff m
-  . MonadAff ( console :: CONSOLE, dom :: DOM | eff ) m
+  . MonadAff ( dom :: DOM | eff ) m
  => H.Component HH.HTML (ContainerQuery o item) (ContainerInput o item) (Message o item) m
 component =
   H.component
@@ -158,9 +157,9 @@ component =
         (Tuple _ st) <- getState
         if not st.open
           then pure a
-          else a <$ case st.items !! index of
-            Just item -> H.raise $ ItemSelected item
-            _ -> H.liftAff $ log $ "Index " <> show index <> " is out of bounds."
+          else case st.items !! index of
+            Just item -> (H.raise $ ItemSelected item) *> pure a
+            _ -> pure a  -- This should be impossible
 
       -- We can ignore the case in which we don't want anything highlighted
       -- as once the highlight becomes active, nothing but closing the menu
