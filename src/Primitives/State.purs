@@ -5,7 +5,9 @@
 -- | Note: Unless you are modifying or defining a new primitive, you will not need to use this type
 -- | and can rely on the usual state definitions in each primitive's module.
 -- |
+-- |
 -- | **Why use `Store`?**
+-- |
 -- | Halogen components only update if new values come in via their `receiver` field using their `Input`
 -- | type, or if they are destroyed and re-initialized in a new slot. Most values can be updated this
 -- | way, but not render functions.

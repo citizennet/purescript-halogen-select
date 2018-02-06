@@ -10,8 +10,8 @@ import Data.Time.Duration (Milliseconds)
 import DOM.Event.Types as ET
 import Control.Comonad (extract)
 import Control.Comonad.Store (seeks, store)
-import Control.Monad.Aff (Aff, Fiber, delay, error, forkAff, killFiber)
-import Control.Monad.Aff.AVar (AVar, makeEmptyVar, putVar, takeVar)
+import Control.Monad.Aff (Fiber, delay, error, forkAff, killFiber)
+import Control.Monad.Aff.AVar (AVar, makeEmptyVar, putVar, takeVar, AVAR)
 import Control.Monad.Aff.Class (class MonadAff)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Tuple (Tuple(..))
@@ -22,7 +22,6 @@ import Halogen.HTML.Properties as HP
 import Halogen.Query.HalogenM (fork, raise) as H
 import Select.Primitives.State (State, updateStore, getState)
 import Select.Primitives.Container as C
-import Select.Effects (Effects)
 
 -- | The query type for the `Search` primitive. This primitive handles text input
 -- | and debouncing. It has a special query for the purpose of embedding Container
@@ -34,11 +33,11 @@ import Select.Effects (Effects)
 -- | -      mounts the search primitive, but it could also be the query type of some
 -- |        higher component.
 -- | - `item`: Your custom item type, used by your renderers.
--- | - `eff`: The row of effects to use in the primitive. You are expected to provide your
--- |          rows wrapped in the select Effects type:
+-- | - `eff`: The extensible row of effects to used in the primitive. You should pass
+-- |          your own effects.
 -- |
 -- | ```purescript
--- | type ChildQuery eff = SearchQuery MyQuery MyItem (Effects eff)
+-- | type ChildQuery eff = SearchQuery MyQuery MyItem (YourEffects eff)
 -- | ```
 -- |
 -- | Constructors:
@@ -57,12 +56,8 @@ data SearchQuery o item eff a
 -- |
 -- | Arguments:
 -- |
--- | - `eff`: The row of effects used in the primivite. This needs to be wrapped in the
--- |          effects type in practice:
--- |
--- | ```purescript
--- | forall e. SearchState (Effects e)
--- | ```
+-- | - `eff`: The extensible row of effects used in the primitive. You should pass
+-- |          your own effects.
 -- |
 -- | Fields:
 -- |
@@ -106,14 +101,14 @@ type SearchInput o item eff =
 -- |                     container associated with your search primitive.
 -- |
 -- | ```purescript
--- | eval (HandleSearch (Emit q))
+-- | eval (FromContainer q a) -> H.raise (ContainerQuery q) *> pure a
 -- | ```
 -- |
 -- | - `Emit`: An embedded parent query has been triggered. This can be evaluated automatically
 -- |           with this code in the parent's eval function:
 -- |
 -- | ```purescript
--- | eval (HandleSearch (Emit q))
+-- | eval (HandleSearch (Emit q) next) = eval q *> pure next
 -- | ```
 data Message o item
   = NewSearch String
@@ -124,11 +119,11 @@ data Message o item
 -- | The primitive handles state and transformations but defers all rendering to the parent. The
 -- | render function can be written using our helper functions to ensure the right events are included.
 component :: ∀ o item eff m
-  . MonadAff (Effects eff) m
+  . MonadAff (avar :: AVAR | eff) m
  => H.Component
      HH.HTML
-     (SearchQuery o item (Effects eff))
-     (SearchInput o item (Effects eff))
+     (SearchQuery o item (avar :: AVAR | eff))
+     (SearchInput o item (avar :: AVAR | eff))
      (Message o item)
      m
 component =
@@ -140,8 +135,10 @@ component =
     }
   where
     initialState
-      :: SearchInput o item (Effects eff)
-      -> State (SearchState (Effects eff)) (SearchQuery o item (Effects eff))
+      :: SearchInput o item (avar :: AVAR | eff)
+      -> State
+          (SearchState (avar :: AVAR | eff))
+          (SearchQuery o item (avar :: AVAR | eff))
     initialState i = store i.render
       { search: fromMaybe "" i.search
       , ms: i.debounceTime
@@ -149,11 +146,12 @@ component =
       }
 
     eval
-      :: (SearchQuery o item (Effects eff))
+      :: (SearchQuery o item (avar :: AVAR | eff))
       ~> H.ComponentDSL
-          (State (SearchState (Effects eff))
-          (SearchQuery o item (Effects eff)))
-          (SearchQuery o item (Effects eff))
+          (State
+            (SearchState (avar :: AVAR | eff))
+            (SearchQuery o item (avar :: AVAR | eff)))
+          (SearchQuery o item (avar :: AVAR | eff))
           (Message o item)
           m
     eval = case _ of

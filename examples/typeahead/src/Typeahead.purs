@@ -4,7 +4,9 @@ import Prelude
 
 import Control.Monad.Eff.Timer (setTimeout, TIMER)
 import Control.Monad.Aff.Class (class MonadAff)
-import Control.Monad.Aff.Console (log, logShow)
+import Control.Monad.Aff.Console (log, logShow, CONSOLE)
+import Control.Monad.Aff.AVar (AVAR)
+import DOM (DOM)
 import CSS as CSS
 import Data.Array (mapWithIndex, difference, filter, (:))
 import Data.Foldable (length)
@@ -21,10 +23,9 @@ import Halogen.HTML.Properties as HP
 import Halogen.HTML.CSS as HC
 import Select.Primitives.Container as C
 import Select.Primitives.Search as S
-import Select.Effects (Effects)
 
 type TypeaheadItem = String
-type TypeaheadEffects e = (timer :: TIMER | Effects e)
+type TypeaheadEffects eff = ( timer :: TIMER, avar :: AVAR, dom :: DOM, console :: CONSOLE | eff )
 
 data Query a
   = Log String a

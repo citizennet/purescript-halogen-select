@@ -4,8 +4,9 @@ import Prelude
 import Calendar.Utils (alignByWeek, nextMonth, nextYear, prevMonth, prevYear, rowsFromArray, unsafeMkYear, unsafeMkMonth)
 import CSS as CSS
 import Control.Monad.Aff (Aff)
-import Control.Monad.Aff.Console (log)
+import Control.Monad.Aff.Console (log, CONSOLE)
 import Control.Monad.Eff.Now (NOW, now)
+import DOM (DOM)
 import Data.Array (mapWithIndex)
 import Data.Date (Date, Month, Year, canonicalDate, month, year)
 import Data.DateTime (date)
@@ -21,14 +22,8 @@ import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Select.Primitives.Container as C
-import Select.Effects (Effects)
 
-
-{-
-
-The calendar component is an example.
-
--}
+type Effects eff = ( now :: NOW, console :: CONSOLE, dom :: DOM | eff )
 
 type State =
   { targetDate :: Tuple Year Month }
@@ -42,8 +37,7 @@ data Query a
 
 data Direction = Prev | Next
 
-type CalendarEffects e = (now :: NOW | Effects e)
-type ParentHTML e = H.ParentHTML Query ChildQuery Unit (Aff (CalendarEffects e))
+type ParentHTML e = H.ParentHTML Query ChildQuery Unit (Aff (Effects e))
 type ChildQuery = C.ContainerQuery Query CalendarItem
 
 ----------
@@ -64,7 +58,7 @@ data BoundaryStatus
   | InBounds
 
 
-component :: ∀ e. H.Component HH.HTML Query Unit Void (Aff (CalendarEffects e))
+component :: ∀ e. H.Component HH.HTML Query Unit Void (Aff (Effects e))
 component =
   H.lifecycleParentComponent
     { initialState
@@ -79,7 +73,7 @@ component =
     initialState = const
       { targetDate: Tuple (unsafeMkYear 2019) (unsafeMkMonth 2) }
 
-    eval :: Query ~> H.ParentDSL State Query ChildQuery Unit Void (Aff (CalendarEffects e))
+    eval :: Query ~> H.ParentDSL State Query ChildQuery Unit Void (Aff (Effects e))
     eval = case _ of
       ToContainer q a -> H.query unit q *> pure a
 
@@ -121,7 +115,7 @@ component =
          pure a
 
 
-    render :: State -> H.ParentHTML Query ChildQuery Unit (Aff (CalendarEffects e))
+    render :: State -> H.ParentHTML Query ChildQuery Unit (Aff (Effects e))
     render st =
       HH.div
         [ HP.class_ $ HH.ClassName "mw8 sans-serif center" ]
@@ -142,7 +136,7 @@ component =
         targetYear  = fst st.targetDate
         targetMonth = snd st.targetDate
 
-        renderToggle :: H.ParentHTML Query ChildQuery Unit (Aff (CalendarEffects e))
+        renderToggle :: H.ParentHTML Query ChildQuery Unit (Aff (Effects e))
         renderToggle =
           HH.span
           ( C.getToggleProps ToContainer
