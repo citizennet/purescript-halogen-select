@@ -9,6 +9,9 @@ output
 package-lock.json
 generated-docs
 
+# Generated docs
+dist
+
 # IDE
 *.swo
 *.swp
