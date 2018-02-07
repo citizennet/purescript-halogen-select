@@ -45,6 +45,9 @@
     "purescript-formatters": "^3.0.1",
     "purescript-debug": "^3.0.0",
     "purescript-now": "^3.0.0",
-    "purescript-js-timers": "^3.0.0"
+    "purescript-js-timers": "^3.0.0",
+    "purescript-routing": "^7.0.0",
+    "purescript-coroutines": "^4.0.0",
+    "purescript-aff-coroutines": "^6.0.0"
   }
 }

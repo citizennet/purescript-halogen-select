@@ -1,7 +1,7 @@
-module Example.Calendar where
+module Example.Component.Calendar where
 
 import Prelude
-import Example.Calendar.Utils (alignByWeek, nextMonth, nextYear, prevMonth, prevYear, rowsFromArray, unsafeMkYear, unsafeMkMonth)
+import Example.Component.Calendar.Utils (alignByWeek, nextMonth, nextYear, prevMonth, prevYear, rowsFromArray, unsafeMkYear, unsafeMkMonth)
 import CSS as CSS
 import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Console (log, CONSOLE)

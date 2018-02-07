@@ -1,4 +1,4 @@
-module Example.Typeahead.Child where
+module Example.Component.Typeahead where
 
 import Prelude
 

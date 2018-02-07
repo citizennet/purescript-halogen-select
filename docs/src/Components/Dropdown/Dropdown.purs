@@ -1,4 +1,4 @@
-module Example.Dropdown where
+module Example.Component.Dropdown where
 
 import Prelude
 

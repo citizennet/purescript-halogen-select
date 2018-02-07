@@ -1,4 +1,4 @@
-module Example.Typeahead.Parent where
+module Example.Component.Typeahead.Parent where
 
 import Prelude
 
@@ -10,7 +10,7 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 
-import Example.Typeahead.Child as Child
+import Example.Component.Typeahead as Child
 
 type MyEffects e = ( now :: NOW | Child.TypeaheadEffects e)
 
