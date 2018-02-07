@@ -20,9 +20,13 @@ jobs:
                     - v1.2-npm-cache-{{ arch }}-{{ .Branch }}
                     - v1.2-npm-cache
 
+            - restore_cache:
+                keys:
+                    - v1.2-build-cache
+
             - run:
-                name: Install dependencies from NPM and Bower...
-                command: npm install && bower install
+                name: Install dependencies from NPM and Bower and compile...
+                command: npm install
 
             - save_cache:
                 key: v1.2-bower-cache-{{ arch }}-{{ .Branch }}-{{ checksum "bower.json" }}
@@ -33,27 +37,19 @@ jobs:
                 key: v1.2-npm-cache-{{ arch }}-{{ .Branch }}-{{ checksum "package.json" }}
                 paths:
                     - ~/select/node_modules
-                      
-            - restore_cache:
-                keys:
-                    - v1.2-build-cache
-
-            - run:
-                name: Build the base component...
-                command: pulp build
+                    - ~/select/docs/css/node_modules
 
             - save_cache:
                 key: v1.2-build-cache
                 paths:
                     - ~/select/output
 
-            # Verify all examples successfully build...  
+            # Verify all examples successfully build...
             - run:
                 name: Build all examples...
-                command: ./.circleci/run-examples.sh
+                command: npm run build-docs
 
 
-# Should be expanded to include tests and example repos                      
 workflows:
     version: 2
     build:
