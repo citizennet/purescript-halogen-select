@@ -1,0 +1,14 @@
+# Dependencies
+.psci_modules
+bower_components
+node_modules
+
+# Generated files
+.psci
+output
+package-lock.json
+generated-docs
+
+# IDE
+*.swo
+*.swp
