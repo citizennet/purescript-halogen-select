@@ -1,4 +1,4 @@
-module Dropdown where
+module Example.Dropdown where
 
 import Prelude
 
@@ -172,3 +172,4 @@ renderContainer st =
           [ HP.class_ $ HH.ClassName
             $ "lh-copy pa2 ba bl-0 bt-0 br-0 b--dotted b--black-30"
             <> if st.highlightedIndex == Just index then " bg-light-blue" else "" ]
+

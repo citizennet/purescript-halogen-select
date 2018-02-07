@@ -1,4 +1,4 @@
-module Calendar.Utils where
+module Example.Calendar.Utils where
 
 import Prelude
 
