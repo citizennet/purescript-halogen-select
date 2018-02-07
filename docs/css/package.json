@@ -1,11 +1,10 @@
 {
   "private": true,
-  "description": "Tailwinds for the Select library",
+  "description": "Modified Tailwind for CitizenNet user interfaces",
   "author": "Thomas Honeyman <hello@thomashoneyman.com>",
   "keywords": [
     "tailwind",
     "citizennet",
-    "css",
     "webpack"
   ],
   "scripts": {

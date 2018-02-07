@@ -4,9 +4,6 @@ let ExtractTextPlugin = require('extract-text-webpack-plugin');
 let PurgecssPlugin = require('purgecss-webpack-plugin');
 let OptimizeCssAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 
-
-// Custom PurgeCSS extractor for Tailwind that allows special characters in
-// class names.
 // https://github.com/FullHuman/purgecss#extractor
 class TailwindExtractor {
   static extract(content) {
@@ -17,7 +14,7 @@ class TailwindExtractor {
 module.exports = {
   entry: './index.js',
   output: {
-    path: path.resolve(__dirname, '../../dist'),
+    path: path.resolve(__dirname, '../dist'),
     filename: 'select.css'
   },
   module: {
@@ -37,20 +34,18 @@ module.exports = {
   },
   plugins: [
 		// Bundle CSS to separate file, not JS
-    new ExtractTextPlugin('cn-tailwind.css'),
+    new ExtractTextPlugin('select.css'),
 
 		// Remove class names not used in any source files
 		new	PurgecssPlugin({
 			// Locations of any files to scan
 			paths: glob.sync([
-				path.join(__dirname, "../src/**/*.purs"),
-				path.join(__dirname, "../test/**/*.purs"),
-				path.join(__dirname, "../docs/**/*.js"),
+				path.join(__dirname, "../src/**/*.purs")
 			]),
 			extractors: [
 				{
 					extractor: TailwindExtractor,
-					extensions: [ "js", "purs" ]
+					extensions: [ "purs" ]
 				}
 			]
 		}),
@@ -59,4 +54,4 @@ module.exports = {
 		new OptimizeCssAssetsPlugin()
 
 	]
-}
+};

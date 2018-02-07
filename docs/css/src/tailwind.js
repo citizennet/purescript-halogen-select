@@ -1,6 +1,4 @@
-// This file modifies the base Tailwind configuration. We can freely re-use the same names or add new options to existing variables.
-
-var config = require('tailwindcss/defaultConfig')();
+var config = require('tailwindcss/defaultConfig')()
 
 // Additional padding and margin sizes
 config.padding = Object.assign(config.padding, {
@@ -9,7 +7,7 @@ config.padding = Object.assign(config.padding, {
   '16': '4rem',
   '20': '5rem',
   '80': '20rem',
-});
+})
 
 config.margin = Object.assign(config.margin, {
   '10': '2.5rem',
@@ -17,9 +15,9 @@ config.margin = Object.assign(config.margin, {
   '16': '4rem',
   '20': '5rem',
   '80': '20rem',
-});
+})
 
-config.negativeMargin = config.margin;
+config.negativeMargin = config.margin
 
 config.maxHeight = Object.assign(config.maxHeight, {
   '10': '2.5rem',
@@ -27,7 +25,7 @@ config.maxHeight = Object.assign(config.maxHeight, {
   '16': '4rem',
   '20': '5rem',
   '80': '20rem',
-});
+})
 
 // Export the new configuration
-module.exports = config;
+module.exports = config
