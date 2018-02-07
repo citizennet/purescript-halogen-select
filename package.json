@@ -7,8 +7,8 @@
     "postinstall": "bower i --silent && cd docs/css && npm install && cd ../../ && pulp build",
     "clean": "rm -rf output bower_components node_modules && cd docs/css && rm -rf node_modules",
     "watch-dev": "pulp -w build",
-    "build-docs": "pulp build -I docs/src --to docs/example.js",
-    "watch-docs": "pulp -w build -I docs/src --to docs/example.js",
+    "build-docs": "pulp build -I docs/src --to docs/dist/example.js",
+    "watch-docs": "pulp -w build -I docs/src --to docs/dist/example.js",
     "build-css": "cd docs/css && npm run build-prod"
   },
   "devDependencies": {
