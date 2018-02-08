@@ -103,7 +103,7 @@ workflows:
       - test
 
       # On master branch, rebuild docs
-      - docs
+      - docs:
         # filters:
         #   branches:
         #     only: master
