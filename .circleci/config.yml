@@ -1,7 +1,7 @@
 version: 2
 
 jobs:
-  test:
+  build:
     docker:
       - image: thomashoneyman/purescript:0.0.1
     working_directory: ~/select
@@ -48,64 +48,64 @@ jobs:
           name: Build all examples...
           command: npm run build-docs
 
-  docs:
-    docker:
-      - image: thomashoneyman/purescript:0.0.1
-    working_directory: ~/select
-    steps:
-      - run:
-          name: See what's around
-          command: ls -a
-
-      - checkout
-
-      - run:
-          name: See what's around
-          command: ls -a
-
-      # Enable building docs
-      - add_ssh_keys:
-          fingerprints:
-            - "bf:0e:a0:9d:37:6e:40:34:3c:72:90:f5:c8:93:cd:a5"
-
-      - run:
-          name: Prepare branches
-          command: |
-            git checkout gh-pages
-            git checkout master
-
-      - run:
-          name: Set up gh-pages for build artifacts
-          command: |
-            mkdir ../gh-pages
-            git worktree add ../gh-pages gh-pages
-
-      - run:
-          name: See what's around
-          command: ls -a
-
-      - run:
-          name: Build docs and push to GitHub
-          command: |
-            npm run build-all
-            mv dist ../gh-pages/dist
-            cd ../gh-pages
-            git add -a
-            git config --global user.email "automated@automated.com"
-            git config --global user.name "CircleCI Auto Deploy"
-            git commit --allow-empty -a -m "Docs build triggered by CircleCI"
-            git push -u origin gh-pages
+  # docs:
+  #   docker:
+  #     - image: thomashoneyman/purescript:0.0.1
+  #   working_directory: ~/select
+  #   steps:
+  #     - run:
+  #         name: See what's around
+  #         command: ls -a
+  #
+  #     - checkout
+  #
+  #     - run:
+  #         name: See what's around
+  #         command: ls -a
+  #
+  #     # Enable building docs
+  #     - add_ssh_keys:
+  #         fingerprints:
+  #           - "bf:0e:a0:9d:37:6e:40:34:3c:72:90:f5:c8:93:cd:a5"
+  #
+  #     - run:
+  #         name: Prepare branches
+  #         command: |
+  #           git checkout gh-pages
+  #           git checkout master
+  #
+  #     - run:
+  #         name: Set up gh-pages for build artifacts
+  #         command: |
+  #           mkdir ../gh-pages
+  #           git worktree add ../gh-pages gh-pages
+  #
+  #     - run:
+  #         name: See what's around
+  #         command: ls -a
+  #
+  #     - run:
+  #         name: Build docs and push to GitHub
+  #         command: |
+  #           npm run build-all
+  #           mv dist ../gh-pages/dist
+  #           cd ../gh-pages
+  #           git add -a
+  #           git config --global user.email "automated@automated.com"
+  #           git config --global user.name "CircleCI Auto Deploy"
+  #           git commit --allow-empty -a -m "Docs build triggered by CircleCI"
+  #           git push -u origin gh-pages
 
 workflows:
   version: 2
   build:
     jobs:
-      - test
+      - build
 
       # On master branch, rebuild docs
-      - docs:
-        requires:
-          - test
+      # - docs:
+      #   requires:
+      #     - test
 
         # filters:
         #   branches:
