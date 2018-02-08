@@ -28,7 +28,7 @@ jobs:
           command: npm install
 
       - save_cache:
-          keys: v1.2-bower-cache-{{ .Branch }}-{{ checksum "bower.json" }}
+          key: v1.2-bower-cache-{{ .Branch }}-{{ checksum "bower.json" }}
           paths:
             - ~/select/bower_components
             - ~/select/output
