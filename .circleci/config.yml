@@ -24,7 +24,7 @@ jobs:
             - v1.2-npm-cache
 
       - run:
-          name: Install dependencies from NPM and Bower and compile...
+          name: Install dependencies from NPM and Bower (including CSS)
           command: npm install
 
       - save_cache:
@@ -37,6 +37,7 @@ jobs:
           key: v1.2-npm-cache-{{ .Branch }}-{{ checksum "package.json" }}
           paths:
             - ~/select/node_modules
+            - ~/select/docs/css/node_modules
 
       # Verify all examples successfully build...
       - run:
@@ -46,9 +47,9 @@ jobs:
       # Persist the specified paths into the workspace
       - persist_to_workspace:
         # Must be an absolute path or relative from working_directory
-          root: .
+          root: docs
           paths:
-            - docs
+            - .
 
   docs:
     <<: *defaults
@@ -56,7 +57,7 @@ jobs:
       - checkout
 
       - run:
-          name: Prepare branches
+          name: Prepare branches by checking both out locally
           command: |
             git checkout gh-pages
             git checkout master
@@ -73,8 +74,8 @@ jobs:
       - run:
           name: Build CSS
           command: |
-            cp -r persisted/docs/dist/ docs/dist/
-            npm run install-css
+            cp -r persisted/dist/ docs/dist/
+            cp -r persisted/css/node_modules docs/css/node_modules
             npm run build-css
 
       # Enable building docs

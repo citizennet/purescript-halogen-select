@@ -2,11 +2,10 @@
   "private": true,
   "scripts": {
     "build-all": "npm run build-docs && npm run build-css",
-    "postinstall": "bower i --silent && pulp build",
-    "clean": "rm -rf output bower_components node_modules && cd docs/css && npm install",
+    "postinstall": "bower i --silent && cd docs/css && npm install",
+    "clean": "rm -rf output bower_components node_modules && cd docs/css && rm -rf node_modules",
     "build-docs": "pulp build -I docs/src --to docs/dist/example.js",
     "watch-docs": "pulp -w build -I docs/src --to docs/dist/example.js",
-    "install-css": "cd docs/css && npm install",
     "build-css": "cd docs/css && npm run build-prod"
   },
   "devDependencies": {
