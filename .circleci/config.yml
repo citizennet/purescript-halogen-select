@@ -1,75 +1,111 @@
 version: 2
 
 jobs:
-    build:
-        docker:
-            - image: thomashoneyman/purescript:0.0.1
-        working_directory: ~/select
-        steps:
-						# Enable building docs
-            - add_ssh_keys:
-                fingerprints:
-                  - "bf:0e:a0:9d:37:6e:40:34:3c:72:90:f5:c8:93:cd:a5"
+  test:
+    docker:
+      - image: thomashoneyman/purescript:0.0.1
+    working_directory: ~/select
+    steps:
+      - checkout
 
-						- checkout
+      - restore_cache:
+          keys:
+            - v1.2-bower-cache-{{ arch }}-{{ .Branch }}-{{ checksum "bower.json" }}
+            - v1.2-bower-cache-{{ arch }}-{{ .Branch }}
+            - v1.2-bower-cache
 
-            - run:
-                name: Prepare branches
-                command: git checkout gh-pages && git checkout master
+      - restore_cache:
+          keys:
+            - v1.2-npm-cache-{{ arch }}-{{ .Branch }}-{{ checksum "package.json" }}
+            - v1.2-npm-cache-{{ arch }}-{{ .Branch }}
+            - v1.2-npm-cache
 
-            - run:
-                name: Set up worktree
-                command: mkdir ../gh-pages && git worktree add ../gh-pages gh-pages
+      - restore_cache:
+          keys:
+            - v1.2-build-cache
 
-            - restore_cache:
-                keys:
-                    - v1.2-bower-cache-{{ arch }}-{{ .Branch }}-{{ checksum "bower.json" }}
-                    - v1.2-bower-cache-{{ arch }}-{{ .Branch }}
-                    - v1.2-bower-cache
+      - run:
+          name: Install dependencies from NPM and Bower and compile...
+          command: npm install
 
-            - restore_cache:
-                keys:
-                    - v1.2-npm-cache-{{ arch }}-{{ .Branch }}-{{ checksum "package.json" }}
-                    - v1.2-npm-cache-{{ arch }}-{{ .Branch }}
-                    - v1.2-npm-cache
+      - save_cache:
+          key: v1.2-bower-cache-{{ arch }}-{{ .Branch }}-{{ checksum "bower.json" }}
+          paths:
+            - ~/select/bower_components
 
-            - restore_cache:
-                keys:
-                    - v1.2-build-cache
+      - save_cache:
+          key: v1.2-npm-cache-{{ arch }}-{{ .Branch }}-{{ checksum "package.json" }}
+          paths:
+            - ~/select/node_modules
 
-            - run:
-                name: Install dependencies from NPM and Bower and compile...
-                command: npm install
+      - save_cache:
+          key: v1.2-build-cache
+          paths:
+            - ~/select/output
 
-            - save_cache:
-                key: v1.2-bower-cache-{{ arch }}-{{ .Branch }}-{{ checksum "bower.json" }}
-                paths:
-                    - ~/select/bower_components
+      # Verify all examples successfully build...
+      - run:
+          name: Build all examples...
+          command: npm run build-docs
 
-            - save_cache:
-                key: v1.2-npm-cache-{{ arch }}-{{ .Branch }}-{{ checksum "package.json" }}
-                paths:
-                    - ~/select/node_modules
-                    - ~/select/docs/css/node_modules
+  docs:
+    docker:
+      - image: thomashoneyman/purescript:0.0.1
+    working_directory: ~/select
+    steps:
+      - run:
+          name: See what's around
+          command: ls -a
 
-            - save_cache:
-                key: v1.2-build-cache
-                paths:
-                    - ~/select/output
+      - checkout
 
-            # Verify all examples successfully build...
-            - run:
-                name: Build all examples...
-                command: npm run build-docs
+      - run:
+          name: See what's around
+          command: ls -a
 
-            # Verify all examples successfully build...
-            - run:
-                name: Build all examples...
-                command: git checkout gh-
+      # Enable building docs
+      - add_ssh_keys:
+          fingerprints:
+            - "bf:0e:a0:9d:37:6e:40:34:3c:72:90:f5:c8:93:cd:a5"
 
+      - checkout
+
+      - run:
+          name: Prepare branches
+          command: |
+            git checkout gh-pages
+            git checkout master
+
+      - run:
+          name: Set up gh-pages for build artifacts
+          command: |
+            mkdir ../gh-pages
+            git worktree add ../gh-pages gh-pages
+
+      - run:
+          name: See what's around
+          command: ls -a
+
+      - run:
+          name: Build docs and push to GitHub
+          command: |
+            npm run build-all
+            mv dist ../gh-pages/dist
+            cd ../gh-pages
+            git add -a
+            git commit -m "Docs build triggered by CircleCI"
+            git push -u origin gh-pages
 
 workflows:
-    version: 2
-    build:
-        jobs:
-            - build
+  version: 2
+  test_docs:
+    jobs:
+      - test
+
+      # On master branch, rebuild docs
+      - docs
+        # filters:
+        #   branches:
+        #     only: master
+        requires:
+          - test
