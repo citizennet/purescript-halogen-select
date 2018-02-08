@@ -11,6 +11,7 @@ generated-docs
 
 # Generated docs
 dist
+**/site/*.js
 
 # IDE
 *.swo
