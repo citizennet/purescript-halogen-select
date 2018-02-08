@@ -85,9 +85,9 @@ jobs:
       - run:
           name: Build CSS
           command: |
+            mv persisted_docs/dist/example.js docs/dist/
             npm run install-css
             npm run build-css
-            mv docs/dist/select.css persisted_docs/dist/
 
       # Enable building docs
       - add_ssh_keys:
@@ -99,7 +99,7 @@ jobs:
           command: |
             npm run build-all
             rm -rf ../gh-pages/dist
-            mv persisted_docs/dist ../gh-pages/dist
+            mv docs/dist ../gh-pages/dist
             cd ../gh-pages
             git config --global user.email "automated@automated.com"
             git config --global user.name "CircleCI Auto Deploy"
