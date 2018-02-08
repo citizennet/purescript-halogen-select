@@ -68,8 +68,6 @@ jobs:
           fingerprints:
             - "bf:0e:a0:9d:37:6e:40:34:3c:72:90:f5:c8:93:cd:a5"
 
-      - checkout
-
       - run:
           name: Prepare branches
           command: |
@@ -93,7 +91,9 @@ jobs:
             mv dist ../gh-pages/dist
             cd ../gh-pages
             git add -a
-            git commit -m "Docs build triggered by CircleCI"
+            git config --global user.email "automated@automated.com"
+            git config --global user.name "CircleCI Auto Deploy"
+            git commit --allow-empty -a -m "Docs build triggered by CircleCI"
             git push -u origin gh-pages
 
 workflows:
