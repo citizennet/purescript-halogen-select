@@ -6,7 +6,20 @@ jobs:
             - image: thomashoneyman/purescript:0.0.1
         working_directory: ~/select
         steps:
-            - checkout
+						# Enable building docs
+            - add_ssh_keys:
+                fingerprints:
+                  - "bf:0e:a0:9d:37:6e:40:34:3c:72:90:f5:c8:93:cd:a5"
+
+						- checkout
+
+            - run:
+                name: Prepare branches
+                command: git checkout gh-pages && git checkout master
+
+            - run:
+                name: Set up worktree
+                command: mkdir ../gh-pages && git worktree add ../gh-pages gh-pages
 
             - restore_cache:
                 keys:
@@ -48,6 +61,11 @@ jobs:
             - run:
                 name: Build all examples...
                 command: npm run build-docs
+
+            # Verify all examples successfully build...
+            - run:
+                name: Build all examples...
+                command: git checkout gh-
 
 
 workflows:
