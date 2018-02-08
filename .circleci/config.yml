@@ -100,9 +100,9 @@ workflows:
 
       # On master branch, rebuild docs
       - docs:
-          filters:
-            branches:
-              only: master
+          # filters:
+          #   branches:
+          #     only: master
 
           requires:
             - test
