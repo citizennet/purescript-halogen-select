@@ -51,10 +51,6 @@ jobs:
           name: Build all examples...
           command: npm run build-docs
 
-      - run:
-          name: Copy over files to keep
-          command: mv docs/dist workspace
-
       # Persist the specified paths into the workspace
       - persist_to_workspace:
         # Must be an absolute path or relative from working_directory
@@ -80,12 +76,12 @@ jobs:
             git worktree add ../gh-pages gh-pages
 
       - attach_workspace:
-          at: persisted_docs
+          at: persisted
 
       - run:
           name: Build CSS
           command: |
-            mv persisted_docs/dist/example.js docs/dist/
+            mv persisted/docs/dist/example.js docs/dist/
             npm run install-css
             npm run build-css
 
