@@ -2,7 +2,6 @@
   "private": true,
   "scripts": {
     "build-all": "npm run build-docs && npm run build-css",
-    "preinstall": "npm run clean",
     "postinstall": "bower i --silent && pulp build",
     "clean": "rm -rf output bower_components node_modules && cd docs/css && npm install",
     "build-docs": "pulp build -I docs/src --to docs/dist/example.js",
