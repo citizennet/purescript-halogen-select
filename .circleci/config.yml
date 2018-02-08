@@ -85,6 +85,7 @@ jobs:
       - run:
           name: Build CSS
           command: |
+            mv persisted_docs/css/node_modules docs/css/node_modules
             npm run build-css
             mv docs/dist/select.css persisted_docs/dist/
 
