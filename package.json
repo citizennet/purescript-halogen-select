@@ -6,6 +6,7 @@
     "clean": "rm -rf output bower_components node_modules && cd docs/css && npm install",
     "build-docs": "pulp build -I docs/src --to docs/dist/example.js",
     "watch-docs": "pulp -w build -I docs/src --to docs/dist/example.js",
+    "install-css": "cd docs/css && npm install",
     "build-css": "cd docs/css && npm run build-prod"
   },
   "devDependencies": {
