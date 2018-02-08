@@ -81,7 +81,7 @@ jobs:
       - run:
           name: Build CSS
           command: |
-            mv persisted/docs/dist/example.js docs/dist/
+            cp -r persisted/docs/dist/ docs/dist/
             npm run install-css
             npm run build-css
 
@@ -91,9 +91,8 @@ jobs:
             - "bf:0e:a0:9d:37:6e:40:34:3c:72:90:f5:c8:93:cd:a5"
 
       - run:
-          name: Build docs and push to GitHub
+          name: Push to GitHub
           command: |
-            npm run build-all
             rm -rf ../gh-pages/dist
             mv docs/dist ../gh-pages/dist
             cd ../gh-pages
