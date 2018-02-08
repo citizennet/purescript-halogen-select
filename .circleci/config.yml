@@ -96,9 +96,7 @@ jobs:
             rm -rf ../gh-pages/dist
             mv docs/dist ../gh-pages/dist
             cd ../gh-pages
-            git config --global user.email "automated@automated.com"
-            git config --global user.name "CircleCI Auto Deploy"
-            git commit --allow-empty -a -m "Docs build triggered by CircleCI"
+            git commit --allow-empty -a -m "Build triggered by CircleCI"
             git push -u origin gh-pages
 
 workflows:
@@ -109,9 +107,9 @@ workflows:
 
       # On master branch, rebuild docs
       - docs:
+          filters:
+            branches:
+              only: master
+
           requires:
             - test
-
-        # filters:
-        #   branches:
-        #     only: master
