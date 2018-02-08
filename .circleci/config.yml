@@ -13,38 +13,30 @@ jobs:
 
       - restore_cache:
           keys:
-            - v1.2-bower-cache-{{ arch }}-{{ .Branch }}-{{ checksum "bower.json" }}
-            - v1.2-bower-cache-{{ arch }}-{{ .Branch }}
+            - v1.2-bower-cache-{{ .Branch }}-{{ checksum "bower.json" }}
+            - v1.2-bower-cache-{{ .Branch }}
             - v1.2-bower-cache
 
       - restore_cache:
           keys:
-            - v1.2-npm-cache-{{ arch }}-{{ .Branch }}-{{ checksum "package.json" }}
-            - v1.2-npm-cache-{{ arch }}-{{ .Branch }}
+            - v1.2-npm-cache-{{ .Branch }}-{{ checksum "package.json" }}
+            - v1.2-npm-cache-{{ .Branch }}
             - v1.2-npm-cache
-
-      - restore_cache:
-          keys:
-            - v1.2-build-cache
 
       - run:
           name: Install dependencies from NPM and Bower and compile...
           command: npm install
 
       - save_cache:
-          key: v1.2-bower-cache-{{ arch }}-{{ .Branch }}-{{ checksum "bower.json" }}
+          keys: v1.2-bower-cache-{{ .Branch }}-{{ checksum "bower.json" }}
           paths:
             - ~/select/bower_components
+            - ~/select/output
 
       - save_cache:
-          key: v1.2-npm-cache-{{ arch }}-{{ .Branch }}-{{ checksum "package.json" }}
+          key: v1.2-npm-cache-{{ .Branch }}-{{ checksum "package.json" }}
           paths:
             - ~/select/node_modules
-
-      - save_cache:
-          key: v1.2-build-cache
-          paths:
-            - ~/select/output
 
       # Verify all examples successfully build...
       - run:
