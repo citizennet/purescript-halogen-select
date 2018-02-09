@@ -1,0 +1,113 @@
+version: 2
+
+defaults: &defaults
+  working_directory: ~/select
+  docker:
+    - image: thomashoneyman/purescript:0.0.2
+
+jobs:
+  test:
+    <<: *defaults
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1.2-bower-cache-{{ .Branch }}-{{ checksum "bower.json" }}
+            - v1.2-bower-cache-{{ .Branch }}
+            - v1.2-bower-cache
+
+      - restore_cache:
+          keys:
+            - v1.2-npm-cache-{{ .Branch }}-{{ checksum "package.json" }}
+            - v1.2-npm-cache-{{ .Branch }}
+            - v1.2-npm-cache
+
+      - run:
+          name: Install dependencies from NPM and Bower (including CSS)
+          command: npm install
+
+      - save_cache:
+          key: v1.2-bower-cache-{{ .Branch }}-{{ checksum "bower.json" }}
+          paths:
+            - ~/select/bower_components
+            - ~/select/output
+
+      - save_cache:
+          key: v1.2-npm-cache-{{ .Branch }}-{{ checksum "package.json" }}
+          paths:
+            - ~/select/node_modules
+            - ~/select/docs/css/node_modules
+
+      # Verify all examples successfully build...
+      - run:
+          name: Build all examples...
+          command: npm run build-docs
+
+      # Persist the specified paths into the workspace
+      - persist_to_workspace:
+          root: docs
+          paths:
+            - .
+
+  docs:
+    <<: *defaults
+    steps:
+      - checkout
+
+      - run:
+          name: Prepare branches by checking both out locally
+          command: |
+            git checkout gh-pages
+            git checkout master
+
+      - run:
+          name: Set up gh-pages for build artifacts
+          command: |
+            mkdir ../gh-pages
+            git worktree add ../gh-pages gh-pages
+
+      - attach_workspace:
+          at: persisted
+
+      - run:
+          name: Build CSS
+          command: |
+            cp -r persisted/dist/ docs/dist/
+            cp -r persisted/css/node_modules docs/css/node_modules
+            npm run build-css
+
+      # Enable building docs
+      - add_ssh_keys:
+          fingerprints:
+            - "bf:0e:a0:9d:37:6e:40:34:3c:72:90:f5:c8:93:cd:a5"
+
+      - run:
+          name: Push to GitHub
+          command: |
+            rm -rf ../gh-pages/dist
+            mv docs/dist ../gh-pages/dist
+            cd ../gh-pages
+            git config --global user.email "dev@citizennet.com"
+            git config --global user.name "CircleCI Build"
+            git add .
+            git commit --allow-empty -m "Build triggered by CircleCI"
+            git push -u origin gh-pages
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - test:
+          filters:
+            branches:
+              ignore: gh-pages
+
+      # On master branch, rebuild docs
+      - docs:
+          filters:
+            branches:
+              only: master
+
+          requires:
+            - test
