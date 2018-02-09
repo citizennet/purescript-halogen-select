@@ -88,16 +88,20 @@ jobs:
             rm -rf ../gh-pages/dist
             mv docs/dist ../gh-pages/dist
             cd ../gh-pages
-            git config --global user.email "you@example.com"
-            git config --global user.name "Your Name"
-            git commit --allow-empty -a -m "Build triggered by CircleCI"
+            git config --global user.email "dev@citizennet.com"
+            git config --global user.name "CircleCI Build"
+            git add .
+            git commit --allow-empty -m "Build triggered by CircleCI"
             git push -u origin gh-pages
 
 workflows:
   version: 2
   build:
     jobs:
-      - test
+      - test:
+          filters:
+            branches:
+              ignore: gh-pages
 
       # On master branch, rebuild docs
       - docs:
