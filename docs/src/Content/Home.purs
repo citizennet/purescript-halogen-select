@@ -9,6 +9,7 @@ import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
+import Halogen.HTML.Properties as HP
 import Halogen.Component.ChildPath as CP
 import Data.Either.Nested (Either3)
 import Data.Functor.Coproduct.Nested (Coproduct3)
@@ -36,13 +37,105 @@ component =
   where
     render :: Unit -> H.ParentHTML Query ChildQuery ChildSlot _
     render _ =
-      HH.div_
-        [ HH.slot' CP.cp1 unit Dropdown.component unit absurd
-        , HH.slot' CP.cp2 unit Typeahead.component dev (HE.input HandleTypeahead)
-        , HH.slot' CP.cp3 unit Calendar.component unit absurd ]
+      HH.div_ [ header, container components, footer ]
 
     eval :: Query ~> H.ParentDSL Unit Query ChildQuery ChildSlot Void _
     eval (HandleTypeahead _ next) = pure next
+
+
+----------
+-- Rendering
+
+class_ = HP.class_ <<< HH.ClassName
+
+header :: ∀ i p. HH.HTML i p
+header =
+  HH.div
+  [ class_ "bg-red" ]
+  [ HH.div
+    [ class_ "container max-w-md mx-auto py-16 px-4" ]
+    [ HH.h1
+    [ class_ "xs:text-5xl md:text-6xl text-red-lightest mb-6 font-bold" ]
+      [ HH.text "Halogen Select" ]
+    , HH.p
+      [ class_ "text-red-lighter text-xl font-medium mb-6" ]
+      [ HH.text "Primitive components for selection user interfaces like calendars, typeaheads, dropdowns, and image pickers." ]
+    ]
+  ]
+
+-- container :: ∀ i p. Array (HH.HTML i p) -> HH.HTML i p
+container components =
+  HH.div
+  [ class_ "container max-w-md mx-auto py-16 px-4" ]
+  ( card <$> components )
+
+card { title, description, component } =
+  HH.div
+  [ class_ "mb-8" ]
+  [ HH.h1_
+    [ HH.text title ]
+  , HH.div
+    [ class_ "text-xl text-grey-dark mb-4 mt-2" ]
+    [ HH.text description ]
+  , component ]
+
+components = [ dropdown, typeahead, calendar ]
+
+dropdown =
+  { title: "Dropdown"
+  , description: "A simple dropdown toggle"
+  , component: dropdownComponent }
+
+typeahead =
+  { title: "Typeahead"
+  , description: "A simple multi-select typeahead"
+  , component: typeaheadComponent }
+
+calendar =
+  { title: "Calendar"
+  , description: "A simple selectable calendar"
+  , component: calendarComponent }
+
+componentBlock { slot, docs } =
+  HH.div
+  [ class_ "rounded border-2 border-grey-light bg-white" ]
+  [ HH.div
+    [ class_ "p-4 bg-grey-lightest" ]
+    [ slot ]
+  , HH.div
+    [ class_ "p-4 border-t-2 border-grey-light" ]
+    [ docs ]
+  ]
+
+dropdownComponent = componentBlock
+  { slot: HH.slot' CP.cp1 unit Dropdown.component unit absurd
+  , docs: docs }
+  where
+    docs =
+      HH.p_ [ HH.text "This is the dropdown component." ]
+
+typeaheadComponent = componentBlock
+  { slot: HH.slot' CP.cp2 unit Typeahead.component dev (HE.input HandleTypeahead)
+  , docs: docs }
+  where
+    docs =
+      HH.p_ [ HH.text "This is the typeahead component." ]
+
+calendarComponent = componentBlock
+  { slot: HH.slot' CP.cp3 unit Calendar.component unit absurd
+  , docs: docs }
+  where
+    docs =
+      HH.p_ [ HH.text "This is the calendar component." ]
+
+footer :: ∀ i p. HH.HTML i p
+footer =
+  HH.div
+  [ class_ "bg-grey-lighter py-8 px-4" ]
+  [ HH.div
+    [ class_ "container max-w-md mx-auto px-4 text-grey-darker" ]
+    [ HH.text "Proudly open-sourced by CitizenNet, a Conde Nast company." ]
+  ]
 
 
 ----------
