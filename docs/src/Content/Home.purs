@@ -37,7 +37,7 @@ component =
   where
     render :: Unit -> H.ParentHTML Query ChildQuery ChildSlot _
     render _ =
-      HH.div_ [ header, container components, footer ]
+      HH.div_ [ header, subhead,  container components, footer ]
 
     eval :: Query ~> H.ParentDSL Unit Query ChildQuery ChildSlot Void _
     eval (HandleTypeahead _ next) = pure next
@@ -58,8 +58,20 @@ header =
     [ class_ "xs:text-5xl md:text-6xl text-red-lightest mb-6 font-bold" ]
       [ HH.text "Halogen Select" ]
     , HH.p
-      [ class_ "text-red-lighter text-xl font-medium mb-6" ]
+      [ class_ "text-red-lighter text-xl font-medium mb-4" ]
       [ HH.text "Primitive components for selection user interfaces like calendars, typeaheads, dropdowns, and image pickers." ]
+    ]
+  ]
+
+subhead :: ∀ i p. HH.HTML i p
+subhead =
+  HH.div
+  [ class_ "bg-grey-lighter" ]
+  [ HH.div
+    [ class_ "container max-w-md mx-auto py-16 px-4" ]
+    [ HH.p
+      [ class_ "text-grey-darker text-lg" ]
+      [ HH.text "Some more documentation or backstory can go here. " ]
     ]
   ]
 
@@ -112,7 +124,7 @@ dropdownComponent = componentBlock
   , docs: docs }
   where
     docs =
-      HH.p_ [ HH.text "This is the dropdown component." ]
+      HH.p_ [ HH.text "This is the dropdown component. Some additional documentation can go here, like code snippets or links to other docs and tutorials that will help users know what to do. We can also provide some configuration toggles to demonstrate the component in different states." ]
 
 typeaheadComponent = componentBlock
   { slot: HH.slot' CP.cp2 unit Typeahead.component dev (HE.input HandleTypeahead)
