@@ -83,10 +83,15 @@ jobs:
             - "bf:0e:a0:9d:37:6e:40:34:3c:72:90:f5:c8:93:cd:a5"
 
       - run:
-          name: Push to GitHub
+          name: Copy over files to gh-pages branch
           command: |
             rm -rf ../gh-pages/dist
             mv docs/dist ../gh-pages/dist
+            mv docs/index.html ../gh-pages/index.html
+
+      - run:
+          name: Push update to GitHub
+          command: |
             cd ../gh-pages
             git config --global user.email "dev@citizennet.com"
             git config --global user.name "CircleCI Build"

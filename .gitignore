@@ -9,7 +9,7 @@ output
 package-lock.json
 generated-docs
 
-# Generated docs
+# Dist
 dist
 
 # IDE
