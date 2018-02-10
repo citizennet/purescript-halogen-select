@@ -37,7 +37,7 @@ component =
   where
     render :: Unit -> H.ParentHTML Query ChildQuery ChildSlot _
     render _ =
-      HH.div_ [ header, subhead,  container components, footer ]
+      HH.div_ [ header, subhead, container components, footer ]
 
     eval :: Query ~> H.ParentDSL Unit Query ChildQuery ChildSlot Void _
     eval (HandleTypeahead _ next) = pure next
@@ -51,14 +51,14 @@ class_ = HP.class_ <<< HH.ClassName
 header :: ∀ i p. HH.HTML i p
 header =
   HH.div
-  [ class_ "bg-red" ]
+  [ class_ "bg-teal" ]
   [ HH.div
     [ class_ "container max-w-md mx-auto py-16 px-4" ]
     [ HH.h1
-    [ class_ "xs:text-5xl md:text-6xl text-red-lightest mb-6 font-bold" ]
+    [ class_ "xs:text-5xl md:text-6xl text-teal-lightest mb-6 font-bold" ]
       [ HH.text "Halogen Select" ]
     , HH.p
-      [ class_ "text-red-lighter text-xl font-medium mb-4" ]
+      [ class_ "text-teal-lighter text-xl font-medium mb-4" ]
       [ HH.text "Primitive components for selection user interfaces like calendars, typeaheads, dropdowns, and image pickers." ]
     ]
   ]
@@ -72,6 +72,9 @@ subhead =
     [ HH.p
       [ class_ "text-grey-darker text-lg" ]
       [ HH.text "Some more documentation or backstory can go here. " ]
+      , HH.a
+        [ HP.href "https://github.com/citizennet/purescript-halogen-select" ]
+        [ HH.text "Star the repo on GitHub." ]
     ]
   ]
 
