@@ -1,6 +1,7 @@
 # Using the most recent version of node by default
 # Could also use node:alpine if size is an issue.
-FROM node:latest
+# Uses `stretch` for latest Debian
+FROM node:stretch
 
 MAINTAINER Thomas Honeyman
 

@@ -1,10 +1,11 @@
-module Example.Typeahead.Child where
+module Example.Component.Typeahead where
 
 import Prelude
 
 import Control.Monad.Eff.Timer (setTimeout, TIMER)
 import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Aff.Console (log, logShow, CONSOLE)
+import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.AVar (AVAR)
 import DOM (DOM)
 import CSS as CSS
@@ -25,17 +26,18 @@ import Select.Primitives.Container as C
 import Select.Primitives.Search as S
 
 type TypeaheadItem = String
-type TypeaheadEffects eff = ( timer :: TIMER, avar :: AVAR, dom :: DOM, console :: CONSOLE | eff )
+type Effects eff = ( timer :: TIMER, avar :: AVAR, dom :: DOM, console :: CONSOLE | eff )
 
 data Query a
   = Log String a
   | HandleContainer (C.Message Query TypeaheadItem) a
   | HandleSearch    (S.Message Query TypeaheadItem) a
+  | Removed TypeaheadItem a
 
 type ChildSlot = Either2 Unit Unit
 type ChildQuery e
   = Coproduct2 (C.ContainerQuery Query TypeaheadItem)
-               (S.SearchQuery Query TypeaheadItem (TypeaheadEffects e))
+               (S.SearchQuery Query TypeaheadItem (Effects e))
 
 type State =
   { items    :: Array TypeaheadItem
@@ -43,11 +45,10 @@ type State =
 
 type Input = Array String
 
-data Message
-  = SomethingHappened
+data Message = Void
 
 component :: ∀ m e
-  . MonadAff ( TypeaheadEffects e ) m
+  . MonadAff ( Effects e ) m
  => H.Component HH.HTML Query Input Message m
 component =
   H.parentComponent
@@ -62,13 +63,8 @@ component =
 
     render :: State -> H.ParentHTML Query (ChildQuery e) ChildSlot m
     render st =
-      HH.div
-        [ HP.class_ $ HH.ClassName "mw8 sans-serif center" ]
-        [ HH.h2
-          [ HP.class_ $ HH.ClassName "black-80 f-headline-1" ]
-          [ HH.text "Typeahead Component"]
-        , HH.ul_
-          ( map (\elem -> HH.li_ [ HH.text elem ]) st.selected )
+      HH.div_
+        [ renderSelections st.selected
         , HH.slot'
             CP.cp2
             unit
@@ -125,14 +121,31 @@ component =
           st <- H.get
           if length (filter ((==) item) st.items) > 0
             then H.modify _ { selected = ( item : st.selected ) }
-            else H.modify _ { items = ( item : st.items ), selected = ( item : st.selected ) }
+            else H.modify _
+                  { items = ( item : st.items )
+                  , selected = ( item : st.selected ) }
 
           newSt <- H.get
           _  <- H.query' CP.cp1 unit
                   $ H.action
-                  $ C.ContainerReceiver { render: renderContainer, items: difference newSt.items newSt.selected }
+                  $ C.ContainerReceiver
+                  $ { render: renderContainer
+                    , items: difference newSt.items newSt.selected }
 
           H.liftAff $ log "List of selections..." *> logShow newSt.selected
+
+      Removed item a -> a <$ do
+        st <- H.get
+        H.modify _ { selected = filter ((/=) item) st.selected }
+
+        newSt <- H.get
+        _  <- H.query' CP.cp1 unit
+                $ H.action
+                $ C.ContainerReceiver
+                $ { render: renderContainer
+                  , items: difference newSt.items newSt.selected }
+
+        H.liftAff $ log "List of selections..." *> logShow newSt.selected
 
 
 {-
@@ -150,60 +163,72 @@ Config
 
 -}
 
--- Render Functions
--- The user is using the Search primitive, so they have to fill out a Search render function
-renderSearch :: ∀ e. (S.SearchState e) -> H.HTML Void (S.SearchQuery Query TypeaheadItem e)
-renderSearch st =
-  HH.input ( S.getInputProps [] )
+class_ = HP.class_ <<< HH.ClassName
 
--- The user is using the Container primitive, so they have to fill out a Container render function
-renderContainer :: (C.ContainerState TypeaheadItem) -> H.HTML Void (C.ContainerQuery Query TypeaheadItem)
+renderSearch :: ∀ e
+  . (S.SearchState e)
+ -> H.HTML Void (S.SearchQuery Query TypeaheadItem e)
+renderSearch _ = HH.input
+  ( S.getInputProps
+    [ class_ "rounded-sm bg-white w-full flex py-2 px-3"
+    , HP.placeholder "Type to search..." ]
+  )
+
+-- Render function to pass to the child container component
+renderContainer
+  :: (C.ContainerState TypeaheadItem)
+  -> H.HTML Void (C.ContainerQuery Query TypeaheadItem)
 renderContainer st =
-  HH.div_
-    $ if not st.open
-      then [ ]
-      else [ renderItems $ renderItem `mapWithIndex` st.items ]
+  HH.div [ class_ "relative z-50" ]
+  $ if not st.open
+    then [ ]
+    else [ renderItems $ renderItem `mapWithIndex` st.items ]
   where
-
     -- Render the container for the items
-    renderItems :: Array (H.HTML Void (C.ContainerQuery Query TypeaheadItem))
-                -> H.HTML Void (C.ContainerQuery Query TypeaheadItem)
+    renderItems
+      :: Array (H.HTML Void (C.ContainerQuery Query TypeaheadItem))
+      -> H.HTML Void (C.ContainerQuery Query TypeaheadItem)
     renderItems html =
       HH.div
-        ( C.getContainerProps
-          [ HP.class_ $ HH.ClassName "measure ba br1 b--black-30 overflow-y-scroll outline-0"
-          , HC.style $ CSS.maxHeight (CSS.px 300.0)
-          ]
-        )
-        ([ HH.div
-            [ HP.class_ $ HH.ClassName "cf" ]
-            [ HH.h4
-                [ HP.class_ $ HH.ClassName "ph2 pv3 ma0 fl w-50" ]
-                [ HH.text "Choose One" ]
-            , HH.div
-                [ HP.class_ $ HH.ClassName "fl w-50 tr" ]
-                [ HH.button
-                    ( C.getChildProps
-                      [ HP.class_ $ HH.ClassName "ma2 ba bw1 ph3 pv2 dib b--near-black pointer outline-0 link"
-                      , HE.onClick $ HE.input_ $ C.Raise $ H.action $ Log "I've been clicked!"  ]
-                    )
-                    [ HH.text "Click Me" ]
-                ]
-            ]
-         ]
-         <> if length html > 0
-             then
-               [ HH.ul
-                 [ HP.class_ $ HH.ClassName "list pa0 ma0 bt b--black-30" ]
-                 html ]
-             else
-               [ HH.p [HP.class_ $ HH.ClassName "lh-copy black-70 pa2"] [ HH.text "No results for that search." ] ]
-        )
+      ( C.getContainerProps
+        [ class_ "absolute bg-white shadow rounded-sm pin-t pin-l w-full" ]
+      )
+      [ HH.ul [ class_ "list-reset" ] html ]
 
-    renderItem :: Int -> TypeaheadItem -> H.HTML Void (C.ContainerQuery Query TypeaheadItem)
-    renderItem index item = HH.li item' [ HH.text item ]
+    renderItem
+      :: Int
+      -> TypeaheadItem
+      -> H.HTML Void (C.ContainerQuery Query TypeaheadItem)
+    renderItem index item =
+      HH.li ( C.getItemProps index props ) [ HH.text item ]
       where
-        item' = C.getItemProps index
-          [ HP.class_ $ HH.ClassName
-            $ "lh-copy pa2 bb b--black-10"
-            <> if st.highlightedIndex == Just index then " bg-light-blue" else "" ]
+        props = [ class_
+          $ "px-4 py-1 text-grey-darkest"
+          <> if st.highlightedIndex == Just index
+               then " bg-grey-lighter"
+               else "" ]
+
+
+renderSelections items =
+  if length items == 0
+    then HH.div_ []
+    else
+    HH.div
+    [ class_ "bg-white rounded-sm w-full border-b border-grey-lighter" ]
+    [ HH.ul
+      [ class_ "list-reset" ]
+      ( renderSelectedItem <$> items )
+    ]
+  where
+    renderSelectedItem item =
+      HH.li
+      [ class_ "px-4 py-1 text-grey-darkest hover:bg-grey-lighter relative" ]
+      [ HH.span_ [ HH.text item ]
+      , closeButton item
+      ]
+
+    closeButton item =
+      HH.span
+      [ HE.onClick $ HE.input_ (Removed item)
+      , class_ "absolute pin-t pin-b pin-r p-1 mx-3 cursor-pointer" ]
+        [ HH.text "×" ]

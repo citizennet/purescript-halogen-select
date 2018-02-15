@@ -9,8 +9,8 @@ output
 package-lock.json
 generated-docs
 
-# Generated examples
-**/dist/*.js
+# Dist
+dist
 
 # IDE
 *.swo

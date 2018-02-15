@@ -5,6 +5,7 @@ This project provides the core building blocks for common select fields, includi
 - Dropdown menus
 - Typeaheads & autocompletion
 - Multi-selects
+- Calendars
 
 It also exports these building blocks composed together into working components you can drop in to your Halogen project, or use as a template you modify. See the [examples](https://github.com/citizennet/purescript-halogen-select/tree/master/examples) folder for working examples of these in action.
 

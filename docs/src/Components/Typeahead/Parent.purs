@@ -1,4 +1,4 @@
-module Example.Typeahead.Parent where
+module Example.Component.Typeahead.Parent where
 
 import Prelude
 
@@ -10,9 +10,9 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 
-import Example.Typeahead.Child as Child
+import Example.Component.Typeahead as Child
 
-type MyEffects e = ( now :: NOW | Child.TypeaheadEffects e)
+type Effects e = ( now :: NOW | Child.Effects e)
 
 data Query a
   = HandleTypeahead Int Child.Message a
@@ -25,7 +25,7 @@ derive instance eqSlot :: Eq Slot
 derive instance ordSlot :: Ord Slot
 
 component :: ∀ m e
-  . MonadAff ( MyEffects e ) m
+  . MonadAff ( Effects e ) m
  => H.Component HH.HTML Query Unit Void m
 component =
   H.parentComponent

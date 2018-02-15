@@ -1,7 +1,7 @@
-module Calendar where
+module Example.Component.Calendar where
 
 import Prelude
-import Calendar.Utils (alignByWeek, nextMonth, nextYear, prevMonth, prevYear, rowsFromArray, unsafeMkYear, unsafeMkMonth)
+import Example.Component.Calendar.Utils (alignByWeek, nextMonth, nextYear, prevMonth, prevYear, rowsFromArray, unsafeMkYear, unsafeMkMonth)
 import CSS as CSS
 import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Console (log, CONSOLE)
@@ -119,10 +119,7 @@ component =
     render st =
       HH.div
         [ HP.class_ $ HH.ClassName "mw8 sans-serif center" ]
-        [ HH.h2
-          [ HP.class_ $ HH.ClassName "black-80 f-headline-1" ]
-          [ HH.text "Calendar Component"]
-        , renderToggle
+        [ renderToggle
         , HH.slot
             unit
             C.component
