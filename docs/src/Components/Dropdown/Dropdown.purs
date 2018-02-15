@@ -165,7 +165,7 @@ renderContainer
   :: (C.ContainerState DropdownItem)
   -> H.HTML Void (C.ContainerQuery Query DropdownItem)
 renderContainer st =
-  HH.div [ class_ "relative" ]
+  HH.div [ class_ "relative z-50" ]
   $ if not st.open
     then [ ]
     else [ renderItems $ renderItem `mapWithIndex` st.items ]

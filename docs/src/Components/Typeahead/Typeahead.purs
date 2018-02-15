@@ -179,7 +179,7 @@ renderContainer
   :: (C.ContainerState TypeaheadItem)
   -> H.HTML Void (C.ContainerQuery Query TypeaheadItem)
 renderContainer st =
-  HH.div [ class_ "relative" ]
+  HH.div [ class_ "relative z-50" ]
   $ if not st.open
     then [ ]
     else [ renderItems $ renderItem `mapWithIndex` st.items ]
