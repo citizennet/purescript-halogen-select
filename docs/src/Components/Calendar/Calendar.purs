@@ -119,10 +119,7 @@ component =
     render st =
       HH.div
         [ HP.class_ $ HH.ClassName "mw8 sans-serif center" ]
-        [ HH.h2
-          [ HP.class_ $ HH.ClassName "black-80 f-headline-1" ]
-          [ HH.text "Calendar Component"]
-        , renderToggle
+        [ renderToggle
         , HH.slot
             unit
             C.component

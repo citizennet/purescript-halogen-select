@@ -57,7 +57,7 @@ header =
   [ HH.div
     [ class_ "container max-w-md mx-auto py-16 px-4" ]
     [ HH.h1
-    [ class_ "text-6xl text-grey-darkest mb-6 font-bold" ]
+    [ class_ "text-6xl text-black mb-6 font-bold" ]
       [ HH.text "Halogen Select" ]
     , HH.p
       [ class_ "text-grey-darker text-xl font-medium mb-4" ]
