@@ -208,7 +208,7 @@ renderSelections items =
   where
     renderSelectedItem item =
       HH.li
-      [ class_ "px-4 py-1 hover:bg-grey-lighter relative" ]
+      [ class_ "px-4 py-1 text-grey-darkest hover:bg-grey-lighter relative" ]
       [ HH.span_ [ HH.text item ]
       , closeButton item
       ]

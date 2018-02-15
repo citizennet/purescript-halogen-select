@@ -18,7 +18,7 @@ import Example.Component.Dropdown as Dropdown
 import Example.Component.Typeahead as Typeahead
 import Example.Component.Calendar as Calendar
 
-type Effects e = ( now :: NOW | Typeahead.TypeaheadEffects e)
+type Effects e = ( now :: NOW | Typeahead.Effects e)
 
 data Query a
   = HandleTypeahead Typeahead.Message a
@@ -37,7 +37,9 @@ component =
   where
     render :: Unit -> H.ParentHTML Query ChildQuery ChildSlot _
     render _ =
-      HH.div_ [ header, subhead, container components, footer ]
+      HH.div
+      [ class_ "leading-normal" ]
+      [ header, subhead, container components, footer ]
 
     eval :: Query ~> H.ParentDSL Unit Query ChildQuery ChildSlot Void _
     eval (HandleTypeahead _ next) = pure next
@@ -51,14 +53,14 @@ class_ = HP.class_ <<< HH.ClassName
 header :: ∀ i p. HH.HTML i p
 header =
   HH.div
-  [ class_ "bg-teal" ]
+  [ class_ "bg-grey-lighter" ]
   [ HH.div
     [ class_ "container max-w-md mx-auto py-16 px-4" ]
     [ HH.h1
-    [ class_ "xs:text-5xl md:text-6xl text-teal-lightest mb-6 font-bold" ]
+    [ class_ "text-6xl text-grey-darkest mb-6 font-bold" ]
       [ HH.text "Halogen Select" ]
     , HH.p
-      [ class_ "text-teal-lighter text-xl font-medium mb-4" ]
+      [ class_ "text-grey-darker text-xl font-medium mb-4" ]
       [ HH.text "Primitive components for selection user interfaces like calendars, typeaheads, dropdowns, and image pickers." ]
     ]
   ]
@@ -66,15 +68,13 @@ header =
 subhead :: ∀ i p. HH.HTML i p
 subhead =
   HH.div
-  [ class_ "bg-grey-lighter" ]
+  [ class_ "bg-grey-lightest" ]
   [ HH.div
     [ class_ "container max-w-md mx-auto py-16 px-4" ]
-    [ HH.p
-      [ class_ "text-grey-darker text-lg" ]
-      [ HH.text "Some more documentation or backstory can go here. " ]
-      , HH.a
-        [ HP.href "https://github.com/citizennet/purescript-halogen-select" ]
-        [ HH.text "Star the repo on GitHub." ]
+    [ HH.a
+      [ HP.href "https://github.com/citizennet/purescript-halogen-select"
+      , class_ "text-grey-darkest hover_underline" ]
+      [ HH.text "Star the repo on GitHub." ]
     ]
   ]
 
@@ -127,21 +127,27 @@ dropdownComponent = componentBlock
   , docs: docs }
   where
     docs =
-      HH.p_ [ HH.text "This is the dropdown component. Some additional documentation can go here, like code snippets or links to other docs and tutorials that will help users know what to do. We can also provide some configuration toggles to demonstrate the component in different states." ]
+      HH.p
+      [ class_ "font-mono text-grey-darkest" ]
+      [ HH.text "HH.slot' CP.cp1 unit Dropdown.component unit absurd" ]
 
 typeaheadComponent = componentBlock
   { slot: HH.slot' CP.cp2 unit Typeahead.component dev (HE.input HandleTypeahead)
   , docs: docs }
   where
     docs =
-      HH.p_ [ HH.text "This is the typeahead component." ]
+      HH.p
+      [ class_ "font-mono text-grey-darkest" ]
+      [ HH.text "HH.slot' CP.cp2 unit Typeahead.Component myData absurd" ]
 
 calendarComponent = componentBlock
   { slot: HH.slot' CP.cp3 unit Calendar.component unit absurd
   , docs: docs }
   where
     docs =
-      HH.p_ [ HH.text "This is the calendar component." ]
+      HH.p
+      [ class_ "font-mono text-grey-darkest" ]
+      [ HH.text "HH.slot' CP.cp3 unit Calendar.component unit absurd" ]
 
 footer :: ∀ i p. HH.HTML i p
 footer =
