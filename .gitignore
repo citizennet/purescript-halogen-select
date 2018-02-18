@@ -10,7 +10,8 @@ package-lock.json
 generated-docs
 
 # Dist
-dist
+docs/dist
+docs/site/public
 
 # IDE
 *.swo

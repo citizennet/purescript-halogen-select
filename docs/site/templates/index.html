@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en-us">
+    <head>
+        <meta charset="UTF-8">
+        <title>{% block title %}{{ config.title }}{% endblock title %}</title>
+        <meta name="description" content="{% block description %}{{ config.description }}{% endblock description %}">
+        <link rel="stylesheet" href="cn-tailwind.css" />
+        <script src="app.js"></script>
+    </head>
+    <body>
+
+        <div class="content">
+            {% block content %}
+              {{ section.content | safe }}
+            {% endblock content %}
+        </div>
+
+    </body>
+</html>

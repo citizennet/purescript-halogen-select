@@ -1,0 +1,11 @@
+# The base URL pages are relative to
+base_url = "https://citizennet.github.io/purescript-halogen-select"
+
+# Don't provide or compile from Sass folder
+compile_sass = false
+
+# Turn on syntax highlighting
+highlight_code = true
+
+# Put custom variables in [extra]
+[extra]
