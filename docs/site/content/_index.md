@@ -4,17 +4,11 @@ description = "Some description"
 template = "index.html"
 +++
 
-# Title
+# `Select` by CitizenNet
+Primitives for building flexible, accessible selection user interfaces. You provide the HTML and CSS; we'll provide the behaviors.
 
-I have a lot to say about stuff.
+{{ halogen(id="dropdown", header="Dropdown", subHeader="Select things with a dropdown block.") }}
 
-## Dropdown
+{{ halogen(id="typeahead", header="Typeahead", subHeader="Select things with a typeahead.") }}
 
-{{ halogen(id="dropdown") }}
-
-## Typeahead
-
-{{ halogen(id="typeahead") }}
-
-## Calendar
-{{ halogen(id="calendar") }}
+{{ halogen(id="calendar", header="Calendar", subHeader="Select things with a calendar.") }}

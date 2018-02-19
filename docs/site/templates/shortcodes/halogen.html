@@ -1,1 +1,11 @@
-<div data-component-id="{{id}}"></div>
+<div class="">
+    {% if header %}
+    <h1 class="font-light leading-loose text-black-20">{{ header }}</h1>
+    {% endif %}
+    
+    {% if subHeader %}
+    <h3 class="font-light leading-normal text-grey-50 text-sm">{{ subHeader }}</h3>
+    {% endif %}
+       
+    <div class="bg-grey-95 flex flex-col items-center justify-center my-6" data-component-id="{{id}}"></div>
+</div>
