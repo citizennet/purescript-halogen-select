@@ -6,8 +6,15 @@ template = "index.html"
 
 # Title
 
-I have a lot to say.
+I have a lot to say about stuff.
 
-{{ halogen(id="button") }}
+## Dropdown
 
 {{ halogen(id="dropdown") }}
+
+## Typeahead
+
+{{ halogen(id="typeahead") }}
+
+## Calendar
+{{ halogen(id="calendar") }}

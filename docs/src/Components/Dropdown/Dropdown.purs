@@ -1,19 +1,16 @@
-module Example.Component.Dropdown where
+module Docs.Components.Dropdown where
 
 import Prelude
 
-import Control.Monad.Aff (Aff)
+import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Aff.Console (log, logShow, CONSOLE)
-import CSS as CSS
 import DOM (DOM)
-import DOM.Event.KeyboardEvent as KE
 import Data.Array ((:), difference, mapWithIndex, length, delete)
 import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Halogen.HTML.CSS as HC
 import Select.Primitives.Container as C
 
 type DropdownItem = String
@@ -30,8 +27,9 @@ data Query a
 
 type Effects eff = ( dom :: DOM, console :: CONSOLE | eff )
 
-component :: ∀ e
-  . H.Component HH.HTML Query Unit Void (Aff (Effects e))
+component :: ∀ eff m
+  . MonadAff ( Effects eff ) m 
+  => H.Component HH.HTML Query Unit Void m
 component =
   H.parentComponent
     { initialState: const initState
@@ -49,7 +47,7 @@ component =
            Query
            (C.ContainerQuery Query DropdownItem)
            Unit
-           (Aff (Effects e))
+           m
     render st =
       HH.div_
       [ renderSelections st.selected
@@ -72,7 +70,7 @@ component =
            (C.ContainerQuery Query DropdownItem)
            Unit
            Void
-           (Aff (Effects e))
+           m
     eval = case _ of
       Log s a -> H.liftAff (log s) *> pure a
 
@@ -139,12 +137,13 @@ testData =
 
 -- Render whatever is going to provide the action for
 -- toggling the menu. Notably, this is not a primitive
-renderToggle :: ∀ e
-  . H.ParentHTML
+renderToggle :: ∀ e m
+  . MonadAff ( Effects e ) m
+ => H.ParentHTML
       Query
       (C.ContainerQuery Query DropdownItem)
       Unit
-      (Aff (Effects e))
+      m
 renderToggle =
   HH.div
     ( C.getToggleProps ToContainer

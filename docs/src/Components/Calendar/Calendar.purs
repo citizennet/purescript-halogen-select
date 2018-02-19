@@ -1,9 +1,9 @@
-module Example.Component.Calendar where
+module Docs.Components.Calendar where
 
 import Prelude
-import Example.Component.Calendar.Utils (alignByWeek, nextMonth, nextYear, prevMonth, prevYear, rowsFromArray, unsafeMkYear, unsafeMkMonth)
+import Docs.Components.Calendar.Utils (alignByWeek, nextMonth, nextYear, prevMonth, prevYear, rowsFromArray, unsafeMkYear, unsafeMkMonth)
 import CSS as CSS
-import Control.Monad.Aff (Aff)
+import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Aff.Console (log, CONSOLE)
 import Control.Monad.Eff.Now (NOW, now)
 import DOM (DOM)
@@ -37,7 +37,7 @@ data Query a
 
 data Direction = Prev | Next
 
-type ParentHTML e = H.ParentHTML Query ChildQuery Unit (Aff (Effects e))
+type ParentHTML m = H.ParentHTML Query ChildQuery Unit m
 type ChildQuery = C.ContainerQuery Query CalendarItem
 
 ----------
@@ -58,7 +58,7 @@ data BoundaryStatus
   | InBounds
 
 
-component :: ∀ e. H.Component HH.HTML Query Unit Void (Aff (Effects e))
+component :: ∀ e m. MonadAff ( Effects e ) m => H.Component HH.HTML Query Unit Void m
 component =
   H.lifecycleParentComponent
     { initialState
@@ -73,7 +73,7 @@ component =
     initialState = const
       { targetDate: Tuple (unsafeMkYear 2019) (unsafeMkMonth 2) }
 
-    eval :: Query ~> H.ParentDSL State Query ChildQuery Unit Void (Aff (Effects e))
+    eval :: Query ~> H.ParentDSL State Query ChildQuery Unit Void m
     eval = case _ of
       ToContainer q a -> H.query unit q *> pure a
 
@@ -115,7 +115,7 @@ component =
          pure a
 
 
-    render :: State -> H.ParentHTML Query ChildQuery Unit (Aff (Effects e))
+    render :: State -> H.ParentHTML Query ChildQuery Unit m
     render st =
       HH.div
         [ HP.class_ $ HH.ClassName "mw8 sans-serif center" ]
@@ -133,7 +133,7 @@ component =
         targetYear  = fst st.targetDate
         targetMonth = snd st.targetDate
 
-        renderToggle :: H.ParentHTML Query ChildQuery Unit (Aff (Effects e))
+        renderToggle :: H.ParentHTML Query ChildQuery Unit m
         renderToggle =
           HH.span
           ( C.getToggleProps ToContainer

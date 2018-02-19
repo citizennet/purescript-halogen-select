@@ -30,9 +30,11 @@ import Halogen.VDom.Driver (runUI)
 
 import Docs.App.Proxy (ProxyS, proxy)
 
+import Docs.App.Component as Component
+
 -- Finds all nodes labeled "data-component-id" and retrieves the associated attribute.
 -- Then, mounts the right component at each node.
-main :: ∀ eff. Eff (HA.HalogenEffects (dom :: DOM | eff)) Unit
+main :: ∀ eff. Eff (HA.HalogenEffects (Component.Effects eff)) Unit
 main = HA.runHalogenAff do
   elements <- awaitSelectAll $ { query: QuerySelector "div[data-component-id]", attr: "data-component-id" }
   flip traverse_ elements $ \e -> runUI app e.attr e.element
@@ -44,15 +46,16 @@ type ComponentQuery = ProxyS (Const Void) Unit
 
 type Components m = Map.Map String (H.Component HH.HTML ComponentQuery Unit Void m)
 
-routes :: ∀ eff m. MonadAff ( dom :: DOM | eff ) m => Components m
-routes = Map.fromFoldable []
-  --  [ Tuple "button" $ proxy $ Component.button
-  --  , Tuple "dropdown" $ proxy $ Component.dropdown
-  --  ]
+routes :: ∀ eff m. MonadAff ( Component.Effects eff ) m => Components m
+routes = Map.fromFoldable
+  [ Tuple "dropdown" $ proxy Component.dropdown
+  , Tuple "typeahead" $ proxy Component.typeahead
+  , Tuple "calendar" $ proxy Component.calendar
+  ]
 
 data Query a = NoOp a
 
-app :: ∀ eff m. MonadAff ( dom :: DOM | eff ) m => H.Component HH.HTML Query String Void m
+app :: ∀ eff m. MonadAff ( Component.Effects eff ) m => H.Component HH.HTML Query String Void m
 app =
   H.parentComponent
     { initialState: id
@@ -96,4 +99,3 @@ selectElements { query, attr } = do
 
   attrs <- liftEff $ traverse (getAttribute attr) elems
   pure $ zipWith ({ element: _, attr: _ }) elems (fromMaybe "" <$> attrs)
-
