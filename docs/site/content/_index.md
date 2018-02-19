@@ -1,7 +1,7 @@
 +++
 title = "Halogen Shortcodes"
 description = "Some description"
-template = "index.html"
+template = "home.html"
 +++
 
 {{ halogen(id="dropdown", header="Dropdown") }}

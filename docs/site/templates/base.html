@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en-us">
+    <head>
+        {% block head %}
+        <meta charset="UTF-8">
+        <title>{% block title %}{% if config.title %}{{ config.title }}{% endif %}{% endblock title %}</title>
+        <meta name="description" content="{% block description %}{{ config.description }}{% endblock description %}">
+        <link rel="stylesheet" href="cn-tailwind.css" />
+        <link rel="stylesheet" href="https://unpkg.com/tachyons@4.9.1/css/tachyons.min.css"/>
+        <script src="app.js"></script>
+        {% endblock head %}
+    </head>
+    <body>
+
+    {% block content %}
+    {% endblock content %}
+
+    </body>
+</html>

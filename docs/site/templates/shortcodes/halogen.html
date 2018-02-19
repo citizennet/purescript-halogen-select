@@ -1,7 +1,7 @@
-<div class="bg-grey-95 w-full my-6 p-10">
+<div class="bg-grey-95 flex flex-col items-center justify-center my-6 p-10">
     {% if header %}
-    <h1 class="font-light leading-loose text-black-20 text-sm">{{ header }}</h1>
+    <h3 class="block font-light mb-10 text-grey-70 text-sm tracking-wide uppercase">{{ header }}</h3>
     {% endif %}
 
-    <div data-component-id="{{id}}"></div>
+    <div class="flex flex-col items-center w-full" data-component-id="{{id}}"></div>
 </div>
