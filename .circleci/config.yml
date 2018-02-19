@@ -24,8 +24,8 @@ jobs:
             - v1.2-npm-cache
 
       - run:
-          name: Install dependencies from NPM and Bower (including CSS)
-          command: npm install
+          name: Install dependencies from NPM and Bower
+          command: npm i
 
       - save_cache:
           key: v1.2-bower-cache-{{ .Branch }}-{{ checksum "bower.json" }}
@@ -37,16 +37,15 @@ jobs:
           key: v1.2-npm-cache-{{ .Branch }}-{{ checksum "package.json" }}
           paths:
             - ~/select/node_modules
-            - ~/select/docs/css/node_modules
 
       # Verify all examples successfully build...
       - run:
-          name: Build all examples...
-          command: npm run build-docs
+          name: Build all components via docs
+          command: npm run build-all
 
       # Persist the specified paths into the workspace
       - persist_to_workspace:
-          root: docs
+          root: docs/dist
           paths:
             - .
 
@@ -68,14 +67,7 @@ jobs:
             git worktree add ../gh-pages gh-pages
 
       - attach_workspace:
-          at: persisted
-
-      - run:
-          name: Build CSS
-          command: |
-            cp -r persisted/dist/ docs/dist/
-            cp -r persisted/css/node_modules docs/css/node_modules
-            npm run build-css
+          at: dist
 
       # Enable building docs
       - add_ssh_keys:
@@ -84,10 +76,7 @@ jobs:
 
       - run:
           name: Copy over files to gh-pages branch
-          command: |
-            rm -rf ../gh-pages/dist
-            mv docs/dist ../gh-pages/dist
-            mv docs/index.html ../gh-pages/index.html
+          command: cp -r dist/. ../gh-pages
 
       - run:
           name: Push update to GitHub

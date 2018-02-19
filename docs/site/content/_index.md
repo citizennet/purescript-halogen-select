@@ -4,8 +4,8 @@ description = "Some description"
 template = "index.html"
 +++
 
-{{ halogen(id="dropdown", header="Dropdown", subHeader="Select things with a dropdown block.") }}
+{{ halogen(id="dropdown", header="Dropdown") }}
 
-{{ halogen(id="typeahead", header="Typeahead", subHeader="Select things with a typeahead.") }}
+{{ halogen(id="typeahead", header="Typeahead") }}
 
-{{ halogen(id="calendar", header="Calendar", subHeader="Select things with a calendar.") }}
+{{ halogen(id="calendar", header="Calendar") }}

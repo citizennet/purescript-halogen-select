@@ -1,11 +1,7 @@
-<div class="">
+<div class="bg-grey-95 w-full my-6 p-10">
     {% if header %}
-    <h1 class="font-light leading-loose text-black-20">{{ header }}</h1>
+    <h1 class="font-light leading-loose text-black-20 text-sm">{{ header }}</h1>
     {% endif %}
 
-    {% if subHeader %}
-    <h3 class="font-light leading-normal text-grey-50 text-sm">{{ subHeader }}</h3>
-    {% endif %}
-
-    <div class="bg-grey-95 w-full my-6 p-10" data-component-id="{{id}}"></div>
+    <div data-component-id="{{id}}"></div>
 </div>
