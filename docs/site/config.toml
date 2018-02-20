@@ -2,10 +2,11 @@
 base_url = "https://citizennet.github.io/purescript-halogen-select"
 
 # Don't provide or compile from Sass folder
-compile_sass = false
+compile_sass = true
 
 # Turn on syntax highlighting
 highlight_code = true
+highlight_theme = "inspired-github"
 
 # Put custom variables in [extra]
 [extra]

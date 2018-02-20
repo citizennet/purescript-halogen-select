@@ -1,0 +1,14 @@
+$black: #22292f;
+$grey-95: #f0f1f2;
+
+$step-1: 0.25rem;
+$step-2: 0.5rem;
+$step-4: 1.0rem;
+$step-6: 1.5rem;
+
+pre {
+  padding: 0 $step-4 0 $step-4;
+  margin-top: $step-6;
+  margin-bottom: $step-6;
+  border-left: $grey-95 $step-1 solid;
+}
