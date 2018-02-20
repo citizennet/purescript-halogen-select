@@ -41,7 +41,7 @@ jobs:
       # Verify all examples successfully build...
       - run:
           name: Build all components via docs
-          command: npm run build-all
+          command: npm run build-docs
 
       # Persist the specified paths into the workspace
       - persist_to_workspace:
