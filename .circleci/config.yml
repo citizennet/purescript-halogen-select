@@ -118,10 +118,18 @@ workflows:
               ignore: gh-pages
 
       # On master branch, rebuild docs
-      - docs:
+      - site:
           filters:
             branches:
               only: master
 
           requires:
             - test
+
+      - docs:
+          filters:
+            branches:
+              only: master
+
+          requires:
+            - site
