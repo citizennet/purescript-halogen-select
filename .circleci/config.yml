@@ -13,40 +13,70 @@ jobs:
 
       - restore_cache:
           keys:
-            - v1.2-bower-cache-{{ .Branch }}-{{ checksum "bower.json" }}
-            - v1.2-bower-cache-{{ .Branch }}
-            - v1.2-bower-cache
+            - v1.3-bower-cache-{{ .Branch }}-{{ checksum "bower.json" }}
+            - v1.3-bower-cache-{{ .Branch }}
+            - v1.3-bower-cache
 
       - restore_cache:
           keys:
-            - v1.2-npm-cache-{{ .Branch }}-{{ checksum "package.json" }}
-            - v1.2-npm-cache-{{ .Branch }}
-            - v1.2-npm-cache
+            - v1.3-npm-cache-{{ .Branch }}-{{ checksum "package.json" }}
+            - v1.3-npm-cache-{{ .Branch }}
+            - v1.3-npm-cache
 
       - run:
-          name: Install dependencies from NPM and Bower (including CSS)
-          command: npm install
+          name: Install dependencies from NPM and Bower
+          command: npm i
 
       - save_cache:
-          key: v1.2-bower-cache-{{ .Branch }}-{{ checksum "bower.json" }}
+          key: v1.3-bower-cache-{{ .Branch }}-{{ checksum "bower.json" }}
           paths:
             - ~/select/bower_components
             - ~/select/output
 
       - save_cache:
-          key: v1.2-npm-cache-{{ .Branch }}-{{ checksum "package.json" }}
+          key: v1.3-npm-cache-{{ .Branch }}-{{ checksum "package.json" }}
           paths:
             - ~/select/node_modules
-            - ~/select/docs/css/node_modules
 
       # Verify all examples successfully build...
       - run:
-          name: Build all examples...
+          name: Build all components via docs
           command: npm run build-docs
 
       # Persist the specified paths into the workspace
       - persist_to_workspace:
-          root: docs
+          root: docs/dist
+          paths:
+            - .
+
+  site:
+    working_directory: ~/select
+    docker:
+      - image: rustlang/rust:nightly
+    steps:
+      - checkout
+
+      - run:
+          name: Install Gutenberg
+          command: |
+            wget https://github.com/Keats/gutenberg/releases/download/v0.3.1/gutenberg-v0.3.1-x86_64-unknown-linux-gnu.tar.gz -O gb.tar.gz
+            tar -xvzf gb.tar.gz
+
+      - attach_workspace:
+          at: docs/dist
+
+      - run:
+          name: Build site
+          command: |
+            mv gutenberg docs/site
+            cd docs/site
+            ./gutenberg build
+            cd ../
+            cp -r site/public/. dist/
+
+      # Persist the dist folder
+      - persist_to_workspace:
+          root: docs/dist
           paths:
             - .
 
@@ -68,14 +98,7 @@ jobs:
             git worktree add ../gh-pages gh-pages
 
       - attach_workspace:
-          at: persisted
-
-      - run:
-          name: Build CSS
-          command: |
-            cp -r persisted/dist/ docs/dist/
-            cp -r persisted/css/node_modules docs/css/node_modules
-            npm run build-css
+          at: dist
 
       # Enable building docs
       - add_ssh_keys:
@@ -83,10 +106,14 @@ jobs:
             - "bf:0e:a0:9d:37:6e:40:34:3c:72:90:f5:c8:93:cd:a5"
 
       - run:
-          name: Push to GitHub
+          name: Copy over files to gh-pages branch
           command: |
-            rm -rf ../gh-pages/dist
-            mv docs/dist ../gh-pages/dist
+            cp -r dist/. ../gh-pages
+            cp -r .circleci/. ../gh-pages/.circleci
+
+      - run:
+          name: Push update to GitHub
+          command: |
             cd ../gh-pages
             git config --global user.email "dev@citizennet.com"
             git config --global user.name "CircleCI Build"
@@ -104,10 +131,18 @@ workflows:
               ignore: gh-pages
 
       # On master branch, rebuild docs
-      - docs:
-          filters:
-            branches:
-              only: master
+      - site:
+          # filters:
+          #   branches:
+          #     only: master
 
           requires:
             - test
+
+      - docs:
+          # filters:
+          #   branches:
+          #     only: master
+
+          requires:
+            - site
