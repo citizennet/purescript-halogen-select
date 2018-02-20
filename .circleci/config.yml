@@ -69,6 +69,7 @@ jobs:
           name: Build site
           command: |
             mv gutenberg docs/site
+            cd docs/site
             ./gutenberg build
             cd ../
             cp -r site/public/. dist/
@@ -98,11 +99,6 @@ jobs:
 
       - attach_workspace:
           at: dist
-
-      - run:
-          name: See what's around
-          command: |
-            cd dist && ls
 
       # Enable building docs
       - add_ssh_keys:
