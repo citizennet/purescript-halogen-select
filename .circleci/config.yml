@@ -54,16 +54,30 @@ jobs:
     docker:
       - image: rustlang/rust:nightly
     steps:
+      - checkout
+
       - run:
           name: Install Gutenberg
           command: |
             wget https://github.com/Keats/gutenberg/releases/download/v0.3.1/gutenberg-v0.3.1-x86_64-unknown-linux-gnu.tar.gz -O gb.tar.gz
             tar -xvzf gb.tar.gz
 
+      - attach_workspace:
+          at: docs/dist
+
+      - run:
+          name: Build site
+          command: |
+            mv gutenberg docs/site
+            ./gutenberg build
+            cd ../
+            cp -r site/public/. dist/
+
+      # Persist the dist folder
       - persist_to_workspace:
-          root: .
+          root: docs/dist
           paths:
-            - gutenberg
+            - .
 
   docs:
     <<: *defaults
@@ -87,7 +101,8 @@ jobs:
 
       - run:
           name: See what's around
-          command: cd dist && ls
+          command: |
+            cd dist && ls
 
       # Enable building docs
       - add_ssh_keys:
@@ -119,17 +134,17 @@ workflows:
 
       # On master branch, rebuild docs
       - site:
-          filters:
-            branches:
-              only: master
+          # filters:
+          #   branches:
+          #     only: master
 
           requires:
             - test
 
       - docs:
-          filters:
-            branches:
-              only: master
+          # filters:
+          #   branches:
+          #     only: master
 
           requires:
             - site
