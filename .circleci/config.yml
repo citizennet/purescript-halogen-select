@@ -49,6 +49,22 @@ jobs:
           paths:
             - .
 
+  site:
+    working_directory: ~/select
+    docker:
+      - image: rustlang/rust:nightly
+    steps:
+      - run:
+          name: Install Gutenberg
+          command: |
+            wget https://github.com/Keats/gutenberg/releases/download/v0.3.1/gutenberg-v0.3.1-x86_64-unknown-linux-gnu.tar.gz -O gb.tar.gz
+            tar -xvzf gb.tar.gz
+
+      - persist_to_workspace:
+          root: .
+          paths:
+            - gutenberg
+
   docs:
     <<: *defaults
     steps:
@@ -68,6 +84,10 @@ jobs:
 
       - attach_workspace:
           at: dist
+
+      - run:
+          name: See what's around
+          command: cd dist && ls
 
       # Enable building docs
       - add_ssh_keys:
