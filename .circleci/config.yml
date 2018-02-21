@@ -132,17 +132,17 @@ workflows:
 
       # On master branch, rebuild docs
       - site:
-          # filters:
-          #   branches:
-          #     only: master
+          filters:
+            branches:
+              only: master
 
           requires:
             - test
 
       - docs:
-          # filters:
-          #   branches:
-          #     only: master
+          filters:
+            branches:
+              only: master
 
           requires:
             - site
