@@ -1,5 +1,10 @@
 # The base URL pages are relative to
+
+# PROD
 base_url = "https://citizennet.github.io/purescript-halogen-select"
+
+# DEV
+# base_url = "file:///Users/honeyman/Code/select/docs/dist"
 
 # Don't provide or compile from Sass folder
 compile_sass = true
