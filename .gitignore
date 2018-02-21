@@ -5,12 +5,14 @@ node_modules
 
 # Generated files
 .psci
+.psc-ide-port
 output
 package-lock.json
 generated-docs
 
 # Dist
-dist
+docs/dist
+docs/site/public
 
 # IDE
 *.swo

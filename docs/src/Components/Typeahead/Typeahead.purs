@@ -1,14 +1,12 @@
-module Example.Component.Typeahead where
+module Docs.Components.Typeahead where
 
 import Prelude
 
 import Control.Monad.Eff.Timer (setTimeout, TIMER)
 import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Aff.Console (log, logShow, CONSOLE)
-import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.AVar (AVAR)
 import DOM (DOM)
-import CSS as CSS
 import Data.Array (mapWithIndex, difference, filter, (:))
 import Data.Foldable (length)
 import Data.Maybe (Maybe(..))
@@ -21,7 +19,7 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Halogen.HTML.CSS as HC
+
 import Select.Primitives.Container as C
 import Select.Primitives.Search as S
 
