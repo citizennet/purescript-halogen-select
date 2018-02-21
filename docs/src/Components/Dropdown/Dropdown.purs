@@ -28,7 +28,7 @@ data Query a
 type Effects eff = ( dom :: DOM, console :: CONSOLE | eff )
 
 component :: ∀ eff m
-  . MonadAff ( Effects eff ) m 
+  . MonadAff ( Effects eff ) m
   => H.Component HH.HTML Query Unit Void m
 component =
   H.parentComponent
@@ -49,7 +49,8 @@ component =
            Unit
            m
     render st =
-      HH.div_
+      HH.div
+      [ class_ "w-full" ]
       [ renderSelections st.selected
       , renderToggle
       , HH.slot

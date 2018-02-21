@@ -61,7 +61,8 @@ component =
 
     render :: State -> H.ParentHTML Query (ChildQuery e) ChildSlot m
     render st =
-      HH.div_
+      HH.div
+        [ class_ "w-full" ]
         [ renderSelections st.selected
         , HH.slot'
             CP.cp2
