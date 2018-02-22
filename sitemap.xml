@@ -1,8 +1,17 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     
+        <url>
+            <loc>https://citizennet.github.io/purescript-halogen-select/documentation/demo/</loc>
+            
+        </url>
+    
     
         <url>
             <loc>https://citizennet.github.io/purescript-halogen-select/</loc>
+        </url>
+    
+        <url>
+            <loc>https://citizennet.github.io/purescript-halogen-select/documentation/</loc>
         </url>
     
     
