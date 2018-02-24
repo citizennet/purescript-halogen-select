@@ -1,17 +1,26 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     
         <url>
-            <loc>https://citizennet.github.io/purescript-halogen-select/documentation/demo/</loc>
+            <loc>file:///Users/saylu/Code/select/docs/dist/tutorials/dropdown/</loc>
+            
+        </url>
+    
+        <url>
+            <loc>file:///Users/saylu/Code/select/docs/dist/documentation/functions/</loc>
             
         </url>
     
     
         <url>
-            <loc>https://citizennet.github.io/purescript-halogen-select/</loc>
+            <loc>file:///Users/saylu/Code/select/docs/dist/</loc>
         </url>
     
         <url>
-            <loc>https://citizennet.github.io/purescript-halogen-select/documentation/</loc>
+            <loc>file:///Users/saylu/Code/select/docs/dist/tutorials/</loc>
+        </url>
+    
+        <url>
+            <loc>file:///Users/saylu/Code/select/docs/dist/documentation/</loc>
         </url>
     
     
