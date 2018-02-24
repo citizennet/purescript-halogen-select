@@ -1,9 +1,9 @@
 +++
-title = "Documentation"
+title = "Tutorials"
 description = "Some description"
 template = "section.html"
 +++
 
 ### Note
 
-These docs are a work in progress.
+These tutorials are a work in progress.

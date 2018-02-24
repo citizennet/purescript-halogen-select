@@ -1,5 +1,5 @@
 +++
-title = "Halogen Shortcodes"
+title = "PureScript Halogen Select"
 description = "Some description"
 template = "home.html"
 +++
