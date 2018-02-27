@@ -138,3 +138,15 @@ component =
           { items: i.items
           , render: i.renderContainer }
 
+-----
+-- Helpers
+
+inContainer :: ∀ o item eff
+  . H.Action (C.ContainerQuery o item)
+ -> SearchContainerQuery o item eff Unit
+inContainer = H.action <<< ToContainer <<< H.action
+
+inSearch :: ∀ o item eff
+  . H.Action (S.SearchQuery o item eff)
+ -> SearchContainerQuery o item eff Unit
+inSearch = H.action <<< ToSearch <<< H.action
