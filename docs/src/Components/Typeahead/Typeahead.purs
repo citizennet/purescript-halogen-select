@@ -2,9 +2,8 @@ module Docs.Components.Typeahead where
 
 import Prelude
 
-import Control.Monad.Eff.Timer (setTimeout, TIMER)
 import Control.Monad.Aff.Class (class MonadAff)
-import Control.Monad.Aff.Console (log, logShow, CONSOLE)
+import Control.Monad.Aff.Console (CONSOLE, log)
 import Control.Monad.Aff.AVar (AVAR)
 import DOM (DOM)
 import Data.Array (mapWithIndex, difference, filter, (:))
@@ -12,38 +11,33 @@ import Data.Foldable (length)
 import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..), contains)
 import Data.Time.Duration (Milliseconds(..))
-import Data.Either.Nested (Either2)
-import Data.Functor.Coproduct.Nested (Coproduct2)
-import Halogen.Component.ChildPath as CP
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 
+import Select.Primitives.SearchContainer as SC
 import Select.Primitives.Container as C
 import Select.Primitives.Search as S
 
 type TypeaheadItem = String
-type Effects eff = ( timer :: TIMER, avar :: AVAR, dom :: DOM, console :: CONSOLE | eff )
+
+type Effects eff = ( avar :: AVAR, dom :: DOM, console :: CONSOLE | eff )
 
 data Query a
   = Log String a
-  | HandleContainer (C.Message Query TypeaheadItem) a
-  | HandleSearch    (S.Message Query TypeaheadItem) a
+  | HandleSearchContainer (SC.Message Query TypeaheadItem) a
   | Removed TypeaheadItem a
-
-type ChildSlot = Either2 Unit Unit
-type ChildQuery e
-  = Coproduct2 (C.ContainerQuery Query TypeaheadItem)
-               (S.SearchQuery Query TypeaheadItem (Effects e))
 
 type State =
   { items    :: Array TypeaheadItem
   , selected :: Array TypeaheadItem }
 
 type Input = Array String
-
 data Message = Void
+
+type ChildSlot = Unit
+type ChildQuery eff = SC.SearchContainerQuery Query TypeaheadItem eff
 
 component :: ∀ m e
   . MonadAff ( Effects e ) m
@@ -59,92 +53,80 @@ component =
     initialState :: Input -> State
     initialState i = { items: i, selected: [] }
 
-    render :: State -> H.ParentHTML Query (ChildQuery e) ChildSlot m
+    render :: State -> H.ParentHTML Query (ChildQuery (Effects e)) ChildSlot m
     render st =
       HH.div
         [ class_ "w-full" ]
         [ renderSelections st.selected
-        , HH.slot'
-            CP.cp2
-            unit
-            S.component
-            { render: renderSearch, search: Nothing, debounceTime: Milliseconds 300.0 }
-            ( HE.input HandleSearch )
-        , HH.slot'
-            CP.cp1
-            unit
-            C.component
-            { render: renderContainer, items: st.items }
-            ( HE.input HandleContainer )
+        , HH.slot unit SC.component searchContainerInput (HE.input HandleSearchContainer)
         ]
+      where
+        searchContainerInput =
+          { search: Nothing
+          , debounceTime: Milliseconds 0.0
+          , items: difference st.items st.selected
+          , renderSearch
+          , renderContainer
+          }
 
-    eval :: Query ~> H.ParentDSL State Query (ChildQuery e) ChildSlot Message m
+    eval :: Query ~> H.ParentDSL State Query (ChildQuery (Effects e)) ChildSlot Message m
     eval = case _ of
       Log str a -> a <$ do
         H.liftAff $ log str
 
-      HandleSearch m a -> case m of
-        S.ContainerQuery q -> do
-          _ <- H.query' CP.cp1 unit q
-          pure a
+      HandleSearchContainer m a -> case m of
+        SC.Emit q -> eval q *> pure a
 
-        S.Emit q -> eval q *> pure a
+        SC.SearchMessage m' -> case m' of
+          S.NewSearch s -> do
+            st <- H.get
 
-        -- A new search is done: filter the results!
-        S.NewSearch s -> a <$ do
-          st <- H.get
+            let filtered  = filterItems s st.items
+                available = difference filtered st.selected
 
-          H.liftAff $ log $ "New search performed: " <> s
-
-          let filtered  = filterItems s st.items
-          let available = difference filtered st.selected
-
-          -- Allow insertion of elements
-          let newItems
-                | length available < 1 = s : available
-                | otherwise            = available
-
-          _ <- H.query' CP.cp1 unit
-                 $ H.action
-                 $ C.ContainerReceiver { render: renderContainer, items: newItems }
-
-          -- Test custom effects
-          _ <- H.liftEff $ setTimeout 100 (pure unit)
-          pure a
-
-
-      HandleContainer m a -> case m of
-        C.Emit q -> eval q *> pure a
-
-        C.ItemSelected item -> a <$ do
-          st <- H.get
-          if length (filter ((==) item) st.items) > 0
-            then H.modify _ { selected = ( item : st.selected ) }
-            else H.modify _
-                  { items = ( item : st.items )
-                  , selected = ( item : st.selected ) }
-
-          newSt <- H.get
-          _  <- H.query' CP.cp1 unit
+            _ <- H.query unit
                   $ H.action
-                  $ C.ContainerReceiver
-                  $ { render: renderContainer
-                    , items: difference newSt.items newSt.selected }
+                  $ SC.ToContainer
+                  $ H.action
+                  $ C.ReplaceItems available
 
-          H.liftAff $ log "List of selections..." *> logShow newSt.selected
+            pure a
 
-      Removed item a -> a <$ do
+          _ -> pure a
+
+        SC.ContainerMessage m' -> case m' of
+          C.ItemSelected item -> do
+            st <- H.get
+            if length (filter ((==) item) st.items) > 0
+              then H.modify _ { selected = ( item : st.selected ) }
+              else H.modify _
+                    { items = ( item : st.items )
+                    , selected = ( item : st.selected ) }
+
+            newSt <- H.get
+            _  <- H.query unit
+                    $ H.action
+                    $ SC.ToContainer
+                    $ H.action
+                    $ C.ReplaceItems
+                    $ difference newSt.items newSt.selected
+            pure a
+
+          _ -> pure a
+
+
+      Removed item a -> do
         st <- H.get
         H.modify _ { selected = filter ((/=) item) st.selected }
 
         newSt <- H.get
-        _  <- H.query' CP.cp1 unit
+        _  <- H.query unit
                 $ H.action
-                $ C.ContainerReceiver
-                $ { render: renderContainer
-                  , items: difference newSt.items newSt.selected }
+                $ SC.ToContainer
+                $ H.action
+                $ C.ReplaceItems (difference newSt.items newSt.selected)
 
-        H.liftAff $ log "List of selections..." *> logShow newSt.selected
+        pure a
 
 
 {-
