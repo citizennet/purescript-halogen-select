@@ -10,14 +10,15 @@ import Prelude
 
 import Control.Comonad (extract)
 import Control.Comonad.Store (seeks, store)
-import DOM (DOM)
 import Control.Monad.Aff.Class (class MonadAff)
+import Control.Monad.Aff.Console (CONSOLE, log)
+import DOM (DOM)
+import DOM.Event.Event (preventDefault)
+import DOM.Event.KeyboardEvent as KE
+import DOM.Event.Types as ET
 import Data.Array (length, (!!))
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import DOM.Event.Types as ET
-import DOM.Event.Event (preventDefault)
-import DOM.Event.KeyboardEvent as KE
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
@@ -110,19 +111,21 @@ type ContainerInput o item =
 -- | - `ItemSelected`: An item has been selected in the container. This does not indicate the item
 -- |                   has been removed; if you would like the item to also be removed from the
 -- |                   container, make sure to query `ReplaceItems` from the parent.
+-- | - `VisibilitySet`: TODO
 -- | - `Emit`: A parent query has been triggered and should be evaluated by the parent. Typically:
 -- |
 -- | ```purescript
--- | eval (HandleContainer (Emit q) next) = eval q *> pure next
+-- | eval (HandleContainer (Emit q) next) = eval q *> pure next)
 -- | ```
 data Message o item
   = ItemSelected item
+  | VisibilitySet VisibilityStatus
   | Emit (o Unit)
 
 -- | The primitive handles state and transformations but defers all rendering to the parent. The
 -- | render function can be written using our helper functions to ensure the right events are included.
 component :: ∀ o item eff m
-  . MonadAff ( dom :: DOM | eff ) m
+  . MonadAff ( dom :: DOM, console :: CONSOLE | eff ) m
  => H.Component HH.HTML (ContainerQuery o item) (ContainerInput o item) (Message o item) m
 component =
   H.component
@@ -214,16 +217,24 @@ component =
 
       Blur a -> do
         (Tuple _ st) <- getState
+        _ <- H.liftAff (log $ "mouseDown: " <> (show st.mouseDown))
         if not st.open || st.mouseDown
           then pure a
           else a <$ (eval $ Visibility Off a)
 
       -- When toggling, the user will lose their highlighted index.
       Visibility status a -> a <$ case status of
-        On     -> H.modify $ seeks (_ { open = true })
-        Off    -> H.modify $ seeks (_ { open = false, highlightedIndex = Nothing })
-        Toggle -> H.modify $ seeks (\st -> st { open = not st.open
-                                              , highlightedIndex = Nothing })
+        On     -> do
+          H.raise $ VisibilitySet On
+          H.modify $ seeks (_ { open = true })
+        Off    -> do
+          H.raise $ VisibilitySet Off
+          H.modify $ seeks (_ { open = false, highlightedIndex = Nothing })
+        Toggle -> do
+          (Tuple _ st) <- getState
+          H.raise $ VisibilitySet (if st.open == true then Off else On)
+          H.modify $ seeks _ { open = not st.open
+                             , highlightedIndex = Nothing }
 
       ReplaceItems newItems a -> a <$ do
         H.modify $ seeks (_ { items = newItems })
@@ -336,8 +347,8 @@ getContainerProps :: ∀ o item e.
      (H.IProp
         ( onMouseDown :: ET.MouseEvent
         , onMouseUp :: ET.MouseEvent
+        , onFocus :: ET.FocusEvent
         , onBlur :: ET.FocusEvent
-        , tabIndex :: Int
         | e
         )
         (ContainerQuery o item)
@@ -345,19 +356,19 @@ getContainerProps :: ∀ o item e.
    ->
    Array
       (H.IProp
-         ( onMouseDown :: ET.MouseEvent
-         , onMouseUp :: ET.MouseEvent
-         , onBlur :: ET.FocusEvent
-         , tabIndex :: Int
-         | e
-         )
-         (ContainerQuery o item)
-      )
+        ( onMouseDown :: ET.MouseEvent
+        , onMouseUp :: ET.MouseEvent
+        , onFocus :: ET.FocusEvent
+        , onBlur :: ET.FocusEvent
+        | e
+        )
+        (ContainerQuery o item)
+     )
 getContainerProps = flip (<>)
   [ HE.onMouseDown $ HE.input_ $ Mouse Down
   , HE.onMouseUp   $ HE.input_ $ Mouse Up
+  , HE.onFocus     $ HE.input_ $ Visibility On
   , HE.onBlur      $ HE.input_ $ Blur
-  , HP.tabIndex 0
   ]
 
 -- | Attach events to an item in the container to support selection, highlighting, and key
@@ -385,30 +396,27 @@ getItemProps :: ∀ o item e
   . Int
   -> Array
       (H.IProp
-         ( onClick :: ET.MouseEvent
+         ( onMouseDown :: ET.MouseEvent
          , onMouseOver :: ET.MouseEvent
          , onKeyDown :: ET.KeyboardEvent
          , onBlur :: ET.FocusEvent
-         , tabIndex :: Int
          | e
          )
          (ContainerQuery o item)
       )
   -> Array
       (H.IProp
-        ( onClick :: ET.MouseEvent
+        ( onMouseDown :: ET.MouseEvent
         , onMouseOver :: ET.MouseEvent
         , onKeyDown :: ET.KeyboardEvent
         , onBlur :: ET.FocusEvent
-        , tabIndex :: Int
         | e
         )
         (ContainerQuery o item)
       )
 getItemProps index = flip (<>)
-  [ HE.onClick     $ HE.input_ $ Select index
+  [ HE.onMouseDown $ HE.input_ $ Select index
   , HE.onMouseOver $ HE.input_ $ Highlight (Index index)
   , HE.onKeyDown   $ HE.input  $ \ev -> Key ev
   , HE.onBlur      $ HE.input_ $ Blur
-  , HP.tabIndex 0
   ]
