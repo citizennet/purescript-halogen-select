@@ -80,19 +80,12 @@ component =
         SC.SearchMessage m' -> case m' of
           S.NewSearch s -> do
             st <- H.get
-
             let filtered  = filterItems s st.items
                 available = difference filtered st.selected
-
-            _ <- H.query unit
-                  $ H.action
-                  $ SC.ToContainer
-                  $ H.action
-                  $ C.ReplaceItems available
-
+            _ <- H.query unit <<< SC.inContainer $ C.ReplaceItems available
             pure a
 
-          _ -> pure a
+          otherwise -> pure a
 
         SC.ContainerMessage m' -> case m' of
           C.ItemSelected item -> do
@@ -104,15 +97,11 @@ component =
                     , selected = ( item : st.selected ) }
 
             newSt <- H.get
-            _  <- H.query unit
-                    $ H.action
-                    $ SC.ToContainer
-                    $ H.action
-                    $ C.ReplaceItems
-                    $ difference newSt.items newSt.selected
+            let newItems = difference newSt.items newSt.selected
+            _  <- H.query unit <<< SC.inContainer $ C.ReplaceItems newItems
             pure a
 
-          _ -> pure a
+          otherwise -> pure a
 
 
       Removed item a -> do
@@ -120,12 +109,8 @@ component =
         H.modify _ { selected = filter ((/=) item) st.selected }
 
         newSt <- H.get
-        _  <- H.query unit
-                $ H.action
-                $ SC.ToContainer
-                $ H.action
-                $ C.ReplaceItems (difference newSt.items newSt.selected)
-
+        let newItems = difference newSt.items newSt.selected
+        _  <- H.query unit <<< SC.inContainer $ C.ReplaceItems newItems
         pure a
 
 
