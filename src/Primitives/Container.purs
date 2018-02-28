@@ -11,7 +11,6 @@ import Prelude
 import Control.Comonad (extract)
 import Control.Comonad.Store (seeks, store)
 import Control.Monad.Aff.Class (class MonadAff)
-import Control.Monad.Aff.Console (CONSOLE, log)
 import DOM (DOM)
 import DOM.Event.Event (preventDefault)
 import DOM.Event.KeyboardEvent as KE
@@ -118,7 +117,7 @@ type ContainerInput o item =
 -- | - `Emit`: A parent query has been triggered and should be evaluated by the parent. Typically:
 -- |
 -- | ```purescript
--- | eval (HandleContainer (Emit q) next) = eval q *> pure next)
+-- | eval (HandleContainer (Emit q) next) = eval q *> pure next
 -- | ```
 data Message o item
   = ItemSelected item
@@ -129,7 +128,7 @@ data Message o item
 -- | The primitive handles state and transformations but defers all rendering to the parent. The
 -- | render function can be written using our helper functions to ensure the right events are included.
 component :: ∀ o item eff m
-  . MonadAff ( dom :: DOM, console :: CONSOLE | eff ) m
+  . MonadAff ( dom :: DOM | eff ) m
  => H.Component HH.HTML (ContainerQuery o item) (ContainerInput o item) (Message o item) m
 component =
   H.component

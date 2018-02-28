@@ -6,7 +6,6 @@ import Control.Comonad (extract)
 import Control.Comonad.Store (Store, store)
 import Control.Monad.Aff.AVar (AVAR)
 import Control.Monad.Aff.Class (class MonadAff)
-import Control.Monad.Eff.Console (CONSOLE)
 import DOM (DOM)
 import Data.Either.Nested (Either2)
 import Data.Functor.Coproduct.Nested (Coproduct2)
@@ -41,7 +40,7 @@ data Message o item
   | SearchMessage (S.Message o item)
   | Emit (o Unit)
 
-type Effects eff = ( dom :: DOM, avar :: AVAR, console :: CONSOLE | eff )
+type Effects eff = ( dom :: DOM, avar :: AVAR | eff )
 
 type ChildQuery o item eff = Coproduct2
   (C.ContainerQuery o item)

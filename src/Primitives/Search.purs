@@ -11,7 +11,6 @@ import Control.Comonad.Store (seeks, store)
 import Control.Monad.Aff (Fiber, delay, error, forkAff, killFiber)
 import Control.Monad.Aff.AVar (AVar, makeEmptyVar, putVar, takeVar, AVAR)
 import Control.Monad.Aff.Class (class MonadAff)
-import Control.Monad.Aff.Console (CONSOLE)
 import Control.Monad.Except (runExcept)
 import DOM (DOM)
 import DOM.Event.Event (currentTarget)
@@ -33,7 +32,7 @@ import Halogen.Query.HalogenM (fork, raise) as H
 import Select.Primitives.Container as C
 import Select.Primitives.State (State, updateStore, getState)
 
-type Effects eff = ( avar :: AVAR, console :: CONSOLE, dom :: DOM | eff )
+type Effects eff = ( avar :: AVAR, dom :: DOM | eff )
 
 -- | The query type for the `Search` primitive. This primitive handles text input
 -- | and debouncing. It has a special query for the purpose of embedding Container
@@ -54,12 +53,12 @@ type Effects eff = ( avar :: AVAR, console :: CONSOLE, dom :: DOM | eff )
 -- |
 -- | Constructors:
 -- |
--- | - `TextInput`: Handle new text input as a string
--- | - `Raise`: Embed a parent query that can be returned to the parent for evaluation
--- | - `FromContainer`: Embed a container query that can be routed to a container slot
--- | - `SearchReceiver`: Update the component with new `Input` when the parent re-renders
--- | - `CaptureFocus`: TODO
--- | - `TriggerFocus`: TODO
+-- | - `TextInput`: Handle new text input as a string.
+-- | - `Raise`: Embed a parent query that can be returned to the parent for evaluation.
+-- | - `FromContainer`: Embed a container query that can be routed to a container slot.
+-- | - `SearchReceiver`: Update the component with new `Input` when the parent re-renders.
+-- | - `CaptureFocus`: Capture input element from focus event.
+-- | - `TriggerFocus`: Refocus input element.
 data SearchQuery o item eff a
   = TextInput String a
   | Raise (o Unit) a
@@ -82,6 +81,7 @@ data SearchQuery o item eff a
 -- | - `ms`: Number of milliseconds for the input to be debounced before passing
 -- |         a message to the parent. Set to 0.0 if you don't want debouncing.
 -- | - `debouncer`: Facilitates debouncing for the input field.
+-- | - `inputEl`: Reference to search element so we can manually trigger focus./
 type SearchState eff =
   { search    :: String
   , ms        :: Milliseconds
@@ -120,6 +120,8 @@ type SearchInput o item eff =
 -- | ```purescript
 -- | eval (FromContainer q a) -> H.raise (ContainerQuery q) *> pure a
 -- | ```
+-- |
+-- | - `Focused`: The search input element has been focused on.
 -- |
 -- | - `Emit`: An embedded parent query has been triggered. This can be evaluated automatically
 -- |           with this code in the parent's eval function:
