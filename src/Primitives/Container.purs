@@ -17,6 +17,7 @@ import DOM.Event.KeyboardEvent as KE
 import DOM.Event.Types as ET
 import Data.Array (length, (!!))
 import Data.Maybe (Maybe(..))
+import Data.Traversable (traverse_)
 import Data.Tuple (Tuple(..))
 import Halogen as H
 import Halogen.HTML as HH
@@ -194,19 +195,17 @@ component =
       Key (ev :: KE.KeyboardEvent) a -> do
         (Tuple _ st) <- getState
         if not st.open then pure a else case KE.code ev of
-          "Enter" -> do
+          "Enter" -> a <$ do
             H.liftEff $ preventDefault $ KE.keyboardEventToEvent ev
-            case st.highlightedIndex of
-              Nothing -> pure a
-              Just index -> eval $ Select index a
+            traverse_ (\index -> eval $ Select index a) st.highlightedIndex
 
           "Escape" -> a <$ (H.modify $ seeks _ { open = false })
 
-          "ArrowUp" -> a <$ do
+          "ArrowUp" -> do
             H.liftEff $ preventDefault $ KE.keyboardEventToEvent ev
             eval $ Highlight Prev a
 
-          "ArrowDown" -> a <$ do
+          "ArrowDown" -> do
             H.liftEff $ preventDefault $ KE.keyboardEventToEvent ev
             eval $ Highlight Next a
 
