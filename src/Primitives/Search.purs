@@ -19,10 +19,11 @@ import DOM.Event.FocusEvent as FE
 import DOM.Event.Types as ET
 import DOM.HTML.HTMLElement (focus)
 import DOM.HTML.Types (HTMLElement, readHTMLElement)
-import Data.Either (either)
+import Data.Either (hush)
 import Data.Foreign (toForeign)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Time.Duration (Milliseconds)
+import Data.Traversable (traverse_)
 import Data.Tuple (Tuple(..))
 import Halogen (IProp, Component, ComponentDSL, ComponentHTML, action, component, liftAff, modify, liftEff) as H
 import Halogen.HTML as HH
@@ -221,12 +222,12 @@ component =
 
       CaptureFocus e a -> a <$ do
         (Tuple _ st) <- getState
-        let el = either (const Nothing) Just
-                 <<< runExcept
-                 <<< readHTMLElement
-                 <<< toForeign
-                 <<< currentTarget
-                 <<< focusEventToEvent
+        let el = hush
+             <<< runExcept
+             <<< readHTMLElement
+             <<< toForeign
+             <<< currentTarget
+             <<< focusEventToEvent
         H.modify $ seeks _ { inputEl = el e }
         H.raise Focused
 
