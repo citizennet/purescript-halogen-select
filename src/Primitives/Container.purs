@@ -226,7 +226,7 @@ component =
         (Tuple _ st) <- getState
         if not st.open || st.mouseDown
           then pure a
-          else a <$ (eval $ SetVisibility Off a)
+          else eval $ SetVisibility Off a
 
       -- When toggling, the user will lose their highlighted index.
       SetVisibility status a -> a <$ do
@@ -416,6 +416,6 @@ getItemProps :: ∀ o item e
 getItemProps index = flip (<>)
   [ HE.onMouseDown $ HE.input_ $ Select index
   , HE.onMouseOver $ HE.input_ $ Highlight (Index index)
-  , HE.onKeyDown   $ HE.input  $ \ev -> Key ev
+  , HE.onKeyDown   $ HE.input  $ Key
   , HE.onBlur      $ HE.input_ $ Blur
   ]

@@ -269,8 +269,8 @@ getInputProps :: ∀ o item e eff
         (SearchQuery o item eff)
       )
 getInputProps = flip (<>)
-  [ HE.onFocus      $ HE.input  $ \ev -> CaptureFocus ev
-  , HE.onKeyDown    $ HE.input  $ \ev -> FromContainer $ H.action $ C.Key ev
+  [ HE.onFocus      $ HE.input  $ CaptureFocus
+  , HE.onKeyDown    $ HE.input  $ FromContainer <<< H.action <<< C.Key
   , HE.onValueInput $ HE.input  TextInput
   , HE.onBlur       $ HE.input_ $ FromContainer $ H.action $ C.Blur
   , HP.tabIndex 0
