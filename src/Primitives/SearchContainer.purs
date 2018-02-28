@@ -6,6 +6,7 @@ import Control.Comonad (extract)
 import Control.Comonad.Store (Store, store)
 import Control.Monad.Aff.AVar (AVAR)
 import Control.Monad.Aff.Class (class MonadAff)
+import Control.Monad.Eff.Console (CONSOLE)
 import DOM (DOM)
 import Data.Either.Nested (Either2)
 import Data.Functor.Coproduct.Nested (Coproduct2)
@@ -40,7 +41,7 @@ data Message o item
   | SearchMessage (S.Message o item)
   | Emit (o Unit)
 
-type Effects eff = ( dom :: DOM, avar :: AVAR | eff )
+type Effects eff = ( dom :: DOM, avar :: AVAR, console :: CONSOLE | eff )
 
 type ChildQuery o item eff = Coproduct2
   (C.ContainerQuery o item)
@@ -119,10 +120,15 @@ component =
 
     eval (HandleContainer m a) = case m of
       C.Emit query -> H.raise (Emit query) *> pure a
+      C.ContainerClicked -> a <$ do
+         H.query' CP.cp2 SearchSlot $ H.action S.TriggerFocus
       other -> H.raise (ContainerMessage other) *> pure a
 
     eval (HandleSearch m a) = case m of
       S.Emit query -> H.raise (Emit query) *> pure a
+      S.ContainerQuery query -> eval $ ToContainer query a
+      S.Focused -> a <$ do
+         H.query' CP.cp1 ContainerSlot $ H.action $ C.Visibility C.On
       other -> H.raise (SearchMessage other) *> pure a
 
     eval (Receiver i a) = do

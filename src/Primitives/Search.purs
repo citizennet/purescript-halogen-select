@@ -130,6 +130,7 @@ type SearchInput o item eff =
 data Message o item
   = NewSearch String
   | ContainerQuery (C.ContainerQuery o item Unit)
+  | Focused
   | Emit (o Unit)
 
 
@@ -220,6 +221,7 @@ component =
         (Tuple _ st) <- getState
         let el = either (const Nothing) Just <<< runExcept <<< readHTMLElement <<< toForeign <<< currentTarget <<< focusEventToEvent $ e
         H.modify $ seeks _ { inputEl = el }
+        H.raise Focused
 
       TriggerFocus a -> do
         (Tuple _ st) <- getState
@@ -244,8 +246,6 @@ getInputProps :: ∀ o item e eff
         , onKeyDown :: ET.KeyboardEvent
         , onInput :: ET.Event
         , value :: String
-        , onMouseDown :: ET.MouseEvent
-        , onMouseUp :: ET.MouseEvent
         , onBlur :: ET.FocusEvent
         , tabIndex :: Int
         | e
@@ -258,8 +258,6 @@ getInputProps :: ∀ o item e eff
         , onKeyDown :: ET.KeyboardEvent
         , onInput :: ET.Event
         , value :: String
-        , onMouseDown :: ET.MouseEvent
-        , onMouseUp :: ET.MouseEvent
         , onBlur :: ET.FocusEvent
         , tabIndex :: Int
         | e
@@ -267,12 +265,9 @@ getInputProps :: ∀ o item e eff
         (SearchQuery o item eff)
       )
 getInputProps = flip (<>)
-  -- [ HE.onFocus      $ HE.input_ $ FromContainer $ H.action $ C.Visibility C.Toggle
   [ HE.onFocus      $ HE.input  $ \ev -> CaptureFocus ev
   , HE.onKeyDown    $ HE.input  $ \ev -> FromContainer $ H.action $ C.Key ev
   , HE.onValueInput $ HE.input  TextInput
-  , HE.onMouseDown  $ HE.input_ $ FromContainer $ H.action $ C.Mouse C.Down
-  , HE.onMouseUp    $ HE.input_ $ FromContainer $ H.action $ C.Mouse C.Up
   , HE.onBlur       $ HE.input_ $ FromContainer $ H.action $ C.Blur
   , HP.tabIndex 0
   ]

@@ -63,7 +63,17 @@ typeahead =
     eval (NoOp a) = pure a
 
     render :: Unit -> HTML Typeahead.Query m
-    render _ = HH.slot unit Typeahead.component [ "Lyndsey Duffield", "Chris Pine", "Kevin Hart" ] (const Nothing)
+    render _ = HH.slot unit Typeahead.component users (const Nothing)
+
+    users :: Array String
+    users =
+      [ "Lyndsey Duffield"
+      , "Chris Pine"
+      , "Kevin Hart"
+      , "Dave Chappelle"
+      , "Hannibal Buress"
+      , "Rico Suave"
+      ]
 
 calendar :: ∀ t eff m. MonadAff ( Effects eff ) m => Component m
 calendar =

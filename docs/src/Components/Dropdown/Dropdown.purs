@@ -80,6 +80,8 @@ component =
       HandleContainer m a -> case m of
         C.Emit q -> eval q *> pure a
 
+        C.ContainerClicked -> pure a
+
         C.ItemSelected item -> do
           H.liftAff $ log ("Selected: " <> item)
           H.modify \st -> st { selected = ( item : st.selected ) }
