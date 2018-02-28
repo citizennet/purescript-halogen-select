@@ -84,6 +84,8 @@ component =
           let showCalendar (CalendarItem _ _ _ d) = show d
           H.liftAff $ log ("Selected! Choice was " <> showCalendar item)
 
+        otherwise -> pure a
+
       ToggleMonth dir a -> a <$ do
         st <- H.get
 

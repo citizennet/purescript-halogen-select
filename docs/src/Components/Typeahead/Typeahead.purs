@@ -129,6 +129,7 @@ Config
 
 -}
 
+class_ :: ∀ p i. String -> H.IProp ( "class" :: String | i ) p
 class_ = HP.class_ <<< HH.ClassName
 
 renderSearch :: ∀ e
@@ -175,6 +176,10 @@ renderContainer st =
                else "" ]
 
 
+renderSelections
+  :: ∀ p
+   . Array TypeaheadItem
+  -> H.HTML p Query
 renderSelections items =
   if length items == 0
     then HH.div_ []

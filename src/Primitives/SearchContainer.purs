@@ -119,10 +119,15 @@ component =
 
     eval (HandleContainer m a) = case m of
       C.Emit query -> H.raise (Emit query) *> pure a
+      C.ContainerClicked -> a <$ do
+         H.query' CP.cp2 SearchSlot $ H.action S.TriggerFocus
       other -> H.raise (ContainerMessage other) *> pure a
 
     eval (HandleSearch m a) = case m of
       S.Emit query -> H.raise (Emit query) *> pure a
+      S.ContainerQuery query -> eval $ ToContainer query a
+      S.Focused -> a <$ do
+         H.query' CP.cp1 ContainerSlot $ H.action $ C.SetVisibility C.On
       other -> H.raise (SearchMessage other) *> pure a
 
     eval (Receiver i a) = do
