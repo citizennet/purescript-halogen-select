@@ -114,6 +114,8 @@ type ContainerInput o item =
 -- | - `ContainerClicked`: The container has been clicked, which draws focus away from the
 -- |                       search if used with a search primitive, this message lets the search
 -- |                       container know to return focus to it
+-- | - `VisibilitySet`: Notifies the parent that the container visibility has a new value.
+-- |                    Useful when you need to trigger some behavior (like validation) when the user closes or opens the menu.
 -- | - `Emit`: A parent query has been triggered and should be evaluated by the parent. Typically:
 -- |
 -- | ```purescript
@@ -229,10 +231,8 @@ component =
       -- When toggling, the user will lose their highlighted index.
       SetVisibility status a -> a <$ do
         case status of
-          On     -> do
-            H.modify $ seeks (_ { open = true })
-          Off    -> do
-            H.modify $ seeks (_ { open = false, highlightedIndex = Nothing })
+          On  -> H.modify $ seeks (_ { open = true })
+          Off -> H.modify $ seeks (_ { open = false, highlightedIndex = Nothing })
         H.raise $ VisibilitySet status
 
       ToggleVisibility a -> a <$ do

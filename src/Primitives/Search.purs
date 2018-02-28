@@ -221,17 +221,18 @@ component =
 
       CaptureFocus e a -> a <$ do
         (Tuple _ st) <- getState
-        let el = either (const Nothing) Just <<< runExcept <<< readHTMLElement <<< toForeign <<< currentTarget <<< focusEventToEvent $ e
-        H.modify $ seeks _ { inputEl = el }
+        let el = either (const Nothing) Just
+                 <<< runExcept
+                 <<< readHTMLElement
+                 <<< toForeign
+                 <<< currentTarget
+                 <<< focusEventToEvent
+        H.modify $ seeks _ { inputEl = el e }
         H.raise Focused
 
-      TriggerFocus a -> do
+      TriggerFocus a -> a <$ do
         (Tuple _ st) <- getState
-        case st.inputEl of
-          Nothing -> pure a
-          Just el -> do
-            _ <- H.liftEff $ focus el
-            pure a
+        traverse_ (H.liftEff <<< focus) st.inputEl
 
 -- | Attach the necessary properties to the input field you render in the page. This
 -- | should be used directly on the input field's list of properties:

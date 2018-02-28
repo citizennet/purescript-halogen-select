@@ -99,9 +99,7 @@ component =
 
         _  <- H.query unit
                 $ H.action
-                $ C.ContainerReceiver
-                $ { render: renderContainer
-                  , items: st.items }
+                $ C.ReplaceItems st.items
 
         pure a
 
