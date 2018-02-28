@@ -128,7 +128,7 @@ component =
       S.Emit query -> H.raise (Emit query) *> pure a
       S.ContainerQuery query -> eval $ ToContainer query a
       S.Focused -> a <$ do
-         H.query' CP.cp1 ContainerSlot $ H.action $ C.Visibility C.On
+         H.query' CP.cp1 ContainerSlot $ H.action $ C.SetVisibility C.On
       other -> H.raise (SearchMessage other) *> pure a
 
     eval (Receiver i a) = do

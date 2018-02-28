@@ -35,7 +35,7 @@ type Effects eff = ( console :: CONSOLE, dom :: DOM, now :: NOW, avar :: AVAR, t
 ----------
 -- Built components
 
-dropdown :: ∀ t eff m. MonadAff ( Effects eff ) m => Component m
+dropdown :: ∀ eff m. MonadAff ( Effects eff ) m => Component m
 dropdown =
   H.parentComponent
     { initialState: const unit
@@ -50,7 +50,7 @@ dropdown =
     render :: Unit -> HTML Dropdown.Query m
     render _ = HH.slot unit Dropdown.component unit absurd
 
-typeahead :: ∀ t eff m. MonadAff ( Effects eff ) m => Component m
+typeahead :: ∀ eff m. MonadAff ( Effects eff ) m => Component m
 typeahead =
   H.parentComponent
     { initialState: const unit
@@ -75,7 +75,7 @@ typeahead =
       , "Rico Suave"
       ]
 
-calendar :: ∀ t eff m. MonadAff ( Effects eff ) m => Component m
+calendar :: ∀ eff m. MonadAff ( Effects eff ) m => Component m
 calendar =
   H.parentComponent
     { initialState: const unit

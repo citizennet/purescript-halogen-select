@@ -80,11 +80,11 @@ component =
       HandleContainer m a -> case m of
         C.Emit q -> eval q *> pure a
 
-        C.ContainerClicked -> pure a
-
         C.ItemSelected item -> a <$ do
           let showCalendar (CalendarItem _ _ _ d) = show d
           H.liftAff $ log ("Selected! Choice was " <> showCalendar item)
+
+        otherwise -> pure a
 
       ToggleMonth dir a -> a <$ do
         st <- H.get

@@ -43,7 +43,8 @@ import Select.Primitives.State (updateStore, getState, State)
 -- | - `Key`: Capture key events for arrow navigation, Escape to close, and Enter to select.
 -- | - `Mouse`: Capture mouse events to close the menu or select an item
 -- | - `Blur`: Trigger the DOM blur event
--- | - `Visibility`: Set the visibility by toggling, setting to on, or setting to off.
+-- | - `SetVisibility`: Set the visibility to on or off.
+-- | - `ToggleVisibility`: Toggle the visibility from its current status.
 -- | - `ReplaceItems`: Replace the array of items.
 -- | - `Raise`: Embed a parent query that can be returned to the parent for evaluation.
 -- | - `ContainerReceiver`: Update the component on new `Input` when the parent re-renders.
@@ -53,7 +54,8 @@ data ContainerQuery o item a
   | Key KE.KeyboardEvent a
   | Mouse MouseState a
   | Blur a
-  | Visibility VisibilityStatus a
+  | SetVisibility VisibilityStatus a
+  | ToggleVisibility a
   | ReplaceItems (Array item) a
   | Raise (o Unit) a
   | ContainerReceiver (ContainerInput o item) a
@@ -80,7 +82,6 @@ data MouseState
 data VisibilityStatus
   = On
   | Off
-  | Toggle
 
 -- | The internal state of the `Container` primitive
 -- |
@@ -111,7 +112,9 @@ type ContainerInput o item =
 -- | - `ItemSelected`: An item has been selected in the container. This does not indicate the item
 -- |                   has been removed; if you would like the item to also be removed from the
 -- |                   container, make sure to query `ReplaceItems` from the parent.
--- | - `SearchQuery`: TODO
+-- | - `ContainerClicked`: The container has been clicked, which draws focus away from the
+-- |                       search if used with a search primitive, this message lets the search
+-- |                       container know to return focus to it
 -- | - `Emit`: A parent query has been triggered and should be evaluated by the parent. Typically:
 -- |
 -- | ```purescript
@@ -120,6 +123,7 @@ type ContainerInput o item =
 data Message o item
   = ItemSelected item
   | ContainerClicked
+  | VisibilitySet VisibilityStatus
   | Emit (o Unit)
 
 -- | The primitive handles state and transformations but defers all rendering to the parent. The
@@ -219,23 +223,24 @@ component =
 
       Blur a -> do
         (Tuple _ st) <- getState
-        H.liftAff $ log $ "mouseDown: " <> (show st.mouseDown)
         if not st.open || st.mouseDown
           then pure a
-          else a <$ (eval $ Visibility Off a)
+          else a <$ (eval $ SetVisibility Off a)
 
       -- When toggling, the user will lose their highlighted index.
-      Visibility status a -> a <$ do
+      SetVisibility status a -> a <$ do
         case status of
           On     -> do
             H.modify $ seeks (_ { open = true })
           Off    -> do
             H.modify $ seeks (_ { open = false, highlightedIndex = Nothing })
-          Toggle -> do
-            (Tuple _ st) <- getState
-            case st.open of
-              false -> eval $ Visibility On unit
-              _     -> eval $ Visibility Off unit
+        H.raise $ VisibilitySet status
+
+      ToggleVisibility a -> a <$ do
+        (Tuple _ st) <- getState
+        case st.open of
+          false -> eval $ SetVisibility On unit
+          _     -> eval $ SetVisibility Off unit
 
       ReplaceItems newItems a -> a <$ do
         H.modify $ seeks (_ { items = newItems })
@@ -289,7 +294,7 @@ getToggleProps :: ∀ o item e f.
           f
        )
 getToggleProps q = flip (<>)
-  [ HE.onClick      $ HE.input_ $ q $ H.action $ Visibility Toggle
+  [ HE.onClick      $ HE.input_ $ q $ H.action $ ToggleVisibility
   , HE.onKeyDown    $ HE.input  $ \ev -> q $ H.action $ Key ev
   , HE.onMouseDown  $ HE.input_ $ q $ H.action $ Mouse Down
   , HE.onMouseUp    $ HE.input_ $ q $ H.action $ Mouse Up

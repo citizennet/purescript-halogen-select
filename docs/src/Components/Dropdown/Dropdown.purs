@@ -5,7 +5,7 @@ import Prelude
 import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Aff.Console (log, logShow, CONSOLE)
 import DOM (DOM)
-import Data.Array ((:), difference, mapWithIndex, length, delete)
+import Data.Array (mapWithIndex)
 import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML as HH
@@ -17,7 +17,7 @@ type DropdownItem = String
 
 type State =
   { items    :: Array DropdownItem
-  , selected :: Array DropdownItem }
+  , selected :: Maybe DropdownItem }
 
 data Query a
   = Log String a
@@ -39,7 +39,7 @@ component =
     }
   where
     initState :: State
-    initState = { items: testData, selected: [] }
+    initState = { items: testData, selected: Nothing }
 
     render
       :: State
@@ -80,33 +80,28 @@ component =
       HandleContainer m a -> case m of
         C.Emit q -> eval q *> pure a
 
-        C.ContainerClicked -> pure a
-
         C.ItemSelected item -> do
           H.liftAff $ log ("Selected: " <> item)
-          H.modify \st -> st { selected = ( item : st.selected ) }
+          H.modify \st -> st { selected = pure item }
 
           st <- H.get
           H.liftAff $ logShow st.selected
-          _  <- H.query unit
-                  $ H.action
-                  $ C.ContainerReceiver
-                  $ { render: renderContainer
-                    , items: difference st.items st.selected }
+          _ <- H.query unit
+                 $ H.action
+                 $ C.SetVisibility C.Off
           pure a
+
+        otherwise -> pure a
 
       Removed item a -> do
         st <- H.get
-        let newSelections = delete item st.selected
-            newItems = difference newSelections st.items
-
-        H.modify (_ { selected = newSelections })
+        H.modify (_ { selected = Nothing })
 
         _  <- H.query unit
                 $ H.action
                 $ C.ContainerReceiver
                 $ { render: renderContainer
-                  , items: newItems }
+                  , items: st.items }
 
         pure a
 
@@ -118,6 +113,7 @@ HELPERS
 
 -}
 
+class_ :: ∀ p i. String -> H.IProp ( "class" :: String | i ) p
 class_ = HP.class_ <<< HH.ClassName
 
 -- The parent must provide some input data.
@@ -197,26 +193,24 @@ renderContainer st =
                else "" ]
 
 
-renderSelections items =
-  if length items == 0
-    then HH.div_ []
-    else
-    HH.div
+renderSelections
+  :: ∀ p
+   . Maybe DropdownItem
+  -> H.HTML p Query
+renderSelections Nothing =
+  HH.div_ []
+renderSelections (Just item) =
+  HH.div
     [ class_ "bg-white rounded-sm w-full border-b border-grey-lighter" ]
     [ HH.ul
       [ class_ "list-reset" ]
-      ( renderSelectedItem <$> items )
-    ]
-  where
-    renderSelectedItem item =
-      HH.li
-      [ class_ "px-4 py-1 text-grey-darkest hover:bg-grey-lighter relative" ]
-      [ HH.span_ [ HH.text item ]
-      , closeButton item
+      [ HH.li
+        [ class_ "px-4 py-1 text-grey-darkest hover:bg-grey-lighter relative" ]
+        [ HH.span_ [ HH.text item ]
+        , HH.span
+          [ HE.onClick $ HE.input_ (Removed item)
+          , class_ "absolute pin-t pin-b pin-r p-1 mx-3 cursor-pointer" ]
+          [ HH.text "×" ]
+        ]
       ]
-
-    closeButton item =
-      HH.span
-      [ HE.onClick $ HE.input_ (Removed item)
-      , class_ "absolute pin-t pin-b pin-r p-1 mx-3 cursor-pointer" ]
-        [ HH.text "×" ]
+    ]
