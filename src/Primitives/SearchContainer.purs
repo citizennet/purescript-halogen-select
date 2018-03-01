@@ -18,21 +18,25 @@ import Halogen.HTML.Events as HE
 import Select.Primitives.Container as C
 import Select.Primitives.Search as S
 
-data SearchContainerQuery o item eff a
+data SearchContainerQuery o item eff m a
   = ToSearch (S.SearchQuery o item eff Unit) a
   | ToContainer (C.ContainerQuery o item Unit) a
   | HandleSearch (S.Message o item) a
   | HandleContainer (C.Message o item) a
-  | Receiver (Input o item eff) a
+  | Receiver (Input o item eff m) a
 
 type State = Unit
 
-type Input o item eff =
+type Input o item eff m =
   { items :: Array item
   , search :: Maybe String
   , debounceTime :: Milliseconds
   , renderSearch :: S.SearchState eff -> H.ComponentHTML (S.SearchQuery o item eff)
   , renderContainer :: C.ContainerState item -> H.ComponentHTML (C.ContainerQuery o item)
+  , render
+    :: SearchContainerHTML o item eff m
+    -> SearchContainerHTML o item eff m
+    -> SearchContainerHTML o item eff m
   }
 
 data Message o item
@@ -53,21 +57,22 @@ data Slot
 derive instance eqPrimitiveSlot :: Eq Slot
 derive instance ordPrimitiveSlot :: Ord Slot
 
+type SearchContainerHTML o item eff m =
+  H.ParentHTML
+    (SearchContainerQuery o item eff m)
+    (ChildQuery o item eff)
+    ChildSlot
+    m
+
 type StateStore o item eff m =
-  Store
-    State
-    (H.ParentHTML
-      (SearchContainerQuery o item eff)
-      (ChildQuery o item eff)
-      ChildSlot
-      m)
+  Store State (SearchContainerHTML o item eff m)
 
 component :: ∀ o item eff m
-  . MonadAff (Effects eff) m
- => H.Component
+   . MonadAff (Effects eff) m
+  => H.Component
      HH.HTML
-     (SearchContainerQuery o item (Effects eff))
-     (Input o item (Effects eff))
+     (SearchContainerQuery o item (Effects eff) m)
+     (Input o item (Effects eff) m)
      (Message o item)
      m
 component =
@@ -79,14 +84,13 @@ component =
     }
   where
     initialState
-      :: Input o item (Effects eff)
+      :: Input o item (Effects eff) m
       -> StateStore o item (Effects eff) m
     initialState i = store render' unit
       where
-        render' _ =
-          HH.div_
-          [ HH.slot' CP.cp2 SearchSlot S.component inputS (HE.input HandleSearch)
-          , HH.slot' CP.cp1 ContainerSlot C.component inputC (HE.input HandleContainer) ]
+        render' _ = i.render
+          (HH.slot' CP.cp2 SearchSlot S.component inputS (HE.input HandleSearch))
+          (HH.slot' CP.cp1 ContainerSlot C.component inputC (HE.input HandleContainer))
 
         inputS =
           { search: i.search
@@ -102,10 +106,10 @@ component =
     -- EVAL
 
     eval
-      :: SearchContainerQuery o item (Effects eff)
+      :: SearchContainerQuery o item (Effects eff) m
       ~> H.ParentDSL
           (StateStore o item (Effects eff) m)
-          (SearchContainerQuery o item (Effects eff))
+          (SearchContainerQuery o item (Effects eff) m)
           (ChildQuery o item (Effects eff))
           (ChildSlot)
           (Message o item)
@@ -146,12 +150,12 @@ component =
 -----
 -- Helpers
 
-inContainer :: ∀ o item eff
+inContainer :: ∀ o item eff m
   . H.Action (C.ContainerQuery o item)
- -> SearchContainerQuery o item eff Unit
+ -> SearchContainerQuery o item eff m Unit
 inContainer = H.action <<< ToContainer <<< H.action
 
-inSearch :: ∀ o item eff
+inSearch :: ∀ o item eff m
   . H.Action (S.SearchQuery o item eff)
- -> SearchContainerQuery o item eff Unit
+ -> SearchContainerQuery o item eff m Unit
 inSearch = H.action <<< ToSearch <<< H.action

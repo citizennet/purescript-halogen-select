@@ -37,7 +37,7 @@ type Input = Array String
 data Message = Void
 
 type ChildSlot = Unit
-type ChildQuery eff = SC.SearchContainerQuery Query TypeaheadItem eff
+type ChildQuery eff m = SC.SearchContainerQuery Query TypeaheadItem eff m
 
 component :: ∀ m e
   . MonadAff ( Effects e ) m
@@ -53,7 +53,9 @@ component =
     initialState :: Input -> State
     initialState i = { items: i, selected: [] }
 
-    render :: State -> H.ParentHTML Query (ChildQuery (Effects e)) ChildSlot m
+    render
+      :: State
+      -> H.ParentHTML Query (ChildQuery (Effects e) m) ChildSlot m
     render st =
       HH.div
         [ class_ "w-full" ]
@@ -67,9 +69,15 @@ component =
           , items: difference st.items st.selected
           , renderSearch
           , renderContainer
+          , render:
+            \search container -> HH.div
+              [ HP.class_ $ HH.ClassName "flex-auto" ]
+              [ search, container ]
           }
 
-    eval :: Query ~> H.ParentDSL State Query (ChildQuery (Effects e)) ChildSlot Message m
+    eval
+      :: Query
+      ~> H.ParentDSL State Query (ChildQuery (Effects e) m) ChildSlot Message m
     eval = case _ of
       Log str a -> a <$ do
         H.liftAff $ log str
