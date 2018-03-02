@@ -12,20 +12,20 @@
 
 There are a few ways to get started with the `Select` library.
 
-**Installation**
+**Installation**  
 `Select` is available on Bower and Pursuit:
 
 ```sh
 bower i --save purescript-halogen-select
 ```
 
-**Pursuit Package Documentation**
+**Pursuit Package Documentation**  
 [The Select library and its module documentation are on Pursuit](https://pursuit.purescript.org/packages/purescript-halogen-select). However, you are more likely to get value from the documentation site.
 
-**Official Docs, Tutorials & Getting Started**
+**Official Docs, Tutorials & Getting Started**  
 To learn more about using `Select`, see [the official documentation site](https://citizennet.github.io/purescript-halogen-select).
 
-**Live Code**
+**Live Code**  
 You can see working examples of components built using this library in a few places:
 
 - See the [Components](https://github.com/citizennet/purescript-halogen-select/tree/master/docs/src/Components) folder from the documentation site, or
@@ -34,7 +34,7 @@ You can see working examples of components built using this library in a few pla
 Have an example of a component you've built with `Select`? Open a PR or drop us a message and we can help review and showcase your work.
 
 
-# Design Principles
+# Design Principles  
 
 The library provides essential behaviors for selection user interfaces as a group of Halogen components. But you won't find a single render function in the code. Instead, with the help of a few `getProps` helpers, you can write your HTML rendering however you'd like. You can freely include your own queries and the library will return them to be run. You can even use any data you want from your parent state in your render functions. The library manages user interaction, state, accessibility, and logic; you are responsible for rendering HTML depending on that state.
 
