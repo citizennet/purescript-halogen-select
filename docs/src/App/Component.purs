@@ -35,7 +35,7 @@ type Effects eff = ( console :: CONSOLE, dom :: DOM, now :: NOW, avar :: AVAR, t
 ----------
 -- Built components
 
-dropdown :: ∀ t eff m. MonadAff ( Effects eff ) m => Component m
+dropdown :: ∀ eff m. MonadAff ( Effects eff ) m => Component m
 dropdown =
   H.parentComponent
     { initialState: const unit
@@ -50,7 +50,7 @@ dropdown =
     render :: Unit -> HTML Dropdown.Query m
     render _ = HH.slot unit Dropdown.component unit absurd
 
-typeahead :: ∀ t eff m. MonadAff ( Effects eff ) m => Component m
+typeahead :: ∀ eff m. MonadAff ( Effects eff ) m => Component m
 typeahead =
   H.parentComponent
     { initialState: const unit
@@ -63,9 +63,19 @@ typeahead =
     eval (NoOp a) = pure a
 
     render :: Unit -> HTML Typeahead.Query m
-    render _ = HH.slot unit Typeahead.component [ "Lyndsey Duffield", "Chris Pine", "Kevin Hart" ] (const Nothing)
+    render _ = HH.slot unit Typeahead.component users (const Nothing)
 
-calendar :: ∀ t eff m. MonadAff ( Effects eff ) m => Component m
+    users :: Array String
+    users =
+      [ "Lyndsey Duffield"
+      , "Chris Pine"
+      , "Kevin Hart"
+      , "Dave Chappelle"
+      , "Hannibal Buress"
+      , "Rico Suave"
+      ]
+
+calendar :: ∀ eff m. MonadAff ( Effects eff ) m => Component m
 calendar =
   H.parentComponent
     { initialState: const unit

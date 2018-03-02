@@ -6,22 +6,34 @@ module Select.Primitives.Search where
 
 import Prelude
 
-import Data.Time.Duration (Milliseconds)
-import DOM.Event.Types as ET
 import Control.Comonad (extract)
 import Control.Comonad.Store (seeks, store)
 import Control.Monad.Aff (Fiber, delay, error, forkAff, killFiber)
 import Control.Monad.Aff.AVar (AVar, makeEmptyVar, putVar, takeVar, AVAR)
 import Control.Monad.Aff.Class (class MonadAff)
+import Control.Monad.Except (runExcept)
+import DOM (DOM)
+import DOM.Event.Event (currentTarget)
+import DOM.Event.FocusEvent (focusEventToEvent)
+import DOM.Event.FocusEvent as FE
+import DOM.Event.Types as ET
+import DOM.HTML.HTMLElement (focus)
+import DOM.HTML.Types (HTMLElement, readHTMLElement)
+import Data.Either (hush)
+import Data.Foreign (toForeign)
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Time.Duration (Milliseconds)
+import Data.Traversable (traverse_)
 import Data.Tuple (Tuple(..))
-import Halogen (IProp, Component, ComponentDSL, ComponentHTML, action, component, liftAff, modify) as H
+import Halogen (IProp, Component, ComponentDSL, ComponentHTML, action, component, liftAff, modify, liftEff) as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.Query.HalogenM (fork, raise) as H
-import Select.Primitives.State (State, updateStore, getState)
 import Select.Primitives.Container as C
+import Select.Primitives.State (State, updateStore, getState)
+
+type Effects eff = ( avar :: AVAR, dom :: DOM | eff )
 
 -- | The query type for the `Search` primitive. This primitive handles text input
 -- | and debouncing. It has a special query for the purpose of embedding Container
@@ -42,15 +54,19 @@ import Select.Primitives.Container as C
 -- |
 -- | Constructors:
 -- |
--- | - `TextInput`: Handle new text input as a string
--- | - `Raise`: Embed a parent query that can be returned to the parent for evaluation
--- | - `FromContainer`: Embed a container query that can be routed to a container slot
--- | - `SearchReceiver`: Update the component with new `Input` when the parent re-renders
+-- | - `TextInput`: Handle new text input as a string.
+-- | - `Raise`: Embed a parent query that can be returned to the parent for evaluation.
+-- | - `FromContainer`: Embed a container query that can be routed to a container slot.
+-- | - `SearchReceiver`: Update the component with new `Input` when the parent re-renders.
+-- | - `CaptureFocus`: Capture input element from focus event.
+-- | - `TriggerFocus`: Refocus input element.
 data SearchQuery o item eff a
   = TextInput String a
   | Raise (o Unit) a
   | FromContainer (C.ContainerQuery o item Unit) a
   | SearchReceiver (SearchInput o item eff) a
+  | CaptureFocus FE.FocusEvent a
+  | TriggerFocus a
 
 -- | The `Search` primitive internal state.
 -- |
@@ -66,10 +82,12 @@ data SearchQuery o item eff a
 -- | - `ms`: Number of milliseconds for the input to be debounced before passing
 -- |         a message to the parent. Set to 0.0 if you don't want debouncing.
 -- | - `debouncer`: Facilitates debouncing for the input field.
+-- | - `inputEl`: Reference to search element so we can manually trigger focus./
 type SearchState eff =
   { search    :: String
   , ms        :: Milliseconds
   , debouncer :: Maybe (Debouncer eff)
+  , inputEl   :: Maybe HTMLElement
   }
 
 -- | The `Debouncer` type alias, used to debounce user input in the `Search` primitive.
@@ -104,6 +122,8 @@ type SearchInput o item eff =
 -- | eval (FromContainer q a) -> H.raise (ContainerQuery q) *> pure a
 -- | ```
 -- |
+-- | - `Focused`: The search input element has been focused on.
+-- |
 -- | - `Emit`: An embedded parent query has been triggered. This can be evaluated automatically
 -- |           with this code in the parent's eval function:
 -- |
@@ -113,17 +133,18 @@ type SearchInput o item eff =
 data Message o item
   = NewSearch String
   | ContainerQuery (C.ContainerQuery o item Unit)
+  | Focused
   | Emit (o Unit)
 
 
 -- | The primitive handles state and transformations but defers all rendering to the parent. The
 -- | render function can be written using our helper functions to ensure the right events are included.
 component :: ∀ o item eff m
-  . MonadAff (avar :: AVAR | eff) m
+  . MonadAff (Effects eff) m
  => H.Component
      HH.HTML
-     (SearchQuery o item (avar :: AVAR | eff))
-     (SearchInput o item (avar :: AVAR | eff))
+     (SearchQuery o item (Effects eff))
+     (SearchInput o item (Effects eff))
      (Message o item)
      m
 component =
@@ -135,23 +156,24 @@ component =
     }
   where
     initialState
-      :: SearchInput o item (avar :: AVAR | eff)
+      :: SearchInput o item (Effects eff)
       -> State
-          (SearchState (avar :: AVAR | eff))
-          (SearchQuery o item (avar :: AVAR | eff))
+          (SearchState (Effects eff))
+          (SearchQuery o item (Effects eff))
     initialState i = store i.render
       { search: fromMaybe "" i.search
       , ms: i.debounceTime
       , debouncer: Nothing
+      , inputEl: Nothing
       }
 
     eval
-      :: (SearchQuery o item (avar :: AVAR | eff))
+      :: (SearchQuery o item (Effects eff))
       ~> H.ComponentDSL
           (State
-            (SearchState (avar :: AVAR | eff))
-            (SearchQuery o item (avar :: AVAR | eff)))
-          (SearchQuery o item (avar :: AVAR | eff))
+            (SearchState (Effects eff))
+            (SearchQuery o item (Effects eff)))
+          (SearchQuery o item (Effects eff))
           (Message o item)
           m
     eval = case _ of
@@ -198,6 +220,20 @@ component =
       -- the parent to set the text.
       SearchReceiver i a -> H.modify (updateStore i.render id) *> pure a
 
+      CaptureFocus e a -> a <$ do
+        (Tuple _ st) <- getState
+        let el = hush
+             <<< runExcept
+             <<< readHTMLElement
+             <<< toForeign
+             <<< currentTarget
+             <<< focusEventToEvent
+        H.modify $ seeks _ { inputEl = el e }
+        H.raise Focused
+
+      TriggerFocus a -> a <$ do
+        (Tuple _ st) <- getState
+        traverse_ (H.liftEff <<< focus) st.inputEl
 
 -- | Attach the necessary properties to the input field you render in the page. This
 -- | should be used directly on the input field's list of properties:
@@ -214,8 +250,6 @@ getInputProps :: ∀ o item e eff
         , onKeyDown :: ET.KeyboardEvent
         , onInput :: ET.Event
         , value :: String
-        , onMouseDown :: ET.MouseEvent
-        , onMouseUp :: ET.MouseEvent
         , onBlur :: ET.FocusEvent
         , tabIndex :: Int
         | e
@@ -228,8 +262,6 @@ getInputProps :: ∀ o item e eff
         , onKeyDown :: ET.KeyboardEvent
         , onInput :: ET.Event
         , value :: String
-        , onMouseDown :: ET.MouseEvent
-        , onMouseUp :: ET.MouseEvent
         , onBlur :: ET.FocusEvent
         , tabIndex :: Int
         | e
@@ -237,11 +269,9 @@ getInputProps :: ∀ o item e eff
         (SearchQuery o item eff)
       )
 getInputProps = flip (<>)
-  [ HE.onFocus      $ HE.input_ $ FromContainer $ H.action $ C.Visibility C.Toggle
-  , HE.onKeyDown    $ HE.input  $ \ev -> FromContainer $ H.action $ C.Key ev
+  [ HE.onFocus      $ HE.input  $ CaptureFocus
+  , HE.onKeyDown    $ HE.input  $ FromContainer <<< H.action <<< C.Key
   , HE.onValueInput $ HE.input  TextInput
-  , HE.onMouseDown  $ HE.input_ $ FromContainer $ H.action $ C.Mouse C.Down
-  , HE.onMouseUp    $ HE.input_ $ FromContainer $ H.action $ C.Mouse C.Up
   , HE.onBlur       $ HE.input_ $ FromContainer $ H.action $ C.Blur
   , HP.tabIndex 0
   ]
