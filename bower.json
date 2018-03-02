@@ -39,7 +39,7 @@
   },
   "devDependencies": {
     "purescript-fuzzy": "citizennet/purescript-fuzzy",
-    "purescript-cn-ui": "citizennet/purescript-cn-ui",
+    "purescript-ocelot": "citizennet/purescript-ocelot",
     "purescript-dom-classy": "^2.1.0",
     "purescript-remotedata": "^2.2.0",
     "purescript-console": "^3.0.0",
