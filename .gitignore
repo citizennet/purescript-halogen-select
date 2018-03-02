@@ -17,3 +17,5 @@ docs/site/public
 # IDE
 *.swo
 *.swp
+*.log
+*.lock
