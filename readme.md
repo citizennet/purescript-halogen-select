@@ -12,20 +12,20 @@
 
 There are a few ways to get started with the `Select` library.
 
-**Installation**  
+**Installation**
 `Select` is available on Bower and Pursuit:
 
 ```sh
 bower i --save purescript-halogen-select
 ```
 
-**Pursuit Package Documentation**  
-[The `Select` library and its module documentation are on Pursuit](https://pursuit.purescript.org/packages/purescript-halogen-select). However, you are more likely to get value from the documentation site.
+**Pursuit Package Documentation**
+[The Select library and its module documentation are on Pursuit](https://pursuit.purescript.org/packages/purescript-halogen-select). However, you are more likely to get value from the documentation site.
 
-**Official Docs, Tutorials & Getting Started**  
+**Official Docs, Tutorials & Getting Started**
 To learn more about using `Select`, see [the official documentation site](https://citizennet.github.io/purescript-halogen-select).
 
-**Live Code**  
+**Live Code**
 You can see working examples of components built using this library in a few places:
 
 - See the [Components](https://github.com/citizennet/purescript-halogen-select/tree/master/docs/src/Components) folder from the documentation site, or
@@ -38,16 +38,16 @@ Have an example of a component you've built with `Select`? Open a PR or drop us 
 
 The library provides essential behaviors for selection user interfaces as a group of Halogen components. But you won't find a single render function in the code. Instead, with the help of a few `getProps` helpers, you can write your HTML rendering however you'd like. You can freely include your own queries and the library will return them to be run. You can even use any data you want from your parent state in your render functions. The library manages user interaction, state, accessibility, and logic; you are responsible for rendering HTML depending on that state.
 
-1. Provide behaviors, not styles  
+1. Provide behaviors, not styles
 Developers should be able to style and display dropdowns and typeaheads however they would like, rather than be forced to use particular CSS classes or re-implement the component with their HTML. This is accomplished with augmented render functions as described below. We provide the machinery; you provide the HTML and styles.
 
-2. Export the building blocks, not just the end result  
+2. Export the building blocks, not just the end result
 Developers should be able to take a core set of behaviors and choose how they would like to handle them in their own version of the component. If you would like the typeahead's functionality but do something fancy with the selected items, you should be able to. Each building block is exported.
 
-3. Require minimal configuration  
+3. Require minimal configuration
 Instantiating a typeahead shouldn't require a 50-field configuration record. We require at minimum two things: the data to populate the menu and the HTML to render that data. The rest is taken care of by the component. You are responsible for handling two things: when an item was selected, and when the user has performed a new search. If you want to do even less, you can use one of our default implementations to drop in to your project.
 
-4. Be accessible (Upcoming)  
+4. Be accessible (Upcoming)
 ARIA props and other features necessary for accessibility online should be handled properly without any setup.
 
 
