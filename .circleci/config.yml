@@ -3,7 +3,7 @@ version: 2
 defaults: &defaults
   working_directory: ~/select
   docker:
-    - image: thomashoneyman/purescript:0.0.2
+    - image: thomashoneyman/purescript:0.0.3
 
 jobs:
   test:
@@ -13,35 +13,35 @@ jobs:
 
       - restore_cache:
           keys:
-            - v1.3-bower-cache-{{ .Branch }}-{{ checksum "bower.json" }}
-            - v1.3-bower-cache-{{ .Branch }}
-            - v1.3-bower-cache
+            - v1.4.0-bower-cache-{{ .Branch }}-{{ checksum "bower.json" }}
+            - v1.4.0-bower-cache-{{ .Branch }}
+            - v1.4.0-bower-cache
 
       - restore_cache:
           keys:
-            - v1.3-npm-cache-{{ .Branch }}-{{ checksum "package.json" }}
-            - v1.3-npm-cache-{{ .Branch }}
-            - v1.3-npm-cache
+            - v1.4.0-yarn-cache-{{ .Branch }}-{{ checksum "package.json" }}
+            - v1.4.0-yarn-cache-{{ .Branch }}
+            - v1.4.0-yarn-cache
 
       - run:
-          name: Install dependencies from NPM and Bower
-          command: npm i
+          name: Install dependencies from Yarn and Bower
+          command: yarn
 
       - save_cache:
-          key: v1.3-bower-cache-{{ .Branch }}-{{ checksum "bower.json" }}
+          key: v1.4.0-bower-cache-{{ .Branch }}-{{ checksum "bower.json" }}
           paths:
             - ~/select/bower_components
             - ~/select/output
 
       - save_cache:
-          key: v1.3-npm-cache-{{ .Branch }}-{{ checksum "package.json" }}
+          key: v1.4.0-yarn-cache-{{ .Branch }}-{{ checksum "package.json" }}
           paths:
             - ~/select/node_modules
 
       # Verify all examples successfully build...
       - run:
           name: Build all components via docs
-          command: npm run build-docs
+          command: yarn run build-docs
 
       # Persist the specified paths into the workspace
       - persist_to_workspace:
