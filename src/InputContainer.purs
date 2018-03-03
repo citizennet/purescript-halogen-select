@@ -2,6 +2,7 @@ module Select.InputContainer where
 
 import Prelude
 
+import Debug.Trace (spy)
 import Control.Comonad (extract)
 import Control.Comonad.Store (Store, seeks, store)
 import Control.Monad.Aff.Class (class MonadAff)
@@ -30,17 +31,17 @@ import Select.Internal.State (updateStore, getState)
 ----------
 -- Component Types
 
-type InputContainerComponent o item eff m
+type Component o item eff m
   = H.Component HH.HTML (Query o item eff) (Input o item eff) (Message o item) m
 
-type InputContainerHTML o item eff
+type ComponentHTML o item eff
   = H.ComponentHTML (Query o item eff)
 
-type InputContainerDSL o item eff m
+type ComponentDSL o item eff m
   = H.ComponentDSL (StateStore o item eff) (Query o item eff) (Message o item) m
 
 type StateStore o item eff
-  = Store (State item eff) (InputContainerHTML o item eff)
+  = Store (State item eff) (ComponentHTML o item eff)
 
 type Effects eff = ( avar :: AVAR, dom :: DOM | eff )
 
@@ -92,7 +93,7 @@ type Input o item eff =
   { items        :: Array item
   , search       :: Maybe String
   , debounceTime :: Milliseconds
-  , render       :: State item eff -> InputContainerHTML o item eff
+  , render       :: State item eff -> ComponentHTML o item eff
   }
 
 data Message o item
@@ -103,7 +104,7 @@ data Message o item
 
 component :: ∀ o item eff m
   . MonadAff (Effects eff) m
- => InputContainerComponent o item (Effects eff) m
+ => Component o item (Effects eff) m
 component =
   H.component
     { initialState
@@ -124,7 +125,7 @@ component =
       , mouseDown: false
       }
 
-    eval :: (Query o item (Effects eff)) ~> InputContainerDSL o item (Effects eff) m
+    eval :: (Query o item (Effects eff)) ~> ComponentDSL o item (Effects eff) m
     eval = case _ of
       TextInput str a -> a <$ do
         (Tuple _ st) <- getState
@@ -177,17 +178,19 @@ component =
         (Tuple _ st) <- getState
         if st.visibility == Off then pure a else a <$ case target of
           Prev  -> case st.highlightedIndex of
-            Just i | i /= 0 -> H.modify $ seeks _ { highlightedIndex = Just (i + 1) }
-            _ -> H.modify $ seeks _ { highlightedIndex = Just 0 }
-          Next  -> case st.highlightedIndex of
             Just i | i /= 0 -> H.modify $ seeks _ { highlightedIndex = Just (i - 1) }
             _ -> H.modify $ seeks _ { highlightedIndex = Just st.lastIndex }
+          Next  -> case st.highlightedIndex of
+            Just i | i /= st.lastIndex -> H.modify $ seeks _ { highlightedIndex = Just (i + 1) }
+            _ -> H.modify $ seeks _ { highlightedIndex = Just 0 }
           Index i -> H.modify $ seeks _ { highlightedIndex = Just i }
 
       Select index a -> do
         (Tuple _ st) <- getState
         if st.visibility == Off then pure a else case st.items !! index of
-          Just item -> H.raise (Selected item) *> pure a
+          Just item -> do
+             H.raise (Selected item)
+             eval (TriggerFocus a)
           _ -> pure a -- Should not be possible.
 
       Key keyEvent a -> do
@@ -225,19 +228,13 @@ component =
           Off -> eval $ SetVisibility On a
           On  -> eval $ SetVisibility Off a
 
-      ReplaceItems items a -> a <$ H.modify (seeks _ { items = items })
+      ReplaceItems items a -> a <$ do
+        H.modify $ seeks _
+          { items = items
+          , lastIndex = length items - 1
+          , highlightedIndex = Nothing }
 
       Raise parentQuery a -> a <$ H.raise (Emit parentQuery)
 
-      Receive input a -> a <$ do
-        (Tuple _ st) <- getState
+      Receive input a -> a <$ H.modify (updateStore input.render id)
 
-        H.modify
-          $ updateStore input.render
-          $ _ { items = input.items
-              , highlightedIndex = Nothing
-              , lastIndex = length input.items - 1
-              , search = fromMaybe "" input.search
-              , ms = input.debounceTime
-              , debouncer = Nothing
-              }

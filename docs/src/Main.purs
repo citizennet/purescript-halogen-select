@@ -48,10 +48,7 @@ type Components m = Map.Map String (H.Component HH.HTML ComponentQuery Unit Void
 
 routes :: ∀ eff m. MonadAff ( Component.Effects eff ) m => Components m
 routes = Map.fromFoldable
-  [ Tuple "dropdown" $ proxy Component.dropdown
-  , Tuple "typeahead" $ proxy Component.typeahead
-  , Tuple "calendar" $ proxy Component.calendar
-  ]
+  [ Tuple "typeahead" $ proxy Component.typeahead ]
 
 data Query a = NoOp a
 
