@@ -2,7 +2,6 @@ module Select.InputContainer where
 
 import Prelude
 
-import Debug.Trace (spy)
 import Control.Comonad (extract)
 import Control.Comonad.Store (Store, seeks, store)
 import Control.Monad.Aff.Class (class MonadAff)

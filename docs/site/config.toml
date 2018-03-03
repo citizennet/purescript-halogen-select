@@ -1,6 +1,5 @@
 # The base URL pages are relative to
-# base_url = "/purescript-halogen-select/"
-base_url = "file:///Users/saylu/Code/select/docs/dist/"
+base_url = "/purescript-halogen-select/"
 
 # Don't provide or compile from Sass folder
 compile_sass = true
