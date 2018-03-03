@@ -104,7 +104,7 @@ component =
         H.modify _ { selected = filter ((/=) item) st.selected }
         newSt <- H.get
         let newItems = difference newSt.items newSt.selected
-        _ <- H.query unit $ H.action $InputContainer.ReplaceItems newItems
+        _ <- H.query unit $ H.action $ InputContainer.ReplaceItems newItems
         pure a
 
 
