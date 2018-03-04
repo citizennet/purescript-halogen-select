@@ -155,6 +155,7 @@ component =
               H.modify $ seeks _ { debouncer = Nothing }
               (Tuple _ newState) <- getState
               H.raise $ Searched newState.search
+              eval $ Highlight (Index 0) a
 
             H.modify $ seeks _ { debouncer = Just { var, fiber } }
 
@@ -170,6 +171,7 @@ component =
           -- Key stream is not yet implemented. However, this should capture user
           -- key events and expire their search after a set number of milliseconds.
           _, _ -> pure unit
+
 
       TriggerFocus a -> a <$ do
         (Tuple _ st) <- getState
