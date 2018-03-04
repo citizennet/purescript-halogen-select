@@ -6,8 +6,8 @@ import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Aff.Console (CONSOLE, log)
 import Control.Monad.Aff.AVar (AVAR)
 import DOM (DOM)
-import Data.Array (mapWithIndex, difference, filter, (:))
-import Data.Foldable (length)
+import Data.Array (elemIndex, mapWithIndex, difference, filter, (:))
+import Data.Foldable (length, traverse_)
 import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..), contains)
 import Halogen as H
@@ -81,8 +81,10 @@ component =
 
         Select.Searched search -> do
           st <- H.get
-          let newItems = difference st.selected <<< filterItems search $ st.items
+          let newItems = difference (filterItems search st.items) st.selected
+              index = elemIndex search st.items
           _ <- H.query unit $ H.action $ Select.ReplaceItems newItems
+          traverse_ (H.query unit <<< H.action <<< Select.Highlight <<< Select.Index) index
           H.liftAff $ log $ "New search: " <> search
 
         Select.Selected item -> do

@@ -12,7 +12,7 @@ import DOM (DOM)
 import DOM.Event.Event (preventDefault, currentTarget)
 import DOM.Event.KeyboardEvent as KE
 import DOM.Event.FocusEvent as FE
-import DOM.HTML.HTMLElement (focus)
+import DOM.HTML.HTMLElement (focus, blur)
 import DOM.HTML.Types (HTMLElement, readHTMLElement)
 import Data.Array (length, (!!))
 import Data.Either (hush)
@@ -207,15 +207,20 @@ component =
              eval (TriggerFocus a)
           _ -> pure a -- Should not be possible.
 
-      Key keyEvent a -> do
+      Key ev a -> do
         (Tuple _ st) <- getState
         if st.visibility == Off then pure a else do
-           H.liftEff $ preventDefault $ KE.keyboardEventToEvent keyEvent
-           case KE.code keyEvent of
-            "ArrowUp"   -> eval $ Highlight Prev a
-            "ArrowDown" -> eval $ Highlight Next a
-            "Enter"     -> a <$ traverse_ (\index -> eval $ Select index a) st.highlightedIndex
-            "Escape"    -> eval $ SetVisibility Off a
+           let prevent = H.liftEff <<< preventDefault <<< KE.keyboardEventToEvent
+           case KE.code ev of
+            "ArrowUp"   -> prevent ev *> (eval $ Highlight Prev a)
+            "ArrowDown" -> prevent ev *> (eval $ Highlight Next a)
+            "Escape"    -> do
+               prevent ev
+               traverse_ (H.liftEff <<< blur) st.inputElement
+               eval $ Blur a
+            "Enter"     -> a <$ do
+              prevent ev
+              traverse_ (\index -> eval $ Select index a) st.highlightedIndex
             otherKey    -> pure a
 
       Mouse m a -> do
