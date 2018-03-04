@@ -1,4 +1,4 @@
-module Select.InputContainer where
+module Select where
 
 import Prelude
 
@@ -18,7 +18,7 @@ import Data.Array (length, (!!))
 import Data.Either (hush)
 import Data.Foreign (toForeign)
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Time.Duration (Milliseconds)
+import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (traverse_)
 import Data.Tuple (Tuple(..))
 import Halogen (Component, ComponentDSL, ComponentHTML, component, liftAff, liftEff, modify) as H
@@ -49,7 +49,7 @@ type Effects eff = ( avar :: AVAR, dom :: DOM | eff )
 -- Core Constructors
 
 data Query o item eff a
-  = TextInput String a
+  = Search String a
   | TriggerFocus a
   | CaptureFocus FE.FocusEvent a
   | Highlight Target a
@@ -72,9 +72,14 @@ derive instance eqMouseState :: Eq MouseState
 data Visibility = Off | On
 derive instance eqVisibility :: Eq Visibility
 
+data InputType
+  = TextInput
+  | Toggle
+
 type State item eff =
-  { search           :: String
-  , ms               :: Milliseconds
+  { inputType        :: InputType
+  , search           :: String
+  , debounceTime     :: Milliseconds
   , debouncer        :: Maybe (Debouncer eff)
   , inputElement     :: Maybe HTMLElement
   , items            :: Array item
@@ -89,10 +94,11 @@ type Debouncer eff =
   , fiber :: Fiber eff Unit }
 
 type Input o item eff =
-  { items        :: Array item
-  , search       :: Maybe String
-  , debounceTime :: Milliseconds
-  , render       :: State item eff -> ComponentHTML o item eff
+  { inputType     :: InputType
+  , items         :: Array item
+  , initialSearch :: Maybe String
+  , debounceTime  :: Maybe Milliseconds
+  , render        :: State item eff -> ComponentHTML o item eff
   }
 
 data Message o item
@@ -113,8 +119,9 @@ component =
     }
   where
     initialState i = store i.render
-      { search: fromMaybe "" i.search
-      , ms: i.debounceTime
+      { inputType: i.inputType
+      , search: fromMaybe "" i.initialSearch
+      , debounceTime: fromMaybe (Milliseconds 0.0) i.debounceTime
       , debouncer: Nothing
       , inputElement: Nothing
       , items: i.items
@@ -126,15 +133,15 @@ component =
 
     eval :: (Query o item (Effects eff)) ~> ComponentDSL o item (Effects eff) m
     eval = case _ of
-      TextInput str a -> a <$ do
+      Search str a -> a <$ do
         (Tuple _ st) <- getState
         H.modify $ seeks _ { search = str }
 
-        case st.debouncer of
-          Nothing -> unit <$ do
+        case st.inputType, st.debouncer of
+          TextInput, Nothing -> unit <$ do
             var   <- H.liftAff makeEmptyVar
             fiber <- H.liftAff $ forkAff do
-              delay st.ms
+              delay st.debounceTime
               putVar unit var
 
             -- This compututation will fork and run in the background. When the
@@ -147,14 +154,18 @@ component =
 
             H.modify $ seeks _ { debouncer = Just { var, fiber } }
 
-          Just debouncer -> do
+          TextInput, Just debouncer -> do
             let var = debouncer.var
             _ <- H.liftAff $ killFiber (error "Time's up!") debouncer.fiber
             fiber <- H.liftAff $ forkAff do
-              delay st.ms
+              delay st.debounceTime
               putVar unit var
 
             H.modify $ seeks _ { debouncer = Just { var, fiber } }
+
+          -- Key stream is not yet implemented. However, this should capture user
+          -- key events and expire their search after a set number of milliseconds.
+          _, _ -> pure unit
 
       TriggerFocus a -> a <$ do
         (Tuple _ st) <- getState

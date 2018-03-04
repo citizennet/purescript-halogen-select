@@ -1,8 +1,8 @@
-module Select.Props where
+module Select.Utils.Setters where
 
 import Prelude
 
-import Select.InputContainer (MouseState(..), Query(..), Target(Index))
+import Select (MouseState(..), Query(..), Target(Index))
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 
@@ -11,10 +11,17 @@ setChildProps = flip (<>)
   , HP.tabIndex 0
   ]
 
+setToggleProps = flip (<>)
+  [ HE.onFocus      $ HE.input  CaptureFocus
+  , HE.onKeyDown    $ HE.input  Key
+  , HE.onBlur       $ HE.input_ Blur
+  , HP.tabIndex 0
+  ]
+
 setInputProps = flip (<>)
   [ HE.onFocus      $ HE.input  CaptureFocus
   , HE.onKeyDown    $ HE.input  Key
-  , HE.onValueInput $ HE.input  TextInput
+  , HE.onValueInput $ HE.input  Search
   , HE.onBlur       $ HE.input_ Blur
   , HP.tabIndex 0
   ]
