@@ -72,6 +72,10 @@ derive instance eqMouseState :: Eq MouseState
 data Visibility = Off | On
 derive instance eqVisibility :: Eq Visibility
 
+-- | Text-driven inputs will operate like a normal search-driven selection component.
+-- |  Toggle-driven inputs will capture key streams and debounce in reverse (only notify
+-- | about searches when time has expired). Perhaps could take a comparison function for
+-- | automatic highlighting (optional).
 data InputType
   = TextInput
   | Toggle
