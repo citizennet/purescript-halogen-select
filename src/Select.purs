@@ -216,7 +216,7 @@ component =
            case KE.code ev of
             "ArrowUp"   -> prevent ev *> (eval $ Highlight Prev a)
             "ArrowDown" -> prevent ev *> (eval $ Highlight Next a)
-            "Escape"    -> do
+            "Escape"    -> a <$ do
                prevent ev
                traverse_ (H.liftEff <<< blur) st.inputElement
             "Enter"     -> a <$ do
