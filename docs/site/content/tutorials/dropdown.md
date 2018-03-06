@@ -1,6 +1,6 @@
 +++
-title = "Dropdown Tutorial"
-description = "Some description"
+title = "Typeahead Tutorial"
+description = "A tutorial for building typeaheads with Select."
 template = "article.html"
 +++
 

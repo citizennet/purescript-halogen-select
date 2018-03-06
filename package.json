@@ -4,7 +4,7 @@
     "build-all": "yarn run build-docs && yarn run build-site",
     "watch-all": "pulp -w --before 'yarn run build-docs' build -I docs/src --to docs/dist/app.js",
     "clean": "rm -rf output bower_components node_modules",
-    "postinstall": "bower i --silent && rm -rf bower_components/purescript-halogen-select && rm -rf docs/dist && mkdir docs/dist && cp bower_components/purescript-ocelot/dist/cn-tailwind.css docs/dist/cn-tailwind.css",
+    "postinstall": "bower i --silent",
     "build-docs": "pulp build -I docs/src --to docs/dist/app.js",
     "watch-docs": "pulp -w build -I docs/src --to docs/dist/app.js",
     "build-site": "cd docs/site && gutenberg build && cd ../ && cp -r site/public/. dist/"

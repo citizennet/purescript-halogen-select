@@ -6,19 +6,17 @@ import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Aff.Console (CONSOLE, log)
 import Control.Monad.Aff.AVar (AVAR)
 import DOM (DOM)
-import Data.Array (mapWithIndex, difference, filter, (:))
-import Data.Foldable (length)
+import Data.Array (elemIndex, mapWithIndex, difference, filter, (:))
+import Data.Foldable (length, traverse_)
 import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..), contains)
-import Data.Time.Duration (Milliseconds(..))
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 
-import Select.Primitives.SearchContainer as SC
-import Select.Primitives.Container as C
-import Select.Primitives.Search as S
+import Select as Select
+import Select.Utils.Setters as Setters
 
 type TypeaheadItem = String
 
@@ -26,7 +24,7 @@ type Effects eff = ( avar :: AVAR, dom :: DOM, console :: CONSOLE | eff )
 
 data Query a
   = Log String a
-  | HandleSearchContainer (SC.Message Query TypeaheadItem) a
+  | HandleInputContainer (Select.Message Query TypeaheadItem) a
   | Removed TypeaheadItem a
 
 type State =
@@ -37,7 +35,7 @@ type Input = Array String
 data Message = Void
 
 type ChildSlot = Unit
-type ChildQuery eff m = SC.SearchContainerQuery Query TypeaheadItem eff m
+type ChildQuery eff = Select.Query Query TypeaheadItem eff
 
 component :: ∀ m e
   . MonadAff ( Effects e ) m
@@ -55,134 +53,102 @@ component =
 
     render
       :: State
-      -> H.ParentHTML Query (ChildQuery (Effects e) m) ChildSlot m
+      -> H.ParentHTML Query (ChildQuery (Effects e)) ChildSlot m
     render st =
       HH.div
         [ class_ "w-full" ]
         [ renderSelections st.selected
-        , HH.slot unit SC.component searchContainerInput (HE.input HandleSearchContainer)
+        , HH.slot unit Select.component input (HE.input HandleInputContainer)
         ]
       where
-        searchContainerInput =
-          { search: Nothing
-          , debounceTime: Milliseconds 0.0
+        input =
+          { initialSearch: Nothing
+          , debounceTime: Nothing
+          , inputType: Select.TextInput
           , items: difference st.items st.selected
-          , renderSearch
-          , renderContainer
-          , render:
-            \search container -> HH.div
-              [ HP.class_ $ HH.ClassName "flex-auto" ]
-              [ search, container ]
+          , render: renderInputContainer
           }
 
     eval
       :: Query
-      ~> H.ParentDSL State Query (ChildQuery (Effects e) m) ChildSlot Message m
+      ~> H.ParentDSL State Query (ChildQuery (Effects e)) ChildSlot Message m
     eval = case _ of
       Log str a -> a <$ do
         H.liftAff $ log str
 
-      HandleSearchContainer m a -> case m of
-        SC.Emit q -> eval q *> pure a
+      HandleInputContainer m a -> a <$ case m of
+        Select.Emit q -> eval q
 
-        SC.SearchMessage m' -> case m' of
-          S.NewSearch s -> do
-            st <- H.get
-            let filtered  = filterItems s st.items
-                available = difference filtered st.selected
-            _ <- H.query unit <<< SC.inContainer $ C.ReplaceItems available
-            pure a
+        Select.Searched search -> do
+          st <- H.get
+          let newItems = difference (filterItems search st.items) st.selected
+              index = elemIndex search st.items
+          _ <- H.query unit $ H.action $ Select.ReplaceItems newItems
+          traverse_ (H.query unit <<< H.action <<< Select.Highlight <<< Select.Index) index
+          H.liftAff $ log $ "New search: " <> search
 
-          otherwise -> pure a
+        Select.Selected item -> do
+          st <- H.get
+          if length (filter ((==) item) st.items) > 0
+            then H.modify _ { selected = ( item : st.selected ) }
+            else H.modify _
+                  { items = ( item : st.items )
+                  , selected = ( item : st.selected ) }
+          newSt <- H.get
+          let newItems = difference newSt.items newSt.selected
+          _ <- H.query unit $ H.action $ Select.ReplaceItems newItems
+          H.liftAff $ log $ "New item selected: " <> item
 
-        SC.ContainerMessage m' -> case m' of
-          C.ItemSelected item -> do
-            st <- H.get
-            if length (filter ((==) item) st.items) > 0
-              then H.modify _ { selected = ( item : st.selected ) }
-              else H.modify _
-                    { items = ( item : st.items )
-                    , selected = ( item : st.selected ) }
-
-            newSt <- H.get
-            let newItems = difference newSt.items newSt.selected
-            _  <- H.query unit <<< SC.inContainer $ C.ReplaceItems newItems
-            pure a
-
-          otherwise -> pure a
-
+        otherwise -> pure unit
 
       Removed item a -> do
         st <- H.get
         H.modify _ { selected = filter ((/=) item) st.selected }
-
         newSt <- H.get
         let newItems = difference newSt.items newSt.selected
-        _  <- H.query unit <<< SC.inContainer $ C.ReplaceItems newItems
+        _ <- H.query unit $ H.action $ Select.ReplaceItems newItems
         pure a
 
 
-{-
-
-HELPERS
-
--}
-
-filterItems :: TypeaheadItem -> Array TypeaheadItem -> Array TypeaheadItem
-filterItems str = filter (\i -> contains (Pattern str) i)
-
-{-
-
-Config
-
--}
+----------
+-- Helpers
 
 class_ :: ∀ p i. String -> H.IProp ( "class" :: String | i ) p
 class_ = HP.class_ <<< HH.ClassName
 
-renderSearch :: ∀ e
-  . (S.SearchState e)
- -> H.HTML Void (S.SearchQuery Query TypeaheadItem e)
-renderSearch _ = HH.input
-  ( S.getInputProps
-    [ class_ "rounded-sm bg-white w-full flex py-2 px-3"
-    , HP.placeholder "Type to search..." ]
-  )
+filterItems :: TypeaheadItem -> Array TypeaheadItem -> Array TypeaheadItem
+filterItems str = filter (\i -> contains (Pattern str) i)
 
--- Render function to pass to the child container component
-renderContainer
-  :: (C.ContainerState TypeaheadItem)
-  -> H.HTML Void (C.ContainerQuery Query TypeaheadItem)
-renderContainer st =
-  HH.div [ class_ "relative z-50" ]
-  $ if not st.open
-    then [ ]
-    else [ renderItems $ renderItem `mapWithIndex` st.items ]
+renderInputContainer :: ∀ e
+  . Select.State TypeaheadItem e
+ -> Select.ComponentHTML Query TypeaheadItem e
+renderInputContainer state = HH.div_ [ renderInput, renderContainer ]
   where
-    -- Render the container for the items
-    renderItems
-      :: Array (H.HTML Void (C.ContainerQuery Query TypeaheadItem))
-      -> H.HTML Void (C.ContainerQuery Query TypeaheadItem)
-    renderItems html =
-      HH.div
-      ( C.getContainerProps
-        [ class_ "absolute bg-white shadow rounded-sm pin-t pin-l w-full" ]
-      )
-      [ HH.ul [ class_ "list-reset" ] html ]
+    renderInput = HH.input $ Setters.setInputProps
+      [ class_ "rounded-sm bg-white w-full flex py-2 px-3"
+      , HP.placeholder "Type to search..." ]
 
-    renderItem
-      :: Int
-      -> TypeaheadItem
-      -> H.HTML Void (C.ContainerQuery Query TypeaheadItem)
-    renderItem index item =
-      HH.li ( C.getItemProps index props ) [ HH.text item ]
+    renderContainer =
+      HH.div [ class_ "relative z-50" ]
+      $ if state.visibility == Select.Off
+        then []
+        else [ renderItems $ renderItem `mapWithIndex` state.items ]
       where
-        props = [ class_
-          $ "px-4 py-1 text-grey-darkest"
-          <> if st.highlightedIndex == Just index
-               then " bg-grey-lighter"
-               else "" ]
+        renderItems html =
+          HH.div
+          ( Setters.setContainerProps
+            [ class_ "absolute bg-white shadow rounded-sm pin-t pin-l w-full" ]
+          )
+          [ HH.ul [ class_ "list-reset" ] html ]
 
+        renderItem index item =
+          HH.li ( Setters.setItemProps index props ) [ HH.text item ]
+          where
+            props = [ class_
+              $ "px-4 py-1 text-grey-darkest"
+              <> if state.highlightedIndex == Just index
+                   then " bg-grey-lighter"
+                   else "" ]
 
 renderSelections
   :: ∀ p

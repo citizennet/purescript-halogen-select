@@ -20,7 +20,7 @@
 -- | Therefore, it is necessary that your render function updates on parent re-render just like usual
 -- | `Input` values. Using `Store` allows us to extract and use the render function in a primitive.
 
-module Select.Primitives.State where
+module Select.Internal.State where
 
 import Prelude (pure, (<<<), (=<<))
 
