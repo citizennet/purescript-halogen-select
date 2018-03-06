@@ -219,7 +219,6 @@ component =
             "Escape"    -> do
                prevent ev
                traverse_ (H.liftEff <<< blur) st.inputElement
-               eval $ Blur a
             "Enter"     -> a <$ do
               prevent ev
               traverse_ (\index -> eval $ Select index a) st.highlightedIndex
