@@ -204,9 +204,9 @@ component =
       Select index a -> do
         (Tuple _ st) <- getState
         if st.visibility == Off then pure a else case st.items !! index of
-          Just item -> do
+          Just item -> a <$ do
+             _ <- eval (TriggerFocus a)
              H.raise (Selected item)
-             eval (TriggerFocus a)
           _ -> pure a -- Should not be possible.
 
       Key ev a -> do
