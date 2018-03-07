@@ -29,7 +29,9 @@ data Query a
 
 type State =
   { items    :: Array TypeaheadItem
-  , selected :: Array TypeaheadItem }
+  , selected :: Array TypeaheadItem
+  , keepOpen :: Boolean
+  }
 
 type Input = Array String
 data Message = Void
@@ -49,7 +51,7 @@ component =
     }
   where
     initialState :: Input -> State
-    initialState i = { items: i, selected: [] }
+    initialState i = { items: i, selected: [], keepOpen: true }
 
     render
       :: State
@@ -67,6 +69,7 @@ component =
           , inputType: Select.TextInput
           , items: difference st.items st.selected
           , render: renderInputContainer
+          , keepOpen: st.keepOpen
           }
 
     eval
