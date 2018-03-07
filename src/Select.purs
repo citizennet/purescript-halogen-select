@@ -4,14 +4,14 @@ import Prelude
 
 import Control.Comonad (extract)
 import Control.Comonad.Store (Store, seeks, store)
-import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Aff (Fiber, delay, error, forkAff, killFiber)
 import Control.Monad.Aff.AVar (AVar, makeEmptyVar, putVar, takeVar, AVAR)
+import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Except (runExcept)
 import DOM (DOM)
 import DOM.Event.Event (preventDefault, currentTarget)
-import DOM.Event.KeyboardEvent as KE
 import DOM.Event.FocusEvent as FE
+import DOM.Event.KeyboardEvent as KE
 import DOM.HTML.HTMLElement (focus, blur)
 import DOM.HTML.Types (HTMLElement, readHTMLElement)
 import Data.Array (length, (!!))
@@ -50,8 +50,9 @@ type Effects eff = ( avar :: AVAR, dom :: DOM | eff )
 
 data Query o item eff a
   = Search String a
-  | TriggerFocus a
   | CaptureFocus FE.FocusEvent a
+  | TriggerFocus a
+  | TriggerBlur a
   | Highlight Target a
   | Select Int a
   | Key KE.KeyboardEvent a
@@ -91,6 +92,7 @@ type State item eff =
   , highlightedIndex :: Maybe Int
   , lastIndex        :: Int
   , mouseDown        :: Boolean
+  , keepOpen         :: Boolean
   }
 
 type Debouncer eff =
@@ -103,6 +105,7 @@ type Input o item eff =
   , initialSearch :: Maybe String
   , debounceTime  :: Maybe Milliseconds
   , render        :: State item eff -> ComponentHTML o item eff
+  , keepOpen      :: Boolean
   }
 
 data Message o item
@@ -133,6 +136,7 @@ component =
       , visibility: Off
       , lastIndex: length i.items - 1
       , mouseDown: false
+      , keepOpen: i.keepOpen
       }
 
     eval :: (Query o item (Effects eff)) ~> ComponentDSL o item (Effects eff) m
@@ -172,11 +176,6 @@ component =
           -- key events and expire their search after a set number of milliseconds.
           _, _ -> pure unit
 
-
-      TriggerFocus a -> a <$ do
-        (Tuple _ st) <- getState
-        traverse_ (H.liftEff <<< focus) st.inputElement
-
       CaptureFocus focusEvent a -> a <$ do
         (Tuple _ st) <- getState
         let elementFromFocusEvent
@@ -189,6 +188,14 @@ component =
 
         H.modify $ seeks _ { inputElement = elementFromFocusEvent focusEvent }
         eval $ SetVisibility On a
+
+      TriggerFocus a -> a <$ do
+        (Tuple _ st) <- getState
+        traverse_ (H.liftEff <<< focus) st.inputElement
+
+      TriggerBlur a -> a <$ do
+        (Tuple _ st) <- getState
+        traverse_ (H.liftEff <<< blur) st.inputElement
 
       Highlight target a -> do
         (Tuple _ st) <- getState
@@ -204,9 +211,11 @@ component =
       Select index a -> do
         (Tuple _ st) <- getState
         if st.visibility == Off then pure a else case st.items !! index of
-          Just item -> do
-             H.raise (Selected item)
-             eval (TriggerFocus a)
+          Just item -> a <$ do
+             _ <- case st.keepOpen of
+               true -> eval $ TriggerFocus a
+               otherwise -> eval $ TriggerBlur a
+             H.raise $ Selected item
           _ -> pure a -- Should not be possible.
 
       Key ev a -> do
@@ -218,7 +227,7 @@ component =
             "ArrowDown" -> prevent ev *> (eval $ Highlight Next a)
             "Escape"    -> a <$ do
                prevent ev
-               traverse_ (H.liftEff <<< blur) st.inputElement
+               eval $ TriggerBlur a
             "Enter"     -> a <$ do
               prevent ev
               traverse_ (\index -> eval $ Select index a) st.highlightedIndex
@@ -237,9 +246,12 @@ component =
           else eval $ SetVisibility Off a
 
       SetVisibility v a -> a <$ do
-        case v of
-          Off -> H.modify $ seeks _ { visibility = v }
-          On  -> H.modify $ seeks _ { visibility = v, highlightedIndex = Nothing }
+        _ <- case v of
+          Off -> do
+            H.modify $ seeks _ { visibility = v }
+            eval $ TriggerBlur a
+          On  -> a <$ do
+            H.modify $ seeks _ { visibility = v, highlightedIndex = Nothing }
         H.raise $ VisibilityChanged v
 
       ToggleVisibility a -> a <$ do
