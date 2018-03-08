@@ -211,14 +211,12 @@ component =
               traverse_ (\index -> eval $ Select index a) st.highlightedIndex
             otherKey    -> pure a
 
-      PreventClick ev a -> do
+      PreventClick ev a -> a <$ do
         H.liftEff <<< preventDefault <<< ME.mouseEventToEvent $ ev
-        pure a
 
       ItemClick index ev a -> do
         _ <- eval $ PreventClick ev a
-        _ <- eval $ Select index a
-        pure a
+        eval $ Select index a
 
       SetVisibility v a -> a <$ do
         (Tuple _ st) <- getState
