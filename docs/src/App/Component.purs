@@ -46,7 +46,7 @@ typeahead =
     eval (NoOp a) = pure a
 
     render :: Unit -> HTML Typeahead.Query m
-    render _ = HH.slot unit Typeahead.component users (const Nothing)
+    render _ = HH.slot unit Typeahead.component { items: users, keepOpen: false } (const Nothing)
 
     users :: Array String
     users =

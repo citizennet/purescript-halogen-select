@@ -11,8 +11,9 @@ import Control.Monad.Except (runExcept)
 import DOM (DOM)
 import DOM.Event.Event (preventDefault, currentTarget)
 import DOM.Event.KeyboardEvent as KE
+import DOM.Event.MouseEvent as ME
 import DOM.Event.FocusEvent as FE
-import DOM.HTML.HTMLElement (focus, blur)
+import DOM.HTML.HTMLElement (blur)
 import DOM.HTML.Types (HTMLElement, readHTMLElement)
 import Data.Array (length, (!!))
 import Data.Either (hush)
@@ -50,13 +51,12 @@ type Effects eff = ( avar :: AVAR, dom :: DOM | eff )
 
 data Query o item eff a
   = Search String a
-  | TriggerFocus a
-  | CaptureFocus FE.FocusEvent a
   | Highlight Target a
   | Select Int a
+  | CaptureFocus FE.FocusEvent a
   | Key KE.KeyboardEvent a
-  | Mouse MouseState a
-  | Blur a
+  | ItemClick Int ME.MouseEvent a
+  | PreventClick ME.MouseEvent a
   | SetVisibility Visibility a
   | ToggleVisibility a
   | ReplaceItems (Array item) a
@@ -66,14 +66,11 @@ data Query o item eff a
 data Target = Prev | Next | Index Int
 derive instance eqTarget :: Eq Target
 
-data MouseState = Down | Up
-derive instance eqMouseState :: Eq MouseState
-
 data Visibility = Off | On
 derive instance eqVisibility :: Eq Visibility
 
 -- | Text-driven inputs will operate like a normal search-driven selection component.
--- |  Toggle-driven inputs will capture key streams and debounce in reverse (only notify
+-- | Toggle-driven inputs will capture key streams and debounce in reverse (only notify
 -- | about searches when time has expired). Perhaps could take a comparison function for
 -- | automatic highlighting (optional).
 data InputType
@@ -90,7 +87,6 @@ type State item eff =
   , visibility       :: Visibility
   , highlightedIndex :: Maybe Int
   , lastIndex        :: Int
-  , mouseDown        :: Boolean
   }
 
 type Debouncer eff =
@@ -132,7 +128,6 @@ component =
       , highlightedIndex: Nothing
       , visibility: Off
       , lastIndex: length i.items - 1
-      , mouseDown: false
       }
 
     eval :: (Query o item (Effects eff)) ~> ComponentDSL o item (Effects eff) m
@@ -140,6 +135,7 @@ component =
       Search str a -> a <$ do
         (Tuple _ st) <- getState
         H.modify $ seeks _ { search = str }
+        _ <- eval (SetVisibility On a)
 
         case st.inputType, st.debouncer of
           TextInput, Nothing -> unit <$ do
@@ -152,10 +148,9 @@ component =
             -- var is finally filled, the effect will run (raise a new search)
             _ <- H.fork do
               _ <- H.liftAff $ takeVar var
-              H.modify $ seeks _ { debouncer = Nothing }
+              H.modify $ seeks _ { debouncer = Nothing, highlightedIndex = Just 0 }
               (Tuple _ newState) <- getState
               H.raise $ Searched newState.search
-              eval $ Highlight (Index 0) a
 
             H.modify $ seeks _ { debouncer = Just { var, fiber } }
 
@@ -172,24 +167,6 @@ component =
           -- key events and expire their search after a set number of milliseconds.
           _, _ -> pure unit
 
-
-      TriggerFocus a -> a <$ do
-        (Tuple _ st) <- getState
-        traverse_ (H.liftEff <<< focus) st.inputElement
-
-      CaptureFocus focusEvent a -> a <$ do
-        (Tuple _ st) <- getState
-        let elementFromFocusEvent
-              = hush
-              <<< runExcept
-              <<< readHTMLElement
-              <<< toForeign
-              <<< currentTarget
-              <<< FE.focusEventToEvent
-
-        H.modify $ seeks _ { inputElement = elementFromFocusEvent focusEvent }
-        eval $ SetVisibility On a
-
       Highlight target a -> do
         (Tuple _ st) <- getState
         if st.visibility == Off then pure a else a <$ case target of
@@ -204,10 +181,20 @@ component =
       Select index a -> do
         (Tuple _ st) <- getState
         if st.visibility == Off then pure a else case st.items !! index of
-          Just item -> a <$ do
-             _ <- eval (TriggerFocus a)
-             H.raise (Selected item)
+          Just item -> H.raise (Selected item) *> pure a
           _ -> pure a -- Should not be possible.
+
+      CaptureFocus focusEvent a -> a <$ do
+        (Tuple _ st) <- getState
+        let elementFromFocusEvent
+              = hush
+              <<< runExcept
+              <<< readHTMLElement
+              <<< toForeign
+              <<< currentTarget
+              <<< FE.focusEventToEvent
+        H.modify $ seeks _ { inputElement = elementFromFocusEvent focusEvent }
+        eval $ SetVisibility On a
 
       Key ev a -> do
         (Tuple _ st) <- getState
@@ -224,23 +211,20 @@ component =
               traverse_ (\index -> eval $ Select index a) st.highlightedIndex
             otherKey    -> pure a
 
-      Mouse m a -> do
-        (Tuple _ st) <- getState
-        if st.visibility == Off then pure a else case m of
-          Down -> H.modify (seeks _ { mouseDown = true })  *> pure a
-          Up   -> H.modify (seeks _ { mouseDown = false }) *> eval (TriggerFocus a)
+      PreventClick ev a -> do
+        H.liftEff <<< preventDefault <<< ME.mouseEventToEvent $ ev
+        pure a
 
-      Blur a -> do
-        (Tuple _ st) <- getState
-        if st.visibility == Off || st.mouseDown
-          then pure a
-          else eval $ SetVisibility Off a
+      ItemClick index ev a -> do
+        _ <- eval $ PreventClick ev a
+        _ <- eval $ Select index a
+        pure a
 
       SetVisibility v a -> a <$ do
-        case v of
-          Off -> H.modify $ seeks _ { visibility = v }
-          On  -> H.modify $ seeks _ { visibility = v, highlightedIndex = Nothing }
-        H.raise $ VisibilityChanged v
+        (Tuple _ st) <- getState
+        when (st.visibility /= v) do
+          H.modify $ seeks _ { visibility = v, highlightedIndex = Just 0 }
+          H.raise $ VisibilityChanged v
 
       ToggleVisibility a -> a <$ do
         (Tuple _ st) <- getState
@@ -254,7 +238,9 @@ component =
           , lastIndex = length items - 1
           , highlightedIndex = Nothing }
 
-      Raise parentQuery a -> a <$ H.raise (Emit parentQuery)
+      Raise parentQuery a -> a <$ do
+        H.raise (Emit parentQuery)
 
-      Receive input a -> a <$ H.modify (updateStore input.render id)
+      Receive input a -> a <$ do
+        H.modify (updateStore input.render id)
 

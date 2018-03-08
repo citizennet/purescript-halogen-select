@@ -29,9 +29,10 @@ data Query a
 
 type State =
   { items    :: Array TypeaheadItem
-  , selected :: Array TypeaheadItem }
+  , selected :: Array TypeaheadItem
+  , keepOpen :: Boolean }
 
-type Input = Array String
+type Input = { items :: Array String, keepOpen :: Boolean }
 data Message = Void
 
 type ChildSlot = Unit
@@ -49,7 +50,7 @@ component =
     }
   where
     initialState :: Input -> State
-    initialState i = { items: i, selected: [] }
+    initialState i = { items: i.items, selected: [], keepOpen: i.keepOpen }
 
     render
       :: State
@@ -89,11 +90,19 @@ component =
 
         Select.Selected item -> do
           st <- H.get
+
+          _ <- if st.keepOpen
+            then pure unit
+            else do
+              _ <- H.query unit $ H.action $ Select.SetVisibility Select.Off
+              pure unit
+
           if length (filter ((==) item) st.items) > 0
             then H.modify _ { selected = ( item : st.selected ) }
             else H.modify _
                   { items = ( item : st.items )
                   , selected = ( item : st.selected ) }
+
           newSt <- H.get
           let newItems = difference newSt.items newSt.selected
           _ <- H.query unit $ H.action $ Select.ReplaceItems newItems
@@ -134,12 +143,17 @@ renderInputContainer state = HH.div_ [ renderInput, renderContainer ]
         then []
         else [ renderItems $ renderItem `mapWithIndex` state.items ]
       where
+        renderChild =
+          HH.div
+          [ HE.onClick $ HE.input_ $ Select.Raise $ H.action $ Log "I was clicked" ]
+          [ HH.text "CLICK ME I'M FROM THE PARENT" ]
+
         renderItems html =
           HH.div
           ( Setters.setContainerProps
             [ class_ "absolute bg-white shadow rounded-sm pin-t pin-l w-full" ]
           )
-          [ HH.ul [ class_ "list-reset" ] html ]
+          [ renderChild, HH.ul [ class_ "list-reset" ] html ]
 
         renderItem index item =
           HH.li ( Setters.setItemProps index props ) [ HH.text item ]
