@@ -17,7 +17,8 @@ setInputProps = flip (<>)
   [ HE.onFocus      $ HE.input CaptureFocus
   , HE.onKeyDown    $ HE.input Key
   , HE.onValueInput $ HE.input Search
-  , HE.onBlur   $ HE.input_ $ SetVisibility Off
+  , HE.onMouseDown  $ HE.input_ $ SetVisibility On
+  , HE.onBlur       $ HE.input_ $ SetVisibility Off
   , HP.tabIndex 0
   ]
 

@@ -197,19 +197,20 @@ component =
         eval $ SetVisibility On a
 
       Key ev a -> do
-        (Tuple _ st) <- getState
-        if st.visibility == Off then pure a else do
-           let prevent = H.liftEff <<< preventDefault <<< KE.keyboardEventToEvent
-           case KE.code ev of
-            "ArrowUp"   -> prevent ev *> (eval $ Highlight Prev a)
-            "ArrowDown" -> prevent ev *> (eval $ Highlight Next a)
-            "Escape"    -> a <$ do
-               prevent ev
-               traverse_ (H.liftEff <<< blur) st.inputElement
-            "Enter"     -> a <$ do
-              prevent ev
-              traverse_ (\index -> eval $ Select index a) st.highlightedIndex
-            otherKey    -> pure a
+        _ <- eval $ SetVisibility On a
+        let prevent = H.liftEff <<< preventDefault <<< KE.keyboardEventToEvent
+        case KE.code ev of
+         "ArrowUp"   -> prevent ev *> (eval $ Highlight Prev a)
+         "ArrowDown" -> prevent ev *> (eval $ Highlight Next a)
+         "Escape"    -> a <$ do
+           (Tuple _ st) <- getState
+           prevent ev
+           traverse_ (H.liftEff <<< blur) st.inputElement
+         "Enter"     -> a <$ do
+           (Tuple _ st) <- getState
+           prevent ev
+           traverse_ (\index -> eval $ Select index a) st.highlightedIndex
+         otherKey    -> pure a
 
       PreventClick ev a -> a <$ do
         H.liftEff <<< preventDefault <<< ME.mouseEventToEvent $ ev
