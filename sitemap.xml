@@ -1,22 +1,22 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     
         <url>
-            <loc>/purescript-halogen-select/tutorials/dropdown/</loc>
-            
-        </url>
-    
-        <url>
             <loc>/purescript-halogen-select/documentation/functions/</loc>
             
         </url>
     
-    
         <url>
-            <loc>/purescript-halogen-select/</loc>
+            <loc>/purescript-halogen-select/tutorials/dropdown/</loc>
+            
         </url>
+    
     
         <url>
             <loc>/purescript-halogen-select/documentation/</loc>
+        </url>
+    
+        <url>
+            <loc>/purescript-halogen-select/</loc>
         </url>
     
         <url>
