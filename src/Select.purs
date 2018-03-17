@@ -4,16 +4,16 @@ import Prelude
 
 import Control.Comonad (extract)
 import Control.Comonad.Store (Store, seeks, store)
-import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Aff (Fiber, delay, error, forkAff, killFiber)
 import Control.Monad.Aff.AVar (AVar, makeEmptyVar, putVar, takeVar, AVAR)
+import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Except (runExcept)
 import DOM (DOM)
 import DOM.Event.Event (preventDefault, currentTarget)
+import DOM.Event.FocusEvent as FE
 import DOM.Event.KeyboardEvent as KE
 import DOM.Event.MouseEvent as ME
-import DOM.Event.FocusEvent as FE
-import DOM.HTML.HTMLElement (blur)
+import DOM.HTML.HTMLElement (blur, focus)
 import DOM.HTML.Types (HTMLElement, readHTMLElement)
 import Data.Array (length, (!!))
 import Data.Either (hush)
@@ -54,6 +54,7 @@ data Query o item eff a
   | Highlight Target a
   | Select Int a
   | CaptureFocus FE.FocusEvent a
+  | TriggerFocus a
   | Key KE.KeyboardEvent a
   | ItemClick Int ME.MouseEvent a
   | PreventClick ME.MouseEvent a
@@ -195,6 +196,10 @@ component =
               <<< FE.focusEventToEvent
         H.modify $ seeks _ { inputElement = elementFromFocusEvent focusEvent }
         eval $ SetVisibility On a
+
+      TriggerFocus a -> a <$ do
+        (Tuple _ st) <- getState
+        traverse_ (H.liftEff <<< focus) st.inputElement
 
       Key ev a -> do
         _ <- eval $ SetVisibility On a
