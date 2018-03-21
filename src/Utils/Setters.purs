@@ -10,6 +10,7 @@ import Select (Query(..), Target(..), Visibility(..))
 type ToggleProps p =
   ( onFocus :: ET.FocusEvent
   , onKeyDown :: ET.KeyboardEvent
+  , onMouseDown :: ET.MouseEvent
   , onBlur :: ET.FocusEvent
   , tabIndex :: Int
   | p
@@ -37,9 +38,10 @@ setToggleProps
    . Array (HP.IProp (ToggleProps p) (Query o item eff Unit))
   -> Array (HP.IProp (ToggleProps p) (Query o item eff Unit))
 setToggleProps = flip (<>)
-  [ HE.onFocus    $ HE.input CaptureFocus
-  , HE.onKeyDown  $ HE.input Key
-  , HE.onBlur $ HE.input_ $ SetVisibility Off
+  [ HE.onFocus     $ HE.input CaptureFocus
+  , HE.onKeyDown   $ HE.input Key
+  , HE.onMouseDown $ HE.input_ ToggleVisibility
+  , HE.onBlur      $ HE.input_ $ SetVisibility Off
   , HP.tabIndex 0
   ]
 
