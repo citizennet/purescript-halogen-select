@@ -84,6 +84,9 @@ setItemProps
   -> Array (HP.IProp (ItemProps p) (Query o item eff Unit))
   -> Array (HP.IProp (ItemProps p) (Query o item eff Unit))
 setItemProps index = flip (<>)
-  [ HE.onMouseDown $ HE.input  $ ItemClick index
+  [ HE.onMouseDown $ HE.input  $ \ev a ->
+      (H.action $ PreventClick ev)
+      `andThen`
+      Select index a
   , HE.onMouseOver $ HE.input_ $ Highlight (Index index)
   ]

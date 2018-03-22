@@ -58,7 +58,6 @@ data Query o item eff a
   | CaptureFocus ET.Event a
   | TriggerFocus a
   | Key KE.KeyboardEvent a
-  | ItemClick Int ME.MouseEvent a
   | PreventClick ME.MouseEvent a
   | SetVisibility Visibility a
   | ToggleVisibility a
@@ -228,10 +227,6 @@ component =
 
       PreventClick ev a -> a <$ do
         H.liftEff <<< preventDefault <<< ME.mouseEventToEvent $ ev
-
-      ItemClick index ev a -> do
-        _ <- eval $ PreventClick ev a
-        eval $ Select index a
 
       SetVisibility v a -> a <$ do
         (Tuple _ st) <- getState
