@@ -45,11 +45,15 @@ setToggleProps = flip (<>)
   [ HE.onFocus $ HE.input $ \ev a ->
       (H.action $ CaptureFocus $ FE.focusEventToEvent ev)
       `andThen`
-      ToggleVisibility a
+      SetVisibility On a
   , HE.onMouseDown $ HE.input $ \ev a ->
       (H.action $ CaptureFocus $ ME.mouseEventToEvent ev)
       `andThen`
-      TriggerFocus a
+      (H.action $ PreventClick ev)
+      `andThen`
+      (H.action TriggerFocus)
+      `andThen`
+      ToggleVisibility a
   , HE.onKeyDown $ HE.input Key
   , HE.onBlur $ HE.input_ $ SetVisibility Off
   , HP.tabIndex 0

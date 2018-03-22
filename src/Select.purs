@@ -2,7 +2,6 @@ module Select where
 
 import Prelude
 
-import Debug.Trace (spy)
 import Control.Comonad (extract)
 import Control.Comonad.Store (Store, seeks, store)
 import Control.Monad.Aff (Fiber, delay, error, forkAff, killFiber)
@@ -202,12 +201,12 @@ component =
               <<< readHTMLElement
               <<< toForeign
               <<< currentTarget
-        H.modify $ seeks _ { inputElement = spy $ elementFromEvent event }
+        H.modify $ seeks _ { inputElement = elementFromEvent event }
         pure a
 
       TriggerFocus a -> a <$ do
         (Tuple _ st) <- getState
-        traverse_ (H.liftEff <<< focus) (spy st.inputElement)
+        traverse_ (H.liftEff <<< focus) st.inputElement
 
       Key ev a -> do
         _ <- eval $ SetVisibility On a
@@ -236,7 +235,6 @@ component =
 
       ToggleVisibility a -> a <$ do
         (Tuple _ st) <- getState
-        _ <- pure $ spy "Visibility toggled"
         case st.visibility of
           Off -> eval $ SetVisibility On a
           On  -> eval $ SetVisibility Off a
