@@ -43,11 +43,11 @@ setToggleProps
   -> Array (HP.IProp (ToggleProps p) (Query o item eff Unit))
 setToggleProps = flip (<>)
   [ HE.onFocus $ HE.input $ \ev a ->
-      (H.action $ CaptureFocus $ FE.focusEventToEvent ev)
+      (H.action $ CaptureRef $ FE.focusEventToEvent ev)
       `andThen`
       SetVisibility On a
   , HE.onMouseDown $ HE.input $ \ev a ->
-      (H.action $ CaptureFocus $ ME.mouseEventToEvent ev)
+      (H.action $ CaptureRef $ ME.mouseEventToEvent ev)
       `andThen`
       (H.action $ PreventClick ev)
       `andThen`
@@ -65,7 +65,7 @@ setInputProps
   -> Array (HP.IProp (InputProps p) (Query o item eff Unit))
 setInputProps = flip (<>)
   [ HE.onFocus $ HE.input $ \ev a ->
-      (H.action $ CaptureFocus $ FE.focusEventToEvent ev)
+      (H.action $ CaptureRef $ FE.focusEventToEvent ev)
       `andThen`
       SetVisibility On a
   , HE.onKeyDown $ HE.input Key

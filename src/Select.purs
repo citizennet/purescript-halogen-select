@@ -54,7 +54,7 @@ data Query o item eff a
   = Search String a
   | Highlight Target a
   | Select Int a
-  | CaptureFocus ET.Event a
+  | CaptureRef ET.Event a
   | TriggerFocus a
   | Key KE.KeyboardEvent a
   | PreventClick ME.MouseEvent a
@@ -193,7 +193,7 @@ component =
           Just item -> H.raise (Selected item) *> pure a
           _ -> pure a -- Should not be possible.
 
-      CaptureFocus event a -> a <$ do
+      CaptureRef event a -> a <$ do
         (Tuple _ st) <- getState
         let elementFromEvent
               = hush
