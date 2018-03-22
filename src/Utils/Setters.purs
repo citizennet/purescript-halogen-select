@@ -5,11 +5,10 @@ import Prelude
 import DOM.Event.FocusEvent as FE
 import DOM.Event.MouseEvent as ME
 import DOM.Event.Types as ET
-import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Select (Query(..), Target(..), Visibility(..))
+import Select (Query(..), Target(..), Visibility(..), andThen)
 
 type ToggleProps p =
   ( onFocus :: ET.FocusEvent
@@ -43,10 +42,16 @@ setToggleProps
    . Array (HP.IProp (ToggleProps p) (Query o item eff Unit))
   -> Array (HP.IProp (ToggleProps p) (Query o item eff Unit))
 setToggleProps = flip (<>)
-  [ HE.onFocus     $ HE.input $ CaptureFocusThen (Just $ H.action ToggleVisibility) <<< FE.focusEventToEvent
-  , HE.onKeyDown   $ HE.input Key
-  , HE.onMouseDown $ HE.input $ CaptureFocusThen (Just $ H.action TriggerFocus) <<< ME.mouseEventToEvent
-  , HE.onBlur      $ HE.input_ $ SetVisibility Off
+  [ HE.onFocus $ HE.input $ \ev a ->
+      (H.action $ CaptureFocus $ FE.focusEventToEvent ev)
+      `andThen`
+      ToggleVisibility a
+  , HE.onMouseDown $ HE.input $ \ev a ->
+      (H.action $ CaptureFocus $ ME.mouseEventToEvent ev)
+      `andThen`
+      TriggerFocus a
+  , HE.onKeyDown $ HE.input Key
+  , HE.onBlur $ HE.input_ $ SetVisibility Off
   , HP.tabIndex 0
   ]
 
@@ -55,11 +60,14 @@ setInputProps
    . Array (HP.IProp (InputProps p) (Query o item eff Unit))
   -> Array (HP.IProp (InputProps p) (Query o item eff Unit))
 setInputProps = flip (<>)
-  [ HE.onFocus      $ HE.input $ CaptureFocusThen (Just $ H.action $ SetVisibility On) <<< FE.focusEventToEvent
-  , HE.onKeyDown    $ HE.input Key
+  [ HE.onFocus $ HE.input $ \ev a ->
+      (H.action $ CaptureFocus $ FE.focusEventToEvent ev)
+      `andThen`
+      SetVisibility On a
+  , HE.onKeyDown $ HE.input Key
   , HE.onValueInput $ HE.input Search
-  , HE.onMouseDown  $ HE.input_ $ SetVisibility On
-  , HE.onBlur       $ HE.input_ $ SetVisibility Off
+  , HE.onMouseDown $ HE.input_ $ SetVisibility On
+  , HE.onBlur $ HE.input_ $ SetVisibility Off
   , HP.tabIndex 0
   ]
 
