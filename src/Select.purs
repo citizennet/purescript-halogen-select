@@ -10,7 +10,7 @@ import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Except (runExcept)
 import DOM (DOM)
 import DOM.Event.Event (preventDefault, currentTarget)
-import DOM.Event.FocusEvent as FE
+import DOM.Event.Types as ET
 import DOM.Event.KeyboardEvent as KE
 import DOM.Event.MouseEvent as ME
 import DOM.HTML.HTMLElement (blur, focus)
@@ -45,7 +45,6 @@ type StateStore o item eff
 
 type Effects eff = ( avar :: AVAR, dom :: DOM | eff )
 
-
 ----------
 -- Core Constructors
 
@@ -53,7 +52,7 @@ data Query o item eff a
   = Search String a
   | Highlight Target a
   | Select Int a
-  | CaptureFocus FE.FocusEvent a
+  | CaptureFocusThen (Maybe (Query o item eff Unit)) ET.Event a
   | TriggerFocus a
   | Key KE.KeyboardEvent a
   | ItemClick Int ME.MouseEvent a
@@ -185,17 +184,16 @@ component =
           Just item -> H.raise (Selected item) *> pure a
           _ -> pure a -- Should not be possible.
 
-      CaptureFocus focusEvent a -> a <$ do
+      CaptureFocusThen query event a -> a <$ do
         (Tuple _ st) <- getState
-        let elementFromFocusEvent
+        let elementFromEvent
               = hush
               <<< runExcept
               <<< readHTMLElement
               <<< toForeign
               <<< currentTarget
-              <<< FE.focusEventToEvent
-        H.modify $ seeks _ { inputElement = elementFromFocusEvent focusEvent }
-        eval $ SetVisibility On a
+        H.modify $ seeks _ { inputElement = elementFromEvent event }
+        traverse_ eval query
 
       TriggerFocus a -> a <$ do
         (Tuple _ st) <- getState

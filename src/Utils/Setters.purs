@@ -2,7 +2,11 @@ module Select.Utils.Setters where
 
 import Prelude
 
+import DOM.Event.FocusEvent as FE
+import DOM.Event.MouseEvent as ME
 import DOM.Event.Types as ET
+import Data.Maybe (Maybe(..))
+import Halogen as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Select (Query(..), Target(..), Visibility(..))
@@ -11,6 +15,7 @@ type ToggleProps p =
   ( onFocus :: ET.FocusEvent
   , onKeyDown :: ET.KeyboardEvent
   , onMouseDown :: ET.MouseEvent
+  , onClick :: ET.MouseEvent
   , onBlur :: ET.FocusEvent
   , tabIndex :: Int
   | p
@@ -38,9 +43,10 @@ setToggleProps
    . Array (HP.IProp (ToggleProps p) (Query o item eff Unit))
   -> Array (HP.IProp (ToggleProps p) (Query o item eff Unit))
 setToggleProps = flip (<>)
-  [ HE.onFocus     $ HE.input CaptureFocus
+  [ HE.onFocus     $ HE.input $ CaptureFocusThen Nothing <<< FE.focusEventToEvent
   , HE.onKeyDown   $ HE.input Key
   , HE.onMouseDown $ HE.input_ ToggleVisibility
+  , HE.onClick     $ HE.input $ CaptureFocusThen (Just $ H.action TriggerFocus) <<< ME.mouseEventToEvent
   , HE.onBlur      $ HE.input_ $ SetVisibility Off
   , HP.tabIndex 0
   ]
@@ -50,7 +56,7 @@ setInputProps
    . Array (HP.IProp (InputProps p) (Query o item eff Unit))
   -> Array (HP.IProp (InputProps p) (Query o item eff Unit))
 setInputProps = flip (<>)
-  [ HE.onFocus      $ HE.input CaptureFocus
+  [ HE.onFocus      $ HE.input $ CaptureFocusThen (Just $ H.action $ SetVisibility On) <<< FE.focusEventToEvent
   , HE.onKeyDown    $ HE.input Key
   , HE.onValueInput $ HE.input Search
   , HE.onMouseDown  $ HE.input_ $ SetVisibility On
