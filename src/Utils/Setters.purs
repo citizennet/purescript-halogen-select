@@ -43,10 +43,9 @@ setToggleProps
    . Array (HP.IProp (ToggleProps p) (Query o item eff Unit))
   -> Array (HP.IProp (ToggleProps p) (Query o item eff Unit))
 setToggleProps = flip (<>)
-  [ HE.onFocus     $ HE.input $ CaptureFocusThen Nothing <<< FE.focusEventToEvent
+  [ HE.onFocus     $ HE.input $ CaptureFocusThen (Just $ H.action ToggleVisibility) <<< FE.focusEventToEvent
   , HE.onKeyDown   $ HE.input Key
-  , HE.onMouseDown $ HE.input_ ToggleVisibility
-  , HE.onClick     $ HE.input $ CaptureFocusThen (Just $ H.action TriggerFocus) <<< ME.mouseEventToEvent
+  , HE.onMouseDown $ HE.input $ CaptureFocusThen (Just $ H.action TriggerFocus) <<< ME.mouseEventToEvent
   , HE.onBlur      $ HE.input_ $ SetVisibility Off
   , HP.tabIndex 0
   ]
