@@ -8,20 +8,22 @@ import Control.Monad.Aff (Fiber, delay, error, forkAff, killFiber)
 import Control.Monad.Aff.AVar (AVar, makeEmptyVar, putVar, takeVar, AVAR)
 import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Except (runExcept)
-import DOM (DOM)
-import DOM.Event.Event (preventDefault, currentTarget)
-import DOM.Event.FocusEvent as FE
-import DOM.Event.KeyboardEvent as KE
-import DOM.Event.MouseEvent as ME
-import DOM.HTML.HTMLElement (blur, focus)
-import DOM.HTML.Types (HTMLElement, readHTMLElement)
 import Data.Array (length, (!!))
 import Data.Either (hush)
+import Data.Functor.Day (Day, day, runDay)
 import Data.Foreign (toForeign)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (traverse_)
 import Data.Tuple (Tuple(..))
+import Data.Newtype (class Newtype, unwrap)
+import DOM (DOM)
+import DOM.Event.Event (preventDefault, currentTarget)
+import DOM.Event.Types as ET
+import DOM.Event.KeyboardEvent as KE
+import DOM.Event.MouseEvent as ME
+import DOM.HTML.HTMLElement (blur, focus)
+import DOM.HTML.Types (HTMLElement, readHTMLElement)
 import Halogen (Component, ComponentDSL, ComponentHTML, component, liftAff, liftEff, modify) as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
@@ -45,7 +47,6 @@ type StateStore o item eff
 
 type Effects eff = ( avar :: AVAR, dom :: DOM | eff )
 
-
 ----------
 -- Core Constructors
 
@@ -53,16 +54,23 @@ data Query o item eff a
   = Search String a
   | Highlight Target a
   | Select Int a
-  | CaptureFocus FE.FocusEvent a
+  | CaptureRef ET.Event a
   | TriggerFocus a
   | Key KE.KeyboardEvent a
-  | ItemClick Int ME.MouseEvent a
   | PreventClick ME.MouseEvent a
   | SetVisibility Visibility a
   | ToggleVisibility a
   | ReplaceItems (Array item) a
+  | AndThen (DayPair (Query o item eff) a)
   | Raise (o Unit) a
   | Receive (Input o item eff) a
+
+newtype DayPair f a = DayPair (Day f f a)
+derive instance newtypeDayPair :: Newtype (DayPair f a) _
+
+-- | Helper function for specifying two queries to run, in order.
+andThen :: ∀ o item eff a. Query o item eff Unit -> Query o item eff a -> Query o item eff a
+andThen q1 q2 = AndThen $ DayPair $ day (const id) q1 q2
 
 data Target = Prev | Next | Index Int
 derive instance eqTarget :: Eq Target
@@ -185,17 +193,16 @@ component =
           Just item -> H.raise (Selected item) *> pure a
           _ -> pure a -- Should not be possible.
 
-      CaptureFocus focusEvent a -> a <$ do
+      CaptureRef event a -> a <$ do
         (Tuple _ st) <- getState
-        let elementFromFocusEvent
+        let elementFromEvent
               = hush
               <<< runExcept
               <<< readHTMLElement
               <<< toForeign
               <<< currentTarget
-              <<< FE.focusEventToEvent
-        H.modify $ seeks _ { inputElement = elementFromFocusEvent focusEvent }
-        eval $ SetVisibility On a
+        H.modify $ seeks _ { inputElement = elementFromEvent event }
+        pure a
 
       TriggerFocus a -> a <$ do
         (Tuple _ st) <- getState
@@ -220,10 +227,6 @@ component =
       PreventClick ev a -> a <$ do
         H.liftEff <<< preventDefault <<< ME.mouseEventToEvent $ ev
 
-      ItemClick index ev a -> do
-        _ <- eval $ PreventClick ev a
-        eval $ Select index a
-
       SetVisibility v a -> a <$ do
         (Tuple _ st) <- getState
         when (st.visibility /= v) do
@@ -242,9 +245,14 @@ component =
           , lastIndex = length items - 1
           , highlightedIndex = Nothing }
 
+      AndThen dayQuery ->
+        unwrap dayQuery # runDay \get fx gy ->
+          get <$> eval fx <*> eval gy
+
       Raise parentQuery a -> a <$ do
         H.raise (Emit parentQuery)
 
       Receive input a -> a <$ do
         H.modify (updateStore input.render id)
+
 

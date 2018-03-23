@@ -11,9 +11,11 @@ import Control.Monad.Eff.Now (NOW)
 import Control.Monad.Eff.Timer (TIMER)
 import DOM (DOM)
 import Data.Maybe (Maybe(..))
-import Docs.Components.Typeahead as Typeahead
 import Halogen as H
 import Halogen.HTML as HH
+
+import Docs.Components.Typeahead as Typeahead
+import Docs.Components.Dropdown as Dropdown
 
 ----------
 -- Component Types
@@ -47,6 +49,31 @@ typeahead =
 
     render :: Unit -> HTML Typeahead.Query m
     render _ = HH.slot unit Typeahead.component { items: users, keepOpen: false } (const Nothing)
+
+    users :: Array String
+    users =
+      [ "Lyndsey Duffield"
+      , "Chris Pine"
+      , "Kevin Hart"
+      , "Dave Chappelle"
+      , "Hannibal Buress"
+      , "Rico Suave"
+      ]
+
+dropdown :: ∀ eff m. MonadAff ( Effects eff ) m => Component m
+dropdown =
+  H.parentComponent
+    { initialState: const unit
+    , render
+    , eval
+    , receiver: const Nothing
+    }
+  where
+    eval :: Query ~> DSL Dropdown.Query m
+    eval (NoOp a) = pure a
+
+    render :: Unit -> HTML Dropdown.Query m
+    render _ = HH.slot unit Dropdown.component { items: users } (const Nothing)
 
     users :: Array String
     users =
