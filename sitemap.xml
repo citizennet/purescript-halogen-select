@@ -1,12 +1,12 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     
         <url>
-            <loc>/purescript-halogen-select/documentation/functions/</loc>
+            <loc>/purescript-halogen-select/tutorials/dropdown/</loc>
             
         </url>
     
         <url>
-            <loc>/purescript-halogen-select/tutorials/dropdown/</loc>
+            <loc>/purescript-halogen-select/documentation/functions/</loc>
             
         </url>
     
@@ -16,11 +16,11 @@
         </url>
     
         <url>
-            <loc>/purescript-halogen-select/</loc>
+            <loc>/purescript-halogen-select/tutorials/</loc>
         </url>
     
         <url>
-            <loc>/purescript-halogen-select/tutorials/</loc>
+            <loc>/purescript-halogen-select/</loc>
         </url>
     
     
