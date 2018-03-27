@@ -4,7 +4,7 @@
 
 - [Module Documentation on Pursuit](https://pursuit.purescript.org/packages/purescript-halogen-select)
 - [Official Documentation / Tutorials / Getting Started](https://citizennet.github.io/purescript-halogen-select)
-- [CitizenNet UI Repository](https://citizennet.github.io/purescript-ocelot)
+- [CitizenNet UI Repository](https://github.com/citizennet/purescript-ocelot)
 
 **This library is under active development and changes often. If you need a stable selection library, we're not there yet! Please consider helping out with a pull request to add features you need and help us reach 1.0!**
 
@@ -23,7 +23,7 @@ bower i --save purescript-halogen-select
 You can see working examples of components built using this library in a few places:
 
 - See the [Components](https://github.com/citizennet/purescript-halogen-select/tree/master/docs/src/Components) folder from the documentation site, or
-- Check out the official [CitizenNet UI Repository](https://citizennet.github.io/purescript-ocelot) where we use this library to make our app's design system.
+- Check out the official [CitizenNet UI Repository](https://github.com/citizennet/purescript-ocelot) where we use this library to make our app's design system.
 
 Have an example of a component you've built with `Select`? Open a PR or drop us a message and we can help review and showcase your work.
 
