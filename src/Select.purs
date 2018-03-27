@@ -1,3 +1,8 @@
+-- | This module exposes a component that can be used to build accessible selection
+-- | user interfaces. You are responsible for providing all rendering, with the help
+-- | of the `Select.Utils.Setters` module, but this component provides the relevant
+-- | behaviors for dropdowns, autocompletes, typeaheads, keyboard-navigable calendars,
+-- | and other selection UIs.
 module Select where
 
 import Prelude
@@ -33,23 +38,60 @@ import Select.Internal.State (updateStore, getState)
 ----------
 -- Component Types
 
+-- | A useful shorthand for the Halogen component type
 type Component o item eff m
   = H.Component HH.HTML (Query o item eff) (Input o item eff) (Message o item) m
 
+-- | A useful shorthand for the Halogen component HTML type
 type ComponentHTML o item eff
   = H.ComponentHTML (Query o item eff)
 
+-- | A useful shorthand for the Halogen component DSL type
 type ComponentDSL o item eff m
   = H.ComponentDSL (StateStore o item eff) (Query o item eff) (Message o item) m
 
+-- | The component's state type, wrapped in `Store`. The state and result of the
+-- | render function are stored so that `extract` from `Control.Comonad` can be
+-- | used to pull out the render function.
 type StateStore o item eff
   = Store (State item eff) (ComponentHTML o item eff)
 
+-- | The effects necessary for this component to run. Your component will need to
+-- | also support these effects.
 type Effects eff = ( avar :: AVAR, dom :: DOM | eff )
 
 ----------
 -- Core Constructors
 
+-- | These queries ensure the component behaves as expected so long as you use the
+-- | helper functions from `Select.Setters.Utils` to attach them to the right elements.
+-- |
+-- | - `o`: The query type of the component that will mount this component in a child slot.
+-- |        This allows you to embed your own queries into the `Select` component.
+-- | - `item`: Your custom item type. It can be a simple type like `String`, or something
+-- |           complex like `CalendarItem StartDate EndDate (Maybe Disabled)`.
+-- | - `eff`: The component's effects.
+-- |
+-- | - `Search`: Perform a new search with the included string.
+-- | - `Highlight`: Change the highlighted index to the next item, previous item, or a
+-- |                specific index.
+-- | - `Select`: Triggers the "Selected" message for the item at the specified index.
+-- | - `CaptureRef`: From an event, captures a reference to the element that triggered
+-- |                 the event. Used to manage focus / blur for elements without requiring
+-- |                 a particular identifier.
+-- | - `TriggerFocus`: Trigger the DOM focus event for the element we have a reference to
+-- | - `Key`: Register a key event. `TextInput`-driven components use these only for navigation,
+-- |          whereas `Toggle`-driven components also use the key stream for highlighting.
+-- | - `PreventClick`: A helper query to prevent click events from bubbling up
+-- | - `SetVisibility`: Sets the container visibility to on or off
+-- | - `ToggleVisibility`: Toggles the container visibility
+-- | - `ReplaceItems`: Replaces all items in state with the new array of items
+-- | - `AndThen`: A helper query to evaluate other queries in sequence. Useful when a single
+-- |              event (like a click) needs to cause multiple queries to trigger in order.
+-- | - `Raise`: A helper query that the component that mounts `Select` can use to embed its
+-- |            own queries. Triggers an `Emit` message containing the query when triggered.
+-- |            This can be used to easily extend `Select` with more behaviors.
+-- | - `Receive`: Sets the component with new input
 data Query o item eff a
   = Search String a
   | Highlight Target a
@@ -65,27 +107,59 @@ data Query o item eff a
   | Raise (o Unit) a
   | Receive (Input o item eff) a
 
+-- | A type representing a pair of queries that can be run in order.
 newtype DayPair f a = DayPair (Day f f a)
 derive instance newtypeDayPair :: Newtype (DayPair f a) _
 
 -- | Helper function for specifying two queries to run, in order.
+-- |
+-- | ```purescript
+-- | [ onClick $ HE.input $ \ev a ->
+-- |     H.action (PreventClick ev)
+-- |     `andThen`
+-- |     TriggerFocus a
+-- | ]
+-- | ```
 andThen :: ∀ o item eff a. Query o item eff Unit -> Query o item eff a -> Query o item eff a
 andThen q1 q2 = AndThen $ DayPair $ day (const id) q1 q2
 
+-- | Represents a way to navigate on `Highlight` events: to the previous
+-- | item, next item, or the item at a particular index.
 data Target = Prev | Next | Index Int
 derive instance eqTarget :: Eq Target
 
+-- | Represents whether the component should display the item container. You
+-- | should use this in your render function to control visibility:
+-- |
+-- | ```purescript
+-- | render state = if state.visibility == On then renderAll else renderInputOnly
+-- | ```
 data Visibility = Off | On
 derive instance eqVisibility :: Eq Visibility
 
 -- | Text-driven inputs will operate like a normal search-driven selection component.
 -- | Toggle-driven inputs will capture key streams and debounce in reverse (only notify
--- | about searches when time has expired). Perhaps could take a comparison function for
--- | automatic highlighting (optional).
+-- | about searches when time has expired).
 data InputType
   = TextInput
   | Toggle
 
+-- | The component's state, once unpacked from `Store`.
+-- |
+-- | - `inputType`: Controls whether the component is input-driven or toggle-driven
+-- | - `search`: The text the user has typed into the text input, or stream of keys
+-- |             they have typed on the toggle.
+-- | - `debounceTime`: How long, in milliseconds, before events should occur based
+-- |                   on user searches.
+-- | - `debouncer`: A representation of a running timer that, when it expires, will
+-- |                trigger debounced events.
+-- | - `inputElement`: A reference to the toggle or input element.
+-- | - `items`: An array of user-provided `item`s.
+-- | - `visibility`: Whether the array of items should be considered visible or not.
+-- |                 Useful for rendering.
+-- | - `highlightedIndex`: What item in the array of items should be considered
+-- |                       highlighted. Useful for rendering.
+-- | - `lastIndex`: The length of the array of items.
 type State item eff =
   { inputType        :: InputType
   , search           :: String
@@ -98,10 +172,15 @@ type State item eff =
   , lastIndex        :: Int
   }
 
+-- | Represents a running computation that, when it completes, will trigger debounced
+-- | effects.
 type Debouncer eff =
   { var   :: AVar Unit
   , fiber :: Fiber eff Unit }
 
+-- | The component's input type, which includes the component`s render function. This
+-- | render function can also be used to share data with the parent component, as every
+-- | time the parent re-renders, the render function will refresh in `Select`.
 type Input o item eff =
   { inputType     :: InputType
   , items         :: Array item
@@ -110,6 +189,14 @@ type Input o item eff =
   , render        :: State item eff -> ComponentHTML o item eff
   }
 
+-- | The parent is only notified for a few important events, but `Emit` makes it
+-- | possible to raise arbitrary queries on events.
+-- |
+-- | - `Searched`: A new text search has been performed. Contains the text.
+-- | - `Selected`: An item has been selected. Contains the item.
+-- | - `VisibilityChanged`: The visibility has changed. Contains the new visibility.
+-- | - `Emit`: An embedded query has been triggered and can now be evaluated.
+-- |           Contains the query.
 data Message o item
   = Searched String
   | Selected item
@@ -254,5 +341,4 @@ component =
 
       Receive input a -> a <$ do
         H.modify (updateStore input.render id)
-
 
