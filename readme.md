@@ -8,7 +8,7 @@
 
 **This library is under active development and changes often. If you need a stable selection library, we're not there yet! Please consider helping out with a pull request to add features you need and help us reach 1.0!**
 
-## Get Started / Learn More
+# Get Started / Learn More
 
 There are a few ways to get started with the `Select` library.
 
@@ -19,13 +19,7 @@ There are a few ways to get started with the `Select` library.
 bower i --save purescript-halogen-select
 ```
 
-**Pursuit Package Documentation**  
-[The Select library and its module documentation are on Pursuit](https://pursuit.purescript.org/packages/purescript-halogen-select).
-
-**Official Docs, Tutorials & Getting Started**  
-To learn more about using `Select`, see [the official documentation site](https://citizennet.github.io/purescript-halogen-select).
-
-**Live Code**  
+**Examples**  
 You can see working examples of components built using this library in a few places:
 
 - See the [Components](https://github.com/citizennet/purescript-halogen-select/tree/master/docs/src/Components) folder from the documentation site, or
@@ -36,7 +30,7 @@ Have an example of a component you've built with `Select`? Open a PR or drop us 
 
 # Design Principles  
 
-The library provides essential behaviors for selection user interfaces as a group of Halogen components. But you won't find a single render function in the code. Instead, with the help of a few `getProps` helpers, you can write your HTML rendering however you'd like. You can freely include your own queries and the library will return them to be run. You can even use any data you want from your parent state in your render functions. The library manages user interaction, state, accessibility, and logic; you are responsible for rendering HTML depending on that state.
+The library provides essential behaviors for selection user interfaces as a group of Halogen components. But you won't find a single render function in the code. Instead, with the help of a few `setProps` helpers, you can write your HTML rendering however you'd like. You can freely include your own queries and the library will return them to be run. You can even use any data you want from your parent state in your render functions. The library manages user interaction, state, accessibility, and logic; you are responsible for rendering HTML depending on that state.
 
 1. Provide behaviors, not styles  
 Developers should be able to style and display dropdowns and typeaheads however they would like, rather than be forced to use particular CSS classes or re-implement the component with their HTML. This is accomplished with augmented render functions as described below. We provide the machinery; you provide the HTML and styles.
