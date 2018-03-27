@@ -20,7 +20,7 @@ bower i --save purescript-halogen-select
 ```
 
 **Pursuit Package Documentation**  
-[The Select library and its module documentation are on Pursuit](https://pursuit.purescript.org/packages/purescript-halogen-select). However, you are more likely to get value from the documentation site.
+[The Select library and its module documentation are on Pursuit](https://pursuit.purescript.org/packages/purescript-halogen-select).
 
 **Official Docs, Tutorials & Getting Started**  
 To learn more about using `Select`, see [the official documentation site](https://citizennet.github.io/purescript-halogen-select).
@@ -38,16 +38,16 @@ Have an example of a component you've built with `Select`? Open a PR or drop us 
 
 The library provides essential behaviors for selection user interfaces as a group of Halogen components. But you won't find a single render function in the code. Instead, with the help of a few `getProps` helpers, you can write your HTML rendering however you'd like. You can freely include your own queries and the library will return them to be run. You can even use any data you want from your parent state in your render functions. The library manages user interaction, state, accessibility, and logic; you are responsible for rendering HTML depending on that state.
 
-1. Provide behaviors, not styles
+1. Provide behaviors, not styles  
 Developers should be able to style and display dropdowns and typeaheads however they would like, rather than be forced to use particular CSS classes or re-implement the component with their HTML. This is accomplished with augmented render functions as described below. We provide the machinery; you provide the HTML and styles.
 
-2. Export the building blocks, not just the end result
+2. Export the building blocks, not just the end result  
 Developers should be able to take a core set of behaviors and choose how they would like to handle them in their own version of the component. If you would like the typeahead's functionality but do something fancy with the selected items, you should be able to. Each building block is exported.
 
-3. Require minimal configuration
+3. Require minimal configuration  
 Instantiating a typeahead shouldn't require a 50-field configuration record. We require at minimum two things: the data to populate the menu and the HTML to render that data. The rest is taken care of by the component. You are responsible for handling two things: when an item was selected, and when the user has performed a new search. If you want to do even less, you can use one of our default implementations to drop in to your project.
 
-4. Be accessible (Upcoming)
+4. Be accessible (Upcoming)  
 ARIA props and other features necessary for accessibility online should be handled properly without any setup.
 
 
@@ -62,33 +62,13 @@ For example, you can make your container compatible with the component with the 
 ```purescript
 [ ... your HTML ...
 , HH.span
-    ( getContainerProps [ ... your css & events ... ] ) -- Augments your props with our behaviors
+    ( setContainerProps [ ... your css & events ... ] ) -- Augments your props with our behaviors
     [ ... your HTML ... ]
 , ... your HTML ...
 ]
 ```
 
-> Warning: As of 1/12/2017, if your events are duplicated by ours, they will be overwritten and fail to trigger. Support for multiple handlers from the same event is not yet supported.
-
-### Available Render Helpers
-
-There are several helper functions you can use to attach the correct props to your selection UI. There are two kinds:
-
-- Helpers meant to be used on your rendering code which will render _inside_ the primitive;
-- Helpers meant to be used on special elements outside the primitives, like the `getToggleProps` helper which allows some focusable element on the page to control the container properly.
-
-Please see the [documentation site](https://citizennet.github.io/purescript-halogen-select/) for examples of these.
-
-<!-- generated via http://www.tablesgenerator.com/markdown_tables -->
-<!-- to update: https://docs.google.com/spreadsheets/d/1JSFWVPiLFQE4xkf8KEMFzSWH3C3pdACBzNQLfhOTasg/edit?usp=sharing -->
-
-| primitive | function                                                                                                                                                 | description                                                                                                                                                                              |
-|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Search    | `getInputProps`                                                                                                                                          | Use on the array of properties for the input field you want to use to capture user input                                                                                                 |
-| Container | `getItemProps`           | Attach events to an item in the container to support selection, highlighting, and key events (like Enter to select).                                                                      |
-| Container | `getContainerProps` | Attach properties to the HTML element that encloses the container. This makes sure you can select items without blurring the container, unless you want to.                              |
-| Container | `getChildProps`                                                                                                                                          | A helper to embed your own HTML and queries inside the container's render function. It will ensure that your events do not inadvertently steal focus or trigger a blur on the container. |
-| Container | `getToggleProps`                                                                                                                                         | Attach properties to a DOM node that will maintain focus and capture key and click events for the container. If you are using the search primitive, this helper is unnecessary.          |
+> Warning: If your events are duplicated by ours, they will be overwritten and fail to trigger.
 
 
 ## Inspiration & Thanks
