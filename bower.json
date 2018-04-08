@@ -36,7 +36,7 @@
     "purescript-transformers": "^3.5.0",
     "purescript-dom": "^4.15.0",
     "purescript-aff": "^4.0.0",
-    "purescript-day": "^9.1.0"
+    "purescript-strings": "^3.5.0"
   },
   "devDependencies": {
     "purescript-dom-classy": "^2.1.0",

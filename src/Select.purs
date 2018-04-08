@@ -13,22 +13,21 @@ import Control.Monad.Aff (Fiber, delay, error, forkAff, killFiber)
 import Control.Monad.Aff.AVar (AVar, makeEmptyVar, putVar, takeVar, AVAR)
 import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Except (runExcept)
+import Control.Monad.Free (Free, foldFree, liftF)
+import DOM (DOM)
+import DOM.Event.Event (preventDefault, currentTarget)
+import DOM.Event.KeyboardEvent as KE
+import DOM.Event.MouseEvent as ME
+import DOM.Event.Types as ET
+import DOM.HTML.HTMLElement (blur, focus)
+import DOM.HTML.Types (HTMLElement, readHTMLElement)
 import Data.Array (length, (!!))
 import Data.Either (hush)
-import Data.Functor.Day (Day, day, runDay)
 import Data.Foreign (toForeign)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (traverse_)
 import Data.Tuple (Tuple(..))
-import Data.Newtype (class Newtype, unwrap)
-import DOM (DOM)
-import DOM.Event.Event (preventDefault, currentTarget)
-import DOM.Event.Types as ET
-import DOM.Event.KeyboardEvent as KE
-import DOM.Event.MouseEvent as ME
-import DOM.HTML.HTMLElement (blur, focus)
-import DOM.HTML.Types (HTMLElement, readHTMLElement)
 import Halogen (Component, ComponentDSL, ComponentHTML, component, liftAff, liftEff, modify) as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
@@ -86,42 +85,72 @@ type Effects eff = ( avar :: AVAR, dom :: DOM | eff )
 -- | - `SetVisibility`: Sets the container visibility to on or off
 -- | - `ToggleVisibility`: Toggles the container visibility
 -- | - `ReplaceItems`: Replaces all items in state with the new array of items
--- | - `AndThen`: A helper query to evaluate other queries in sequence. Useful when a single
--- |              event (like a click) needs to cause multiple queries to trigger in order.
 -- | - `Raise`: A helper query that the component that mounts `Select` can use to embed its
 -- |            own queries. Triggers an `Emit` message containing the query when triggered.
 -- |            This can be used to easily extend `Select` with more behaviors.
 -- | - `Receive`: Sets the component with new input
-data Query o item eff a
+data QueryF o item eff a
   = Search String a
   | Highlight Target a
   | Select Int a
   | CaptureRef ET.Event a
-  | TriggerFocus a
+  | Focus Boolean a
   | Key KE.KeyboardEvent a
   | PreventClick ME.MouseEvent a
   | SetVisibility Visibility a
-  | ToggleVisibility a
+  | GetVisibility (Visibility -> a)
   | ReplaceItems (Array item) a
-  | AndThen (DayPair (Query o item eff) a)
   | Raise (o Unit) a
   | Receive (Input o item eff) a
 
--- | A type representing a pair of queries that can be run in order.
-newtype DayPair f a = DayPair (Day f f a)
-derive instance newtypeDayPair :: Newtype (DayPair f a) _
+type Query o item eff = Free (QueryF o item eff)
 
--- | Helper function for specifying two queries to run, in order.
--- |
--- | ```purescript
--- | [ onClick $ HE.input $ \ev a ->
--- |     H.action (PreventClick ev)
--- |     `andThen`
--- |     TriggerFocus a
--- | ]
--- | ```
-andThen :: ∀ o item eff a. Query o item eff Unit -> Query o item eff a -> Query o item eff a
-andThen q1 q2 = AndThen $ DayPair $ day (const id) q1 q2
+always :: ∀ a b. a -> b -> Maybe a
+always = const <<< Just
+
+search :: ∀ o item eff. String -> Query o item eff Unit
+search s = liftF (Search s unit)
+
+highlight :: ∀ o item eff. Target -> Query o item eff Unit
+highlight t = liftF (Highlight t unit)
+
+select :: ∀ o item eff. Int -> Query o item eff Unit
+select i = liftF (Select i unit)
+
+captureRef :: ∀ o item eff. ET.Event -> Query o item eff Unit
+captureRef r = liftF (CaptureRef r unit)
+
+triggerFocus :: ∀ o item eff. Query o item eff Unit
+triggerFocus = liftF (Focus true unit)
+
+triggerBlur :: ∀ o item eff. Query o item eff Unit
+triggerBlur = liftF (Focus false unit)
+
+key :: ∀ o item eff. KE.KeyboardEvent -> Query o item eff Unit
+key e = liftF (Key e unit)
+
+preventClick :: ∀ o item eff. ME.MouseEvent -> Query o item eff Unit
+preventClick i = liftF (PreventClick i unit)
+
+setVisibility :: ∀ o item eff. Visibility -> Query o item eff Unit
+setVisibility v = liftF (SetVisibility v unit)
+
+getVisibility :: ∀ o item eff. Query o item eff Visibility
+getVisibility = liftF (GetVisibility id)
+
+toggleVisibility :: ∀ o item eff. Query o item eff Unit
+toggleVisibility = getVisibility >>= setVisibility <<< case _ of
+  On -> Off
+  Off -> On
+
+replaceItems :: ∀ o item eff. Array item -> Query o item eff Unit
+replaceItems items = liftF (ReplaceItems items unit)
+
+raise :: ∀ o item eff. o Unit -> Query o item eff Unit
+raise o = liftF (Raise o unit)
+
+receive :: ∀ o item eff. Input o item eff -> Query o item eff Unit
+receive i = liftF (Receive i unit)
 
 -- | Represents a way to navigate on `Highlight` events: to the previous
 -- | item, next item, or the item at a particular index.
@@ -210,8 +239,8 @@ component =
   H.component
     { initialState
     , render: extract
-    , eval
-    , receiver: HE.input Receive
+    , eval: foldFree eval
+    , receiver: Just <<< receive
     }
   where
     initialState i = store i.render
@@ -226,7 +255,7 @@ component =
       , lastIndex: length i.items - 1
       }
 
-    eval :: (Query o item (Effects eff)) ~> ComponentDSL o item (Effects eff) m
+    eval :: (QueryF o item (Effects eff)) ~> ComponentDSL o item (Effects eff) m
     eval = case _ of
       Search str a -> a <$ do
         (Tuple _ st) <- getState
@@ -291,9 +320,9 @@ component =
         H.modify $ seeks _ { inputElement = elementFromEvent event }
         pure a
 
-      TriggerFocus a -> a <$ do
+      Focus focusOrBlur a -> a <$ do
         (Tuple _ st) <- getState
-        traverse_ (H.liftEff <<< focus) st.inputElement
+        traverse_ (H.liftEff <<< if focusOrBlur then focus else blur) st.inputElement
 
       Key ev a -> do
         _ <- eval $ SetVisibility On a
@@ -320,11 +349,9 @@ component =
           H.modify $ seeks _ { visibility = v, highlightedIndex = Just 0 }
           H.raise $ VisibilityChanged v
 
-      ToggleVisibility a -> a <$ do
+      GetVisibility f -> do
         (Tuple _ st) <- getState
-        case st.visibility of
-          Off -> eval $ SetVisibility On a
-          On  -> eval $ SetVisibility Off a
+        pure (f st.visibility)
 
       ReplaceItems items a -> a <$ do
         H.modify $ seeks _
@@ -332,13 +359,8 @@ component =
           , lastIndex = length items - 1
           , highlightedIndex = Nothing }
 
-      AndThen dayQuery ->
-        unwrap dayQuery # runDay \get fx gy ->
-          get <$> eval fx <*> eval gy
-
       Raise parentQuery a -> a <$ do
         H.raise (Emit parentQuery)
 
       Receive input a -> a <$ do
         H.modify (updateStore input.render id)
-

@@ -9,10 +9,12 @@ import Prelude
 import DOM.Event.FocusEvent as FE
 import DOM.Event.MouseEvent as ME
 import DOM.Event.Types as ET
+import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Select (Query(..), Target(..), Visibility(..), andThen)
+import Select (Query, Target(..), Visibility(..))
+import Select as Select
 
 -- | The properties that must be supported by the HTML element that serves
 -- | as a menu toggle. This should be used with toggle-driven `Select` components.
@@ -39,20 +41,21 @@ setToggleProps
    . Array (HP.IProp (ToggleProps p) (Query o item eff Unit))
   -> Array (HP.IProp (ToggleProps p) (Query o item eff Unit))
 setToggleProps = flip (<>)
-  [ HE.onFocus $ HE.input $ \ev a ->
-      (H.action $ CaptureRef $ FE.focusEventToEvent ev)
-      `andThen`
-      SetVisibility On a
-  , HE.onMouseDown $ HE.input $ \ev a ->
-      (H.action $ CaptureRef $ ME.mouseEventToEvent ev)
-      `andThen`
-      (H.action $ PreventClick ev)
-      `andThen`
-      (H.action TriggerFocus)
-      `andThen`
-      ToggleVisibility a
-  , HE.onKeyDown $ HE.input Key
-  , HE.onBlur $ HE.input_ $ SetVisibility Off
+  [ HE.onFocus \ev -> Just do
+      Select.captureRef $ FE.focusEventToEvent ev
+      Select.setVisibility On
+  , HE.onMouseDown \ev -> Just do
+      Select.captureRef $ ME.mouseEventToEvent ev
+      Select.preventClick ev
+      Select.getVisibility >>= case _ of
+        Select.On -> do
+          Select.triggerBlur
+          Select.setVisibility Select.Off
+        Select.Off -> do
+          Select.triggerFocus
+          Select.setVisibility Select.On
+  , HE.onKeyDown $ Just <<< Select.key
+  , HE.onBlur $ Select.always $ Select.setVisibility Off
   , HP.tabIndex 0
   ]
 
@@ -82,14 +85,13 @@ setInputProps
    . Array (HP.IProp (InputProps p) (Query o item eff Unit))
   -> Array (HP.IProp (InputProps p) (Query o item eff Unit))
 setInputProps = flip (<>)
-  [ HE.onFocus $ HE.input $ \ev a ->
-      (H.action $ CaptureRef $ FE.focusEventToEvent ev)
-      `andThen`
-      SetVisibility On a
-  , HE.onKeyDown $ HE.input Key
-  , HE.onValueInput $ HE.input Search
-  , HE.onMouseDown $ HE.input_ $ SetVisibility On
-  , HE.onBlur $ HE.input_ $ SetVisibility Off
+  [ HE.onFocus \ev -> Just do
+      Select.captureRef $ FE.focusEventToEvent ev
+      Select.setVisibility On
+  , HE.onKeyDown $ Just <<< Select.key
+  , HE.onValueInput $ Just <<< Select.search
+  , HE.onMouseDown $ Select.always $ Select.setVisibility On
+  , HE.onBlur $ Select.always $ Select.setVisibility Off
   , HP.tabIndex 0
   ]
 
@@ -105,6 +107,9 @@ type ItemProps p =
 -- | A helper function that augments an array of `IProps` with `ItemProps`. It
 -- | ensures items can be highlighted and selected.
 -- |
+-- | If the boolean argument is true, this will blur the select element when
+-- | the item is selected.
+-- |
 -- | This also expects an index for use in highlighting. It's useful in combination
 -- | with `mapWithIndex`:
 -- |
@@ -113,19 +118,35 @@ type ItemProps p =
 -- |
 -- | render = renderItem `mapWithIndex` itemsArray
 -- | ```
+setItemPropsBase
+  :: ∀ o item eff p
+   . Boolean
+  -> Int
+  -> Array (HP.IProp (ItemProps p) (Query o item eff Unit))
+  -> Array (HP.IProp (ItemProps p) (Query o item eff Unit))
+setItemPropsBase doBlur index = flip (<>)
+  [ HE.onMouseDown \ev -> Just do
+      Select.preventClick ev
+      Select.select index
+      when doBlur Select.triggerBlur
+  , HE.onMouseOver $ Select.always $ Select.highlight (Index index)
+  ]
+
+-- | As above, with no blur.
 setItemProps
   :: ∀ o item eff p
    . Int
   -> Array (HP.IProp (ItemProps p) (Query o item eff Unit))
   -> Array (HP.IProp (ItemProps p) (Query o item eff Unit))
-setItemProps index = flip (<>)
-  [ HE.onMouseDown $ HE.input  $ \ev a ->
-      (H.action $ PreventClick ev)
-      `andThen`
-      Select index a
-  , HE.onMouseOver $ HE.input_ $ Highlight (Index index)
-  ]
+setItemProps = setItemPropsBase false
 
+-- | As above but blurring when selected.
+setItemPropsAndBlur
+  :: ∀ o item eff p
+   . Int
+  -> Array (HP.IProp (ItemProps p) (Query o item eff Unit))
+  -> Array (HP.IProp (ItemProps p) (Query o item eff Unit))
+setItemPropsAndBlur = setItemPropsBase true
 
 -- | A helper function that augments an array of `IProps` with a `MouseDown`
 -- | handler. It ensures that clicking on an item within an enclosing HTML element
@@ -136,5 +157,4 @@ setContainerProps
    . Array (HP.IProp (onMouseDown :: ET.MouseEvent | p) (Query o item eff Unit))
   -> Array (HP.IProp (onMouseDown :: ET.MouseEvent | p) (Query o item eff Unit))
 setContainerProps = flip (<>)
-  [ HE.onMouseDown $ HE.input PreventClick ]
-
+  [ HE.onMouseDown $ Just <<< Select.preventClick ]
