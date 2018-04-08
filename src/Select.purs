@@ -76,24 +76,8 @@ type Effects eff = ( avar :: AVAR, dom :: DOM | eff )
 -- |           complex like `CalendarItem StartDate EndDate (Maybe Disabled)`.
 -- | - `eff`: The component's effects.
 -- |
--- | - `Search`: Perform a new search with the included string.
--- | - `Highlight`: Change the highlighted index to the next item, previous item, or a
--- |                specific index.
--- | - `Select`: Triggers the "Selected" message for the item at the specified index.
--- | - `CaptureRef`: From an event, captures a reference to the element that triggered
--- |                 the event. Used to manage focus / blur for elements without requiring
--- |                 a particular identifier.
--- | - `TriggerFocus`: Trigger the DOM focus event for the element we have a reference to
--- | - `Key`: Register a key event. `TextInput`-driven components use these only for navigation,
--- |          whereas `Toggle`-driven components also use the key stream for highlighting.
--- | - `PreventClick`: A helper query to prevent click events from bubbling up
--- | - `SetVisibility`: Sets the container visibility to on or off
--- | - `ToggleVisibility`: Toggles the container visibility
--- | - `ReplaceItems`: Replaces all items in state with the new array of items
--- | - `Raise`: A helper query that the component that mounts `Select` can use to embed its
--- |            own queries. Triggers an `Emit` message containing the query when triggered.
--- |            This can be used to easily extend `Select` with more behaviors.
--- | - `Receive`: Sets the component with new input
+-- | See the below functions for documentation for the individual constructors
+-- | and easier ways to construct these queries.
 data QueryF o item eff a
   = Search String a
   | Highlight Target a
@@ -114,50 +98,72 @@ type Query o item eff = Free (QueryF o item eff)
 always :: ∀ a b. a -> b -> Maybe a
 always = const <<< Just
 
+-- | Perform a new search with the included string.
 search :: ∀ o item eff. String -> Query o item eff Unit
 search s = liftF (Search s unit)
 
+-- | Change the highlighted index to the next item, previous item, or a
+-- | specific index.
 highlight :: ∀ o item eff. Target -> Query o item eff Unit
 highlight t = liftF (Highlight t unit)
 
+-- | Triggers the "Selected" message for the item at the specified index.
 select :: ∀ o item eff. Int -> Query o item eff Unit
 select i = liftF (Select i unit)
 
+-- | From an event, captures a reference to the element that triggered the
+-- | event. Used to manage focus / blur for elements without requiring a
+-- | particular identifier.
 captureRef :: ∀ o item eff. ET.Event -> Query o item eff Unit
 captureRef r = liftF (CaptureRef r unit)
 
+-- | Trigger the DOM focus event for the element we have a reference to.
 triggerFocus :: ∀ o item eff. Query o item eff Unit
 triggerFocus = liftF (Focus true unit)
 
+-- | Trigger the DOM blur event for the element we have a reference to
 triggerBlur :: ∀ o item eff. Query o item eff Unit
 triggerBlur = liftF (Focus false unit)
 
+-- | Register a key event. `TextInput`-driven components use these only for
+-- | navigation, whereas `Toggle`-driven components also use the key stream for
+-- | highlighting.
 key :: ∀ o item eff. KE.KeyboardEvent -> Query o item eff Unit
 key e = liftF (Key e unit)
 
+-- | A helper query to prevent click events from bubbling up.
 preventClick :: ∀ o item eff. ME.MouseEvent -> Query o item eff Unit
 preventClick i = liftF (PreventClick i unit)
 
+-- | Modify the visibility of the container.
 modifyVisibility :: ∀ o item eff. (Visibility -> Visibility) -> Query o item eff Unit
 modifyVisibility f = liftF $ Visibility $ StateM.modify f
 
+-- | Sets the container visibility to `On` or `Off`.
 setVisibility :: ∀ o item eff. Visibility -> Query o item eff Unit
 setVisibility v = liftF $ Visibility $ StateM.put v
 
+-- | Get the container visibility (`On` or `Off`).
 getVisibility :: ∀ o item eff. Query o item eff Visibility
 getVisibility = liftF $ Visibility $ StateM.get
 
+-- | Toggles the container visibility.
 toggleVisibility :: ∀ o item eff. Query o item eff Unit
 toggleVisibility = getVisibility >>= setVisibility <<< case _ of
   On -> Off
   Off -> On
 
+-- | Replaces all items in state with the new array of items.
 replaceItems :: ∀ o item eff. Array item -> Query o item eff Unit
 replaceItems items = liftF (ReplaceItems items unit)
 
+-- | A helper query that the component that mounts `Select` can use to embed its
+-- | own queries. Triggers an `Emit` message containing the query when triggered.
+-- | This can be used to easily extend `Select` with more behaviors.
 raise :: ∀ o item eff. o Unit -> Query o item eff Unit
 raise o = liftF (Raise o unit)
 
+-- | Sets the component with new input.
 receive :: ∀ o item eff. Input o item eff -> Query o item eff Unit
 receive i = liftF (Receive i unit)
 
