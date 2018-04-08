@@ -27,6 +27,13 @@ You can see working examples of components built using this library in a few pla
 
 Have an example of a component you've built with `Select`? Open a PR or drop us a message and we can help review and showcase your work.
 
+To build the documentation site locally:
+1. download https://www.getgutenberg.io
+2. build the static html with `npm run -s build-site`
+3. build the PureScript with `npm run -s build-docs`
+4. `cd docs/dist`
+4. you might need this: `ln -s . purescript-halogen-select`
+5. start a webserver in that directory, e.g. with `python -m SimpleHTTPServer`
 
 # Design Principles  
 
