@@ -14,7 +14,6 @@ import Control.Monad.Aff.AVar (AVar, makeEmptyVar, putVar, takeVar, AVAR)
 import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (Free, foldFree, liftF)
-import Control.Monad.State as StateM
 import DOM (DOM)
 import DOM.Event.Event (preventDefault, currentTarget)
 import DOM.Event.KeyboardEvent as KE
@@ -25,11 +24,7 @@ import DOM.HTML.Types (HTMLElement, readHTMLElement)
 import Data.Array (length, (!!))
 import Data.Either (hush)
 import Data.Foreign (toForeign)
-import Data.Lens (Lens', _2, use, (.=))
-import Data.Lens.Iso.Newtype (_Newtype)
-import Data.Lens.Record (prop)
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Symbol (SProxy(..))
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (traverse_)
 import Data.Tuple (Tuple(..))
@@ -86,9 +81,8 @@ data QueryF o item eff a
   | Focus Boolean a
   | Key KE.KeyboardEvent a
   | PreventClick ME.MouseEvent a
-    -- a simple state monad captures nicely how to interact with visibility
-    -- (essentially just getting and setting/modifying).
-  | Visibility (StateM.State Visibility a)
+  | SetVisibility Visibility a
+  | GetVisibility (Visibility -> a)
   | ReplaceItems (Array item) a
   | Raise (o Unit) a
   | Receive (Input o item eff) a
@@ -135,17 +129,12 @@ key e = liftF (Key e unit)
 preventClick :: ∀ o item eff. ME.MouseEvent -> Query o item eff Unit
 preventClick i = liftF (PreventClick i unit)
 
--- | Modify the visibility of the container.
-modifyVisibility :: ∀ o item eff. (Visibility -> Visibility) -> Query o item eff Unit
-modifyVisibility f = liftF $ Visibility $ StateM.modify f
-
--- | Sets the container visibility to `On` or `Off`.
 setVisibility :: ∀ o item eff. Visibility -> Query o item eff Unit
-setVisibility v = liftF $ Visibility $ StateM.put v
+setVisibility v = liftF (SetVisibility v unit)
 
 -- | Get the container visibility (`On` or `Off`).
 getVisibility :: ∀ o item eff. Query o item eff Visibility
-getVisibility = liftF $ Visibility $ StateM.get
+getVisibility = liftF (GetVisibility id)
 
 -- | Toggles the container visibility.
 toggleVisibility :: ∀ o item eff. Query o item eff Unit
@@ -278,50 +267,6 @@ component =
     -- mutual recursion woes.
     setVis v = eval' (setVisibility v)
 
-    -- lenses for state
-    _inState :: Lens' (StateStore o item (Effects eff)) (State item (Effects eff))
-    _inState = _Newtype <<< _2
-
-    _visibility :: Lens' (State item (Effects eff)) Visibility
-    _visibility = prop (SProxy :: SProxy "visibility")
-
-    _highlightedIndex :: Lens' (State item (Effects eff)) (Maybe Int)
-    _highlightedIndex = prop (SProxy :: SProxy "highlightedIndex")
-
-    -- Helper for executing free monadic State computations based on the state
-    manipulateState' ::
-      forall v a b.
-        Eq v =>
-        -- where in state this is
-        Lens' (State item (Effects eff)) v ->
-        -- action to run if a change occurs
-        (v -> ComponentDSL o item (Effects eff) m b) ->
-        -- state change to execute
-        StateM.State v a ->
-        ComponentDSL o item (Effects eff) m (Tuple (Maybe b) a)
-    manipulateState' loc ifChanged statem = do
-      before <- use (_inState <<< loc)
-      let Tuple a after = StateM.runState statem before
-      if before /= after
-        then do
-          _inState <<< loc .= after
-          b <- ifChanged after
-          pure (Tuple (Just b) a)
-        else pure (Tuple Nothing a)
-
-    manipulateState ::
-      forall v a b.
-        Eq v =>
-        -- where in state this is
-        Lens' (State item (Effects eff)) v ->
-        -- action to run if a change occurs
-        (v -> ComponentDSL o item (Effects eff) m Unit) ->
-        -- state change to execute
-        StateM.State v a ->
-        ComponentDSL o item (Effects eff) m a
-    manipulateState loc ifChanged statem =
-      manipulateState' loc ifChanged statem <#> extract
-
     -- Just the normal Halogen eval
     eval :: (QueryF o item (Effects eff)) ~> ComponentDSL o item (Effects eff) m
     eval = case _ of
@@ -418,10 +363,15 @@ component =
       PreventClick ev a -> a <$ do
         H.liftEff <<< preventDefault <<< ME.mouseEventToEvent $ ev
 
-      Visibility statem ->
-        statem # manipulateState _visibility \v -> do
-          _inState <<< _highlightedIndex .= Just 0
+      SetVisibility v a -> a <$ do
+        (Tuple _ st) <- getState
+        when (st.visibility /= v) do
+          H.modify $ seeks _ { visibility = v, highlightedIndex = Just 0 }
           H.raise $ VisibilityChanged v
+
+      GetVisibility f -> do
+        (Tuple _ st) <- getState
+        pure (f st.visibility)
 
       ReplaceItems items a -> a <$ do
         H.modify $ seeks _
