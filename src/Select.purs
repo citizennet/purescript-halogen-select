@@ -306,22 +306,24 @@ component =
           _, _ -> pure unit
 
       Highlight target a -> a <$ do
-        st <- use _inState
+        Tuple _ st <- getState
         when (st.visibility /= Off) do
-          _inState <<< _highlightedIndex .=
-            case target of
-              Prev  -> case st.highlightedIndex of
-                Just i | i /= 0 ->
-                  Just (i - 1)
-                _ ->
-                  Just st.lastIndex
-              Next  -> case st.highlightedIndex of
-                Just i | i /= st.lastIndex ->
-                  Just (i + 1)
-                _ ->
-                  Just 0
-              Index i ->
-                Just i
+          let
+            hi =
+              case target of
+                Prev  -> case st.highlightedIndex of
+                  Just i | i /= 0 ->
+                    Just (i - 1)
+                  _ ->
+                    Just st.lastIndex
+                Next  -> case st.highlightedIndex of
+                  Just i | i /= st.lastIndex ->
+                    Just (i + 1)
+                  _ ->
+                    Just 0
+                Index i ->
+                  Just i
+          H.modify $ seeks _ { highlightedIndex = hi }
 
       Select index a -> do
         (Tuple _ st) <- getState
