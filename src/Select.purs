@@ -93,6 +93,9 @@ always :: ∀ a b. a -> b -> Maybe a
 always = const <<< Just
 
 -- | Perform a new search with the included string.
+-- |
+-- | Note: for this function and the remaining query builders, use them without
+-- | `H.action`.
 search :: ∀ o item eff. String -> Query o item eff Unit
 search s = liftF (Search s unit)
 
