@@ -71,8 +71,9 @@ type Effects eff = ( avar :: AVAR, dom :: DOM | eff )
 -- |           complex like `CalendarItem StartDate EndDate (Maybe Disabled)`.
 -- | - `eff`: The component's effects.
 -- |
--- | See the below functions for documentation for the individual constructors
--- | and easier ways to construct these queries.
+-- | See the below functions for documentation for the individual constructors.
+-- | The README details how to use them in Halogen code, since the patterns
+-- | are a little different.
 data QueryF o item eff a
   = Search String a
   | Highlight Target a
@@ -93,9 +94,6 @@ always :: ∀ a b. a -> b -> Maybe a
 always = const <<< Just
 
 -- | Perform a new search with the included string.
--- |
--- | Note: for this function and the remaining query builders, use them without
--- | `H.action`.
 search :: ∀ o item eff. String -> Query o item eff Unit
 search s = liftF (Search s unit)
 
@@ -132,10 +130,12 @@ key e = liftF (Key e unit)
 preventClick :: ∀ o item eff. ME.MouseEvent -> Query o item eff Unit
 preventClick i = liftF (PreventClick i unit)
 
+-- | Set the container visibility (`On` or `Off`)
 setVisibility :: ∀ o item eff. Visibility -> Query o item eff Unit
 setVisibility v = liftF (SetVisibility v unit)
 
--- | Get the container visibility (`On` or `Off`).
+-- | Get the container visibility (`On` or `Off`). Most useful when sequenced
+-- | with other actions.
 getVisibility :: ∀ o item eff. Query o item eff Visibility
 getVisibility = liftF (GetVisibility id)
 
@@ -168,6 +168,9 @@ derive instance eqTarget :: Eq Target
 -- | ```purescript
 -- | render state = if state.visibility == On then renderAll else renderInputOnly
 -- | ```
+-- |
+-- | This is a Boolean Algebra, where `On` corresponds to true, and `Off` to
+-- | false, as one might expect. Thus, `not` will invert visibility.
 data Visibility = Off | On
 derive instance eqVisibility :: Eq Visibility
 derive instance ordVisibility :: Ord Visibility
