@@ -26,7 +26,7 @@ import Data.Either (hush)
 import Data.Foreign (toForeign)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Time.Duration (Milliseconds(..))
-import Data.Traversable (traverse_)
+import Data.Traversable (for_, traverse_)
 import Data.Tuple (Tuple(..))
 import Halogen (Component, ComponentDSL, ComponentHTML, component, liftAff, liftEff, modify) as H
 import Halogen.HTML as HH
@@ -343,11 +343,11 @@ component =
                   Just i
           H.modify $ seeks _ { highlightedIndex = hi }
 
-      Select index a -> do
+      Select index a -> a <$ do
         (Tuple _ st) <- getState
-        if st.visibility == Off then pure a else case st.items !! index of
-          Just item -> H.raise (Selected item) *> pure a
-          _ -> pure a -- Should not be possible.
+        when (st.visibility == On) $
+          for_ (st.items !! index)
+            \item -> H.raise (Selected item)
 
       CaptureRef event a -> a <$ do
         (Tuple _ st) <- getState
@@ -364,21 +364,21 @@ component =
         (Tuple _ st) <- getState
         traverse_ (H.liftEff <<< if focusOrBlur then focus else blur) st.inputElement
 
-      Key ev a -> do
+      Key ev a -> a <$ do
         setVis On
-        let prevent = H.liftEff <<< preventDefault <<< KE.keyboardEventToEvent
+        let preventIt = H.liftEff $ preventDefault $ KE.keyboardEventToEvent ev
         case KE.code ev of
-         "ArrowUp"   -> prevent ev *> (eval $ Highlight Prev a)
-         "ArrowDown" -> prevent ev *> (eval $ Highlight Next a)
-         "Escape"    -> a <$ do
-           (Tuple _ st) <- getState
-           prevent ev
-           traverse_ (H.liftEff <<< blur) st.inputElement
-         "Enter"     -> a <$ do
-           (Tuple _ st) <- getState
-           prevent ev
-           traverse_ (\index -> eval $ Select index a) st.highlightedIndex
-         otherKey    -> pure a
+          "ArrowUp"   -> preventIt *> eval' (highlight Prev)
+          "ArrowDown" -> preventIt *> eval' (highlight Next)
+          "Escape"    -> do
+            (Tuple _ st) <- getState
+            preventIt
+            for_ st.inputElement (H.liftEff <<< blur)
+          "Enter"     -> do
+            (Tuple _ st) <- getState
+            preventIt
+            for_ st.highlightedIndex (eval' <<< select)
+          otherKey    -> pure unit
 
       PreventClick ev a -> a <$ do
         H.liftEff <<< preventDefault <<< ME.mouseEventToEvent $ ev
