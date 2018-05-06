@@ -141,9 +141,7 @@ getVisibility = liftF (GetVisibility id)
 
 -- | Toggles the container visibility.
 toggleVisibility :: ∀ o item eff. Query o item eff Unit
-toggleVisibility = getVisibility >>= setVisibility <<< case _ of
-  On -> Off
-  Off -> On
+toggleVisibility = getVisibility >>= not >>> setVisibility
 
 -- | Replaces all items in state with the new array of items.
 replaceItems :: ∀ o item eff. Array item -> Query o item eff Unit
@@ -172,6 +170,20 @@ derive instance eqTarget :: Eq Target
 -- | ```
 data Visibility = Off | On
 derive instance eqVisibility :: Eq Visibility
+derive instance ordVisibility :: Ord Visibility
+
+instance heytingAlgebraVisibility :: HeytingAlgebra Visibility where
+  tt = On
+  ff = Off
+  not On = Off
+  not Off = On
+  conj On On = On
+  conj _ _ = Off
+  disj Off Off = Off
+  disj _ _ = On
+  implies On Off = Off
+  implies _ _ = On
+instance booleanAlgebraVisibility :: BooleanAlgebra Visibility
 
 -- | Text-driven inputs will operate like a normal search-driven selection component.
 -- | Toggle-driven inputs will capture key streams and debounce in reverse (only notify
