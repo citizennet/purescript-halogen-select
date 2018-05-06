@@ -45,6 +45,7 @@ component =
       HandleSelect (Select.Selected item) a -> do
         st <- H.get
         _ <- H.query unit $ Select.setVisibility Select.Off
+        _ <- H.query unit $ Select.triggerBlur
         _ <- H.query unit $ Select.replaceItems (difference st.items [ item ])
         H.modify _ { text = item }
         pure a
@@ -95,7 +96,7 @@ component =
 
                 renderItem index item =
                   HH.li
-                    ( Setters.setItemPropsAndBlur index props )
+                    ( Setters.setItemProps index props )
                     [ HH.text item ]
                   where
                     props = [ class_

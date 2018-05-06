@@ -156,7 +156,7 @@ renderInputContainer state = HH.div_ [ renderInput, renderContainer ]
           [ renderChild, HH.ul [ class_ "list-reset" ] html ]
 
         renderItem index item =
-          HH.li ( Setters.setItemPropsAndBlur index props ) [ HH.text item ]
+          HH.li ( Setters.setItemProps index props ) [ HH.text item ]
           where
             props = [ class_
               $ "px-4 py-1 text-grey-darkest"

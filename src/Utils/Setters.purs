@@ -107,10 +107,7 @@ type ItemProps p =
 -- | A helper function that augments an array of `IProps` with `ItemProps`. It
 -- | ensures items can be highlighted and selected.
 -- |
--- | If the boolean argument is true, this will blur the select element when
--- | the item is selected.
--- |
--- | This also expects an index for use in highlighting. It's useful in combination
+-- | This expects an index for use in highlighting. It's useful in combination
 -- | with `mapWithIndex`:
 -- |
 -- | ```purescript
@@ -118,35 +115,17 @@ type ItemProps p =
 -- |
 -- | render = renderItem `mapWithIndex` itemsArray
 -- | ```
-setItemPropsBase
-  :: ∀ o item eff p
-   . Boolean
-  -> Int
-  -> Array (HP.IProp (ItemProps p) (Query o item eff Unit))
-  -> Array (HP.IProp (ItemProps p) (Query o item eff Unit))
-setItemPropsBase doBlur index = flip (<>)
-  [ HE.onMouseDown \ev -> Just do
-      Select.preventClick ev
-      Select.select index
-      when doBlur Select.triggerBlur
-  , HE.onMouseOver $ Select.always $ Select.highlight (Index index)
-  ]
-
--- | As above, with no blur.
 setItemProps
   :: ∀ o item eff p
    . Int
   -> Array (HP.IProp (ItemProps p) (Query o item eff Unit))
   -> Array (HP.IProp (ItemProps p) (Query o item eff Unit))
-setItemProps = setItemPropsBase false
-
--- | As above but blurring when selected.
-setItemPropsAndBlur
-  :: ∀ o item eff p
-   . Int
-  -> Array (HP.IProp (ItemProps p) (Query o item eff Unit))
-  -> Array (HP.IProp (ItemProps p) (Query o item eff Unit))
-setItemPropsAndBlur = setItemPropsBase true
+setItemProps index = flip (<>)
+  [ HE.onMouseDown \ev -> Just do
+      Select.preventClick ev
+      Select.select index
+  , HE.onMouseOver $ Select.always $ Select.highlight (Index index)
+  ]
 
 -- | A helper function that augments an array of `IProps` with a `MouseDown`
 -- | handler. It ensures that clicking on an item within an enclosing HTML element
