@@ -10,7 +10,6 @@ import DOM.Event.FocusEvent as FE
 import DOM.Event.MouseEvent as ME
 import DOM.Event.Types as ET
 import Data.Maybe (Maybe(..))
-import Halogen as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Select (Query, Target(..), Visibility(..))

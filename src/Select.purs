@@ -30,7 +30,6 @@ import Data.Traversable (for_, traverse_)
 import Data.Tuple (Tuple(..))
 import Halogen (Component, ComponentDSL, ComponentHTML, component, liftAff, liftEff, modify) as H
 import Halogen.HTML as HH
-import Halogen.HTML.Events as HE
 import Halogen.Query.HalogenM (fork, raise) as H
 import Select.Internal.State (updateStore, getState)
 
@@ -90,6 +89,7 @@ data QueryF o item eff a
 
 type Query o item eff = Free (QueryF o item eff)
 
+-- | Trigger the relevant action with the event each time it occurs
 always :: ∀ a b. a -> b -> Maybe a
 always = const <<< Just
 
