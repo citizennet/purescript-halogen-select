@@ -229,7 +229,7 @@ type Debouncer eff =
   { var   :: AVar Unit
   , fiber :: Fiber eff Unit }
 
--- | The component's input type, which includes the component`s render function. This
+-- | The component's input type, which includes the component's render function. This
 -- | render function can also be used to share data with the parent component, as every
 -- | time the parent re-renders, the render function will refresh in `Select`.
 type Input o item eff =
