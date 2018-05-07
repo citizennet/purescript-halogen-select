@@ -2,9 +2,9 @@ module Docs.Components.Dropdown where
 
 import Prelude
 
+import Control.Monad.Aff.AVar (AVAR)
 import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Aff.Console (CONSOLE)
-import Control.Monad.Aff.AVar (AVAR)
 import DOM (DOM)
 import Data.Array (difference, mapWithIndex)
 import Data.Maybe (Maybe(..))
@@ -12,8 +12,8 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Select.Utils.Setters as Setters
 import Select as Select
+import Select.Utils.Setters as Setters
 
 type Effects eff = ( avar :: AVAR, dom :: DOM, console :: CONSOLE | eff )
 type State = { items :: Array String, text :: String }
@@ -44,8 +44,9 @@ component =
     eval = case _ of
       HandleSelect (Select.Selected item) a -> do
         st <- H.get
-        _ <- H.query unit $ H.action $ Select.SetVisibility Select.Off
-        _ <- H.query unit $ H.action $ Select.ReplaceItems (difference st.items [ item ])
+        _ <- H.query unit $ Select.setVisibility Select.Off
+        _ <- H.query unit $ Select.triggerBlur
+        _ <- H.query unit $ Select.replaceItems (difference st.items [ item ])
         H.modify _ { text = item }
         pure a
 
@@ -102,4 +103,3 @@ component =
                       $ "px-4 py-1 text-grey-darkest"
                       <> if state.highlightedIndex == Just index then " bg-grey-lighter" else ""
                       ]
-
