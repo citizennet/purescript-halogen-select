@@ -12,7 +12,7 @@
     
     
         <url>
-            <loc>/purescript-halogen-select/documentation/</loc>
+            <loc>/purescript-halogen-select/tutorials/</loc>
         </url>
     
         <url>
@@ -20,7 +20,7 @@
         </url>
     
         <url>
-            <loc>/purescript-halogen-select/tutorials/</loc>
+            <loc>/purescript-halogen-select/documentation/</loc>
         </url>
     
     
