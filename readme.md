@@ -6,8 +6,6 @@
 - [Official Documentation / Tutorials / Getting Started](https://citizennet.github.io/purescript-halogen-select)
 - [CitizenNet UI Repository](https://github.com/citizennet/purescript-ocelot)
 
-**This library is under active development and changes often. If you need a stable selection library, we're not there yet! Please consider helping out with a pull request to add features you need and help us reach 1.0!**
-
 # Get Started / Learn More
 
 There are a few ways to get started with the `Select` library.
