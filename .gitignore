@@ -11,7 +11,8 @@ package-lock.json
 generated-docs
 
 # Dist
-docs-compat
+docs/css
+docs/javascripts
 site
 
 # IDE

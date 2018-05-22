@@ -14,6 +14,7 @@ copyright: 'Copyright &copy; 2018 CitizenNet'
 # Config
 theme:
   name: 'material'
+  custom_dir: 'docs/theme'
   language: 'en'
   palette:
     primary: 'cyan'
@@ -23,6 +24,14 @@ theme:
     code: 'Roboto Mono'
   logo:
     icon: 'school'
+
+# To mount components
+extra_javascript:
+  - js/app.js
+
+# To style components
+# extra_css:
+#   - css/cn-tailwind.scoped.css
 
 # Google Analytics
 # google_analytics:

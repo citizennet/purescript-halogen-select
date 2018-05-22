@@ -14,3 +14,7 @@ For full documentation visit [mkdocs.org](http://mkdocs.org).
 ```hs
 let x = 5
 ```
+
+## Mounted components
+
+<div class="ocelot-scoped" data-component="typeahead"></div>

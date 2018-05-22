@@ -53,7 +53,9 @@ jobs:
 
       - run:
           name: Run site generation
-          command: mkdocs build
+          command: |
+            yarn build-docs
+            mkdocs build
 
       - persist_to_workspace:
           root: site
