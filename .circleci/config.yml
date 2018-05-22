@@ -38,6 +38,31 @@ jobs:
           paths:
             - ~/select/node_modules
 
+      - run:
+          name: Build example components
+          command: |
+            yarn build-docs
+
+      - persist_to_workspace:
+          root: docs/js
+          paths:
+            - .
+
+  css:
+    <<: *defaults
+    steps:
+      - checkout
+
+      - run:
+          name: Fetch and persist CSS
+          command: |
+            yarn fetch-css && yarn move-css
+
+      - persist_to_workspace:
+          root: docs/css
+          paths:
+            - .
+
   site:
     working_directory: ~/select
     docker:
@@ -51,11 +76,15 @@ jobs:
           name: Install dependencies
           command: pip install mkdocs mkdocs-material
 
+      - attach_workspace:
+          at: docs/js
+
+      - attach_workspace:
+          at: docs/css
+
       - run:
           name: Run site generation
-          command: |
-            yarn build-docs
-            mkdocs build
+          command: mkdocs build
 
       - persist_to_workspace:
           root: site
@@ -113,6 +142,16 @@ workflows:
               ignore: gh-pages
 
       # On master branch, rebuild docs
+      - css:
+          filters:
+            branches:
+              only:
+                - master
+                - docs
+
+          requires:
+            - test
+
       - site:
           filters:
             branches:
@@ -132,3 +171,4 @@ workflows:
 
           requires:
             - site
+            - css
