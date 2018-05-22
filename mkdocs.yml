@@ -1,0 +1,52 @@
+# Project information
+site_name: 'Select Documentation'
+site_description: 'Building blocks for common selection user interfaces in PureScript & Halogen'
+site_author: 'Thomas Honeyman'
+site_url: 'https://citizennet.github.io/purescript-halogen-select'
+
+# Repository
+repo_name: 'purescript-halogen-select'
+repo_url: 'https://github.com/citizennet/purescript-halogen-select'
+
+# Copyright
+copyright: 'Copyright &copy; 2018 CitizenNet'
+
+# Config
+theme:
+  name: 'material'
+  language: 'en'
+  palette:
+    primary: 'cyan'
+    accent: 'cyan'
+  font:
+    text: 'Open Sans'
+    code: 'Roboto Mono'
+  logo:
+    icon: 'school'
+
+# Google Analytics
+# google_analytics:
+#   - 'UA-XXXXXXXX-X'
+#   - 'auto'
+
+# Extensions
+# Recommended here:
+# https://squidfunk.github.io/mkdocs-material/getting-started/#extensions
+markdown_extensions:
+  - admonition
+  - codehilite:
+      guess_lang: false
+  - toc:
+      permalink: true
+
+# Site architecture
+pages:
+  - Home: 'index.md'
+  # - Tutorials:
+  #   - 'Dropdown': 'tutorials/dropdown.md'
+  #   - 'Typeahead': 'tutorials/typeahead.md'
+  #   - 'Date Picker': 'tutorials/date-picker.md'
+  # - About:
+  #   - 'Design Philosophy': 'about/design-philosophy.md'
+  #   - 'Talks': 'about/talks.md'
+  # - Reference: 'reference.md'

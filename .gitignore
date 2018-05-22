@@ -11,8 +11,8 @@ package-lock.json
 generated-docs
 
 # Dist
-docs/dist
-docs/site/public
+docs-compat
+site
 
 # IDE
 *.swo

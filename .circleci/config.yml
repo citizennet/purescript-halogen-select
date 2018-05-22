@@ -39,44 +39,26 @@ jobs:
             - ~/select/node_modules
 
       # Verify all examples successfully build...
-      - run:
-          name: Build all components via docs
-          command: yarn run build-docs
+      # - run:
+      #     name: Build all components via docs
+      #     command: yarn run build-docs
 
-      # Persist the specified paths into the workspace
-      - persist_to_workspace:
-          root: docs/dist
-          paths:
-            - .
 
   site:
     working_directory: ~/select
     docker:
-      - image: rustlang/rust:nightly
+      - image: squidfunk/mkdocs-material
     steps:
       - checkout
 
       - run:
-          name: Install Gutenberg
+          name: Run site generation
           command: |
-            wget https://github.com/Keats/gutenberg/releases/download/v0.3.1/gutenberg-v0.3.1-x86_64-unknown-linux-gnu.tar.gz -O gb.tar.gz
-            tar -xvzf gb.tar.gz
-
-      - attach_workspace:
-          at: docs/dist
-
-      - run:
-          name: Build site
-          command: |
-            mv gutenberg docs/site
-            cd docs/site
-            ./gutenberg build
-            cd ../
-            cp -r site/public/. dist/
+            docker run --rm -v ${PWD}:/docs squidfunk/mkdocs-material build
 
       # Persist the dist folder
       - persist_to_workspace:
-          root: docs/dist
+          root: site
           paths:
             - .
 
@@ -98,7 +80,7 @@ jobs:
             git worktree add ../gh-pages gh-pages
 
       - attach_workspace:
-          at: dist
+          at: site
 
       # Enable building docs
       - add_ssh_keys:
@@ -108,14 +90,14 @@ jobs:
       - run:
           name: Copy over files to gh-pages branch
           command: |
-            cp -r dist/. ../gh-pages
+            cp -r site/. ../gh-pages
             cp -r .circleci/. ../gh-pages/.circleci
 
       - run:
           name: Push update to GitHub
           command: |
             cd ../gh-pages
-            git config --global user.email "dev@citizennet.com"
+            git config --global user.email "admin@thomashoneyman.com"
             git config --global user.name "CircleCI Build"
             git add .
             git commit --allow-empty -m "Build triggered by CircleCI"
