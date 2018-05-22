@@ -50,7 +50,6 @@ jobs:
           command: |
             docker run --rm -v ${PWD}:/docs squidfunk/mkdocs-material build
 
-      # Persist the dist folder
       - persist_to_workspace:
           root: site
           paths:
