@@ -46,6 +46,9 @@ jobs:
     steps:
       - checkout
 
+      # Necessary to use Docker commands
+      - setup_remote_docker
+
       - run:
           name: Run site generation
           command: |
