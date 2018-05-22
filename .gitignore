@@ -12,7 +12,7 @@ generated-docs
 
 # Dist
 docs/css
-docs/javascripts
+docs/js
 site
 
 # IDE
