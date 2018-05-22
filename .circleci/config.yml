@@ -112,9 +112,11 @@ workflows:
 
       # On master branch, rebuild docs
       - site:
-          # filters:
-          #   branches:
-          #     only: master
+          filters:
+            branches:
+              only:
+                - master
+                - docs
 
           requires:
             - test
@@ -122,7 +124,9 @@ workflows:
       - docs:
           filters:
             branches:
-              only: master
+              only:
+                - master
+                - docs
 
           requires:
             - site
