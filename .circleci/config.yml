@@ -38,11 +38,8 @@ jobs:
           paths:
             - ~/select/node_modules
 
-
   site:
-    working_directory: ~/select
-    docker:
-      - image: squidfunk/mkdocs-material
+    <<: *defaults
     steps:
       - checkout
 
