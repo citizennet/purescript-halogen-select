@@ -41,16 +41,19 @@ jobs:
   site:
     working_directory: ~/select
     docker:
-      - image: docker
+      - image: jfloff/alpine-python:3.4-slim
     steps:
       - checkout
 
       - setup_remote_docker
 
       - run:
+          name: Install dependencies
+          command: pip install mkdocs mkdocs-material
+
+      - run:
           name: Run site generation
-          command: |
-            docker run --rm -v ${PWD}:/docs squidfunk/mkdocs-material build
+          command: mkdocs build
 
       - persist_to_workspace:
           root: site
