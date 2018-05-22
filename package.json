@@ -1,13 +1,8 @@
 {
   "private": true,
   "scripts": {
-    "build-all": "yarn run build-docs && yarn run build-site",
-    "watch-all": "pulp -w --before 'yarn run build-docs' build -I docs/src --to docs/dist/app.js",
-    "clean": "rm -rf output bower_components node_modules",
-    "postinstall": "bower i --silent",
-    "build-docs": "pulp build -I docs/src --to docs/dist/app.js",
-    "watch-docs": "pulp -w build -I docs/src --to docs/dist/app.js",
-    "build-site": "cd docs/site && gutenberg build && cd ../ && cp -r site/public/. dist/"
+    "clean": "rm -rf output bower_components node_modules site",
+    "postinstall": "bower i --silent"
   },
   "devDependencies": {
     "pulp": "^12.0.1",

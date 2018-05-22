@@ -38,11 +38,6 @@ jobs:
           paths:
             - ~/select/node_modules
 
-      # Verify all examples successfully build...
-      # - run:
-      #     name: Build all components via docs
-      #     command: yarn run build-docs
-
 
   site:
     working_directory: ~/select
@@ -114,9 +109,9 @@ workflows:
 
       # On master branch, rebuild docs
       - site:
-          filters:
-            branches:
-              only: master
+          # filters:
+          #   branches:
+          #     only: master
 
           requires:
             - test
