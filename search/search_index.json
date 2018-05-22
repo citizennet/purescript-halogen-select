@@ -2,7 +2,7 @@
     "docs": [
         {
             "location": "/",
-            "text": "Select\n\n\nFor full documentation visit \nmkdocs.org\n.\n\n\nCommands\n\n\n\n\nmkdocs new [dir-name]\n - Create a new project.\n\n\nmkdocs serve\n - Start the live-reloading docs server.\n\n\nmkdocs build\n - Build the documentation site.\n\n\nmkdocs help\n - Print this help message.\n\n\n\n\nProject layout\n\n\nlet\n \nx\n \n=\n \n5",
+            "text": "Select\n\n\nFor full documentation visit \nmkdocs.org\n.\n\n\nCommands\n\n\n\n\nmkdocs new [dir-name]\n - Create a new project.\n\n\nmkdocs serve\n - Start the live-reloading docs server.\n\n\nmkdocs build\n - Build the documentation site.\n\n\nmkdocs help\n - Print this help message.\n\n\n\n\nProject layout\n\n\nlet\n \nx\n \n=\n \n5\n\n\n\n\n\n\nMounted components",
             "title": "Home"
         },
         {
@@ -19,6 +19,11 @@
             "location": "/#project-layout",
             "text": "let   x   =   5",
             "title": "Project layout"
+        },
+        {
+            "location": "/#mounted-components",
+            "text": "",
+            "title": "Mounted components"
         }
     ]
 }
