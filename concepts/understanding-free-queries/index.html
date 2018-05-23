@@ -1,0 +1,650 @@
+
+
+
+
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      <meta http-equiv="x-ua-compatible" content="ie=edge">
+      
+        <meta name="description" content="Building blocks for common selection user interfaces in PureScript & Halogen">
+      
+      
+        <link rel="canonical" href="https://citizennet.github.io/purescript-halogen-select/concepts/understanding-free-queries/">
+      
+      
+        <meta name="author" content="Thomas Honeyman">
+      
+      
+        <meta name="lang:clipboard.copy" content="Copy to clipboard">
+      
+        <meta name="lang:clipboard.copied" content="Copied to clipboard">
+      
+        <meta name="lang:search.language" content="en">
+      
+        <meta name="lang:search.pipeline.stopwords" content="True">
+      
+        <meta name="lang:search.pipeline.trimmer" content="True">
+      
+        <meta name="lang:search.result.none" content="No matching documents">
+      
+        <meta name="lang:search.result.one" content="1 matching document">
+      
+        <meta name="lang:search.result.other" content="# matching documents">
+      
+        <meta name="lang:search.tokenizer" content="[\s\-]+">
+      
+      <link rel="shortcut icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-0.17.3, mkdocs-material-2.7.3">
+    
+    
+      
+        <title>Understanding free queries - Select Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/application.8d40d89b.css">
+      
+        <link rel="stylesheet" href="../../assets/stylesheets/application-palette.6079476c.css">
+      
+    
+    
+      <script src="../../assets/javascripts/modernizr.1aa3b519.js"></script>
+    
+    
+      <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+      
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,400i,700|Roboto+Mono">
+        <style>body,input{font-family:"Open Sans","Helvetica Neue",Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono","Courier New",Courier,monospace}</style>
+      
+      <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    
+    
+      <link rel="stylesheet" href="../../css/cn-tailwind.scoped.css">
+    
+    
+  </head>
+  
+    
+    
+    <body dir="ltr" data-md-color-primary="cyan" data-md-color-accent="cyan">
+  
+    <svg class="md-svg">
+      <defs>
+        
+        
+          <svg xmlns="http://www.w3.org/2000/svg" width="416" height="448"
+    viewBox="0 0 416 448" id="github">
+  <path fill="currentColor" d="M160 304q0 10-3.125 20.5t-10.75 19-18.125
+        8.5-18.125-8.5-10.75-19-3.125-20.5 3.125-20.5 10.75-19 18.125-8.5
+        18.125 8.5 10.75 19 3.125 20.5zM320 304q0 10-3.125 20.5t-10.75
+        19-18.125 8.5-18.125-8.5-10.75-19-3.125-20.5 3.125-20.5 10.75-19
+        18.125-8.5 18.125 8.5 10.75 19 3.125 20.5zM360
+        304q0-30-17.25-51t-46.75-21q-10.25 0-48.75 5.25-17.75 2.75-39.25
+        2.75t-39.25-2.75q-38-5.25-48.75-5.25-29.5 0-46.75 21t-17.25 51q0 22 8
+        38.375t20.25 25.75 30.5 15 35 7.375 37.25 1.75h42q20.5 0
+        37.25-1.75t35-7.375 30.5-15 20.25-25.75 8-38.375zM416 260q0 51.75-15.25
+        82.75-9.5 19.25-26.375 33.25t-35.25 21.5-42.5 11.875-42.875 5.5-41.75
+        1.125q-19.5 0-35.5-0.75t-36.875-3.125-38.125-7.5-34.25-12.875-30.25-20.25-21.5-28.75q-15.5-30.75-15.5-82.75
+        0-59.25 34-99-6.75-20.5-6.75-42.5 0-29 12.75-54.5 27 0 47.5 9.875t47.25
+        30.875q36.75-8.75 77.25-8.75 37 0 70 8 26.25-20.5
+        46.75-30.25t47.25-9.75q12.75 25.5 12.75 54.5 0 21.75-6.75 42 34 40 34
+        99.5z" />
+</svg>
+        
+      </defs>
+    </svg>
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="search" autocomplete="off">
+    <label class="md-overlay" data-md-component="overlay" for="drawer"></label>
+    
+      <a href="#understanding-free-monad-queries" tabindex="1" class="md-skip">
+        Skip to content
+      </a>
+    
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid">
+    <div class="md-flex">
+      <div class="md-flex__cell md-flex__cell--shrink">
+        <a href="https://citizennet.github.io/purescript-halogen-select" title="Select Documentation" class="md-header-nav__button md-logo">
+          
+            <i class="md-icon">school</i>
+          
+        </a>
+      </div>
+      <div class="md-flex__cell md-flex__cell--shrink">
+        <label class="md-icon md-icon--menu md-header-nav__button" for="drawer"></label>
+      </div>
+      <div class="md-flex__cell md-flex__cell--stretch">
+        <div class="md-flex__ellipsis md-header-nav__title" data-md-component="title">
+          
+            
+              <span class="md-header-nav__topic">
+                Select Documentation
+              </span>
+              <span class="md-header-nav__topic">
+                Understanding free queries
+              </span>
+            
+          
+        </div>
+      </div>
+      <div class="md-flex__cell md-flex__cell--shrink">
+        
+          
+            <label class="md-icon md-icon--search md-header-nav__button" for="search"></label>
+            
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="query" data-md-state="active">
+      <label class="md-icon md-search__icon" for="search"></label>
+      <button type="reset" class="md-icon md-search__icon" data-md-component="reset" tabindex="-1">
+        &#xE5CD;
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="result">
+          <div class="md-search-result__meta">
+            Type to start searching
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+          
+        
+      </div>
+      
+        <div class="md-flex__cell md-flex__cell--shrink">
+          <div class="md-header-nav__source">
+            
+
+
+  
+
+
+  <a href="https://github.com/citizennet/purescript-halogen-select/" title="Go to repository" class="md-source" data-md-source="github">
+    
+      <div class="md-source__icon">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <use xlink:href="#github" width="24" height="24"></use>
+        </svg>
+      </div>
+    
+    <div class="md-source__repository">
+      purescript-halogen-select
+    </div>
+  </a>
+
+          </div>
+        </div>
+      
+    </div>
+  </nav>
+</header>
+    
+    <div class="md-container">
+      
+        
+      
+      
+      <main class="md-main">
+        <div class="md-main__inner md-grid" data-md-component="container">
+          
+            
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    <nav class="md-nav md-nav--primary" data-md-level="0">
+  <label class="md-nav__title md-nav__title--site" for="drawer">
+    <span class="md-nav__button md-logo">
+      
+        <i class="md-icon">school</i>
+      
+    </span>
+    Select Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      
+
+
+  
+
+
+  <a href="https://github.com/citizennet/purescript-halogen-select/" title="Go to repository" class="md-source" data-md-source="github">
+    
+      <div class="md-source__icon">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <use xlink:href="#github" width="24" height="24"></use>
+        </svg>
+      </div>
+    
+    <div class="md-source__repository">
+      purescript-halogen-select
+    </div>
+  </a>
+
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../.." title="Home" class="md-nav__link">
+      Home
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-2" type="checkbox" id="nav-2">
+    
+    <label class="md-nav__link" for="nav-2">
+      Tutorials
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-2">
+        Tutorials
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../tutorials/dropdown/" title="Build a dropdown" class="md-nav__link">
+      Build a dropdown
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-3" type="checkbox" id="nav-3">
+    
+    <label class="md-nav__link" for="nav-3">
+      How To
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-3">
+        How To
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../how-to/embed-parent-queries/" title="How to embed parent queries" class="md-nav__link">
+      How to embed parent queries
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-4" type="checkbox" id="nav-4" checked>
+    
+    <label class="md-nav__link" for="nav-4">
+      Concepts
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-4">
+        Concepts
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-toggle md-nav__toggle" data-md-toggle="toc" type="checkbox" id="toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="toc">
+        Understanding free queries
+      </label>
+    
+    <a href="./" title="Understanding free queries" class="md-nav__link md-nav__link--active">
+      Understanding free queries
+    </a>
+    
+      
+<nav class="md-nav md-nav--secondary">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#different-patterns" title="Different patterns" class="md-nav__link">
+    Different patterns
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#returning-non-unit-values" title="Returning non-unit values" class="md-nav__link">
+    Returning non-unit values
+  </a>
+  
+</li>
+      
+      
+      
+      
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../../examples/" title="Examples" class="md-nav__link">
+      Examples
+    </a>
+  </li>
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#different-patterns" title="Different patterns" class="md-nav__link">
+    Different patterns
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#returning-non-unit-values" title="Returning non-unit values" class="md-nav__link">
+    Returning non-unit values
+  </a>
+  
+</li>
+      
+      
+      
+      
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                  <a href="https://github.com/citizennet/purescript-halogen-select/edit/master/docs/concepts/understanding-free-queries.md" title="Edit this page" class="md-icon md-content__icon">&#xE3C9;</a>
+                
+                
+                <h1 id="understanding-free-monad-queries">Understanding Free Monad Queries<a class="headerlink" href="#understanding-free-monad-queries" title="Permanent link">&para;</a></h1>
+<p>Most of the time Halogen queries look like this:</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">data</span> <span class="kt">QueryF</span> <span class="p">(</span><span class="err">…</span> <span class="n">other</span> <span class="kr">type</span> <span class="n">arguments</span> <span class="n">omitted</span> <span class="err">…</span><span class="p">)</span> <span class="n">a</span>
+  <span class="ow">=</span> <span class="o">...</span>
+  <span class="o">|</span> <span class="kt">SetVisibility</span> <span class="kt">Visibility</span> <span class="n">a</span>
+  <span class="o">|</span> <span class="kt">GetVisibility</span> <span class="p">(</span><span class="kt">Visibility</span> <span class="ow">-&gt;</span> <span class="n">a</span><span class="p">)</span>
+</pre></div>
+</td></tr></table>
+
+<p>(where <code class="codehilite"><span class="kt">QueryF</span></code> is used directly as the Halogen query functor)</p>
+<p>This library takes a slightly different approach: the query functor is actually <code class="codehilite"><span class="kt">Control</span><span class="o">.</span><span class="kt">Monad</span><span class="o">.</span><span class="kt">Free</span><span class="o">.</span><span class="kt">Free</span> <span class="kt">QueryF</span></code>, the <a href="https://pursuit.purescript.org/packages/purescript-free/4.2.0/docs/Control.Monad.Free">free monad</a> generated by the query functor.</p>
+<p>This allows queries the full power of monadic (and applicative) composition: sequencing effects, determining control flow based on previous results, and my favorite: doing nothing (<code class="codehilite"><span class="nf">pure</span> <span class="n">unit</span></code>).</p>
+<p>We now define smart query constructors for this Free pattern like so:</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="c1">-- | Set the container visibility (`On` or `Off`).</span>
+<span class="nf">setVisibility</span> <span class="ow">::</span> <span class="err">∀</span> <span class="n">o</span> <span class="n">item</span> <span class="n">eff</span><span class="o">.</span> <span class="kt">Visibility</span> <span class="ow">-&gt;</span> <span class="kt">Query</span> <span class="n">o</span> <span class="n">item</span> <span class="n">eff</span> <span class="kt">Unit</span>
+<span class="nf">setVisibility</span> <span class="n">v</span> <span class="ow">=</span> <span class="n">liftF</span> <span class="p">(</span><span class="kt">SetVisibility</span> <span class="n">v</span> <span class="n">unit</span><span class="p">)</span>
+
+<span class="c1">-- | Get the container visibility (`On` or `Off`). Most useful when sequenced</span>
+<span class="c1">-- | with other actions.</span>
+<span class="nf">getVisibility</span> <span class="ow">::</span> <span class="err">∀</span> <span class="n">o</span> <span class="n">item</span> <span class="n">eff</span><span class="o">.</span> <span class="kt">Query</span> <span class="n">o</span> <span class="n">item</span> <span class="n">eff</span> <span class="kt">Visibility</span>
+<span class="nf">getVisibility</span> <span class="ow">=</span> <span class="n">liftF</span> <span class="p">(</span><span class="kt">GetVisibility</span> <span class="n">id</span><span class="p">)</span>
+</pre></div>
+</td></tr></table>
+
+<h2 id="different-patterns">Different patterns<a class="headerlink" href="#different-patterns" title="Permanent link">&para;</a></h2>
+<p>In the simple cases, the helpers Halogen use to work with raw query constructors are folded into the smart Free query constructors already: <code class="codehilite"><span class="kt">H</span><span class="o">.</span><span class="n">action</span> <span class="p">(</span><span class="kt">SetVisibility</span> <span class="kt">On</span><span class="p">)</span></code> becomes simply <code class="codehilite"><span class="nf">setVisiblity</span> <span class="kt">On</span></code>, and similarly <code class="codehilite"><span class="kt">H</span><span class="o">.</span><span class="n">request</span> <span class="kt">GetVisibility</span></code> is just <code class="codehilite"><span class="nf">getVisibility</span></code>. This is because these patterns are typically present already smart constructors: <code class="codehilite"><span class="nf">setVisibility</span></code> returns <code class="codehilite"><span class="kt">Free</span> <span class="kt">QueryF</span> <span class="kt">Unit</span></code>, since it is an action, and <code class="codehilite"><span class="nf">getVisibility</span></code> returns <code class="codehilite"><span class="kt">Free</span> <span class="kt">QueryF</span> <span class="kt">Visibility</span></code>, since it requests the visibility. This allows for easy composition in <code class="codehilite"><span class="kr">do</span></code> notation:</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">toggleVisibility</span> <span class="ow">=</span> <span class="kr">do</span>
+  <span class="n">vis</span> <span class="ow">&lt;-</span> <span class="n">getVisibility</span>
+  <span class="n">setVisibility</span> <span class="p">(</span><span class="n">not</span> <span class="n">vis</span><span class="p">)</span>
+</pre></div>
+</td></tr></table>
+
+<p>C’est très facile!</p>
+<p>Event handlers look a little different. This is one example:</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kt">HE</span><span class="o">.</span><span class="n">onMouseDown</span> <span class="nf">\</span><span class="n">ev</span> <span class="ow">-&gt;</span> <span class="kt">Just</span> <span class="kr">do</span>
+    <span class="kt">Select</span><span class="o">.</span><span class="n">preventClick</span> <span class="n">ev</span>
+    <span class="kt">Select</span><span class="o">.</span><span class="n">select</span> <span class="n">index</span>
+    <span class="n">when</span> <span class="n">doBlur</span> <span class="kt">Select</span><span class="o">.</span><span class="n">triggerBlur</span>
+</pre></div>
+</td></tr></table>
+
+<p>(Of course you may return <code class="codehilite"><span class="kt">Nothing</span></code> if you so wish, but its effect is just like <code class="codehilite"><span class="nf">pure</span> <span class="n">unit</span></code> now.)</p>
+<p>If you do not need access to the argument <code class="codehilite"><span class="nf">ev</span></code>, <code class="codehilite"><span class="kt">Select</span><span class="o">.</span><span class="n">always</span></code> provides a simple shortcut for <code class="codehilite"><span class="nf">const</span> <span class="o">&lt;&lt;&lt;</span> <span class="kt">Just</span></code>:</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kt">HE</span><span class="o">.</span><span class="n">onMouseOver</span> <span class="o">$</span> <span class="kt">Select</span><span class="o">.</span><span class="n">always</span> <span class="o">$</span> <span class="kt">Select</span><span class="o">.</span><span class="n">highlight</span> <span class="p">(</span><span class="kt">Index</span> <span class="n">index</span><span class="p">)</span>
+</pre></div>
+</td></tr></table>
+
+<h2 id="returning-non-unit-values">Returning non-unit values<a class="headerlink" href="#returning-non-unit-values" title="Permanent link">&para;</a></h2>
+<p>Use <code class="codehilite"><span class="nf">map</span></code> or <code class="codehilite"><span class="o">&lt;$</span></code> or <code class="codehilite"><span class="nf">pure</span></code> to return other types of values from a query. So, instead of something like this:</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kt">H</span><span class="o">.</span><span class="n">subscribe</span> <span class="o">$</span> <span class="n">eventSource&#39;</span> <span class="n">someEventSource</span>
+  <span class="nf">\</span><span class="n">value</span> <span class="ow">-&gt;</span> <span class="kt">Just</span> <span class="p">(</span><span class="kt">SetVisibility</span> <span class="n">value</span> <span class="kt">H</span><span class="o">.</span><span class="kt">Listening</span><span class="p">)</span>
+</pre></div>
+</td></tr></table>
+
+<p>Use</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kt">H</span><span class="o">.</span><span class="n">subscribe</span> <span class="o">$</span> <span class="n">eventSource&#39;</span> <span class="n">someEventSource</span>
+  <span class="nf">\</span><span class="n">value</span> <span class="ow">-&gt;</span> <span class="kt">Just</span> <span class="o">$</span> <span class="n">setVisibility</span> <span class="n">value</span> <span class="o">$&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">Listening</span>
+</pre></div>
+</td></tr></table>
+
+<p>or</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kt">H</span><span class="o">.</span><span class="n">subscribe</span> <span class="o">$</span> <span class="n">eventSource&#39;</span> <span class="n">someEventSource</span>
+  <span class="nf">\</span><span class="n">value</span> <span class="ow">-&gt;</span> <span class="kt">Just</span> <span class="kr">do</span>
+    <span class="n">setVisibility</span> <span class="n">value</span>
+    <span class="n">pure</span> <span class="kt">H</span><span class="o">.</span><span class="kt">Listening</span>
+</pre></div>
+</td></tr></table>
+
+<div class="admonition info">
+<p>Many thanks to <a href="https://github.com/MonoidMusician">Nicholas Scheel</a> for providing the implementation of <code>QueryF</code> and the documentation above.</p>
+</div>
+                
+                  
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid">
+        
+          <a href="../../how-to/embed-parent-queries/" title="How to embed parent queries" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-flex__cell md-flex__cell--shrink">
+              <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
+            </div>
+            <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
+              <span class="md-flex__ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                How to embed parent queries
+              </span>
+            </div>
+          </a>
+        
+        
+          <a href="../../examples/" title="Examples" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
+              <span class="md-flex__ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Examples
+              </span>
+            </div>
+            <div class="md-flex__cell md-flex__cell--shrink">
+              <i class="md-icon md-icon--arrow-forward md-footer-nav__button"></i>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+          <div class="md-footer-copyright__highlight">
+            Copyright &copy; 2018 CitizenNet
+          </div>
+        
+        powered by
+        <a href="http://www.mkdocs.org">MkDocs</a>
+        and
+        <a href="https://squidfunk.github.io/mkdocs-material/">
+          Material for MkDocs</a>
+      </div>
+      
+        
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../../assets/javascripts/application.b438e6c5.js"></script>
+      
+      <script>app.initialize({version:"0.17.3",url:{base:"../.."}})</script>
+      
+        <script src="../../js/app.js"></script>
+      
+    
+    
+      
+    
+  </body>
+</html>
