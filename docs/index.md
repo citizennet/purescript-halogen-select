@@ -22,8 +22,8 @@ If this is your first time using `Select`, start with the [tutorials](https://ci
 
 If this isn't your first time, you'll find value in these resources:
 
-* The [user guide](https://citizennet.github.io/purescript-halogen-select/user-guide) contains more detailed explanations on the design of the library. It will help you understand how to make good design choices and make the most of the tools available to you.
 * The [how-to](https://citizennet.github.io/purescript-halogen-select/how-to) section contains plenty of short guides for common tasks you'll perform using `Select`. Consider it a grab-bag of useful strategies and examples you can refer to when developing new components.
+* The [concepts](https://citizennet.github.io/purescript-halogen-select/concepts) section contains more detailed explanations on the design of the library. It will help you understand how to make good design choices and make the most of the tools available to you.
 * The [reference documentation on Pursuit](https://pursuit.purescript.org/packages/purescript-halogen-select) contains the module documentation and source code. It's a useful reference to verify what functions are available to you.
 * The [examples folder on Github](https://github.com/citizennet/purescript-halogen-select) contains the working source code for all the components in the [tutorials](https://citizennet.github.io/purescript-halogen-select/tutorials). If you're building a similar component, this code can help you get started.
 
