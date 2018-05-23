@@ -65,15 +65,20 @@ markdown_extensions:
       custom_checkbox: true
   - pymdownx.tilde
 
-
 # Site architecture
 pages:
   - Home: 'index.md'
-  # - Tutorials:
-  #   - 'Dropdown': 'tutorials/dropdown.md'
-  #   - 'Typeahead': 'tutorials/typeahead.md'
-  #   - 'Date Picker': 'tutorials/date-picker.md'
-  # - About:
-  #   - 'Design Philosophy': 'about/design-philosophy.md'
-  #   - 'Talks': 'about/talks.md'
-  # - Reference: 'reference.md'
+  - Design Philosophy: 'index.md'
+  - Tutorials:
+    - 'Build a dropdown': 'index.md'
+    - 'Build a typeahead': 'index.md'
+    - 'Build a date picker': 'index.md'
+  - User Guide:
+    - 'Advice for writing better render functions': 'index.md'
+    - 'Controlling behavior from HTML with QueryF': 'index.md'
+  - How To:
+    - 'How to embed parent queries': 'index.md'
+    - 'How to use the parent state for rendering': 'index.md'
+    - 'How to watch a key on the parent state': 'index.md'
+    - 'How to understand common type errors': 'index.md'
+    - 'How to write your own setProps functions': 'index.md'
