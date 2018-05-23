@@ -12,6 +12,12 @@
     
         
     <url>
+     <loc>https://citizennet.github.io/purescript-halogen-select/tutorials/getting-started/</loc>
+     <lastmod>2018-05-23</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+        
+    <url>
      <loc>https://citizennet.github.io/purescript-halogen-select/tutorials/dropdown/</loc>
      <lastmod>2018-05-23</lastmod>
      <changefreq>daily</changefreq>
