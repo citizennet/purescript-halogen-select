@@ -70,11 +70,11 @@ pages:
   - Home: 'index.md'
   # - Design Philosophy: 'index.md'
   - Tutorials:
-    - 'Build a dropdown': 'index.md'
+    - 'Build a dropdown': 'tutorials/dropdown.md'
     # - 'Build a typeahead': 'index.md'
     # - 'Build a date picker': 'index.md'
   - How To:
-    - 'How to embed parent queries': 'index.md'
+    - 'How to embed parent queries': 'how-to/embed-parent-queries.md'
     # - 'How to leverage the parent state for rendering': 'index.md'
     # - 'How to watch a key on the parent state': 'index.md'
     # - 'How to understand common type errors': 'index.md'
