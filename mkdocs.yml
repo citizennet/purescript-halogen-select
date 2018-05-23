@@ -70,6 +70,7 @@ pages:
   - Home: 'index.md'
   # - Design Philosophy: 'index.md'
   - Tutorials:
+    - 'Project setup': 'tutorials/getting-started.md'
     - 'Build a dropdown': 'tutorials/dropdown.md'
     # - 'Build a typeahead': 'index.md'
     # - 'Build a date picker': 'index.md'
