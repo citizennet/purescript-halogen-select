@@ -20,6 +20,9 @@ If this is your first time using `Select`, start with the [tutorials](https://ci
 
 <div class="ocelot-scoped" data-component="dropdown"></div>
 
+!!! tip
+    Don't want to build your own UI components? Check out the [Ocelot component library](https://citizennet.github.io/purescript-ocelot)!
+
 If this isn't your first time, you'll find value in these resources:
 
 * The [how-to](https://citizennet.github.io/purescript-halogen-select/how-to) section contains plenty of short guides for common tasks you'll perform using `Select`. Consider it a grab-bag of useful strategies and examples you can refer to when developing new components.
@@ -36,7 +39,7 @@ If this isn't your first time, you'll find value in these resources:
 * Leverage the provided features for user interaction, state management, accessibility, and logic
 * Retain complete freedom over the design and aesthetic of your selection component
 
-!!! tip "For visual learners"
-    I gave a talk at the Los Angeles PureScript meetup in April 2018 about the approach this library takes. It provides lots of additional context. The talk starts at **35:18**:
+!!! aside "For visual learners"
+    I gave a talk at the Los Angeles PureScript meetup in April 2018 about the approach this library takes. It provides an overview of our design approach, including advantages and drawbacks, as well as a simple walkthrough of building a dropdown. No, the man in the preview isn't me -- that's [Phil Freeman](http://functorial.com/), the designer of the PureScript programming language.
 
     <iframe width="560" height="315" src="https://www.youtube.com/embed/igWrktC0m7E?rel=0&amp;showinfo=0&amp;start=2119" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>

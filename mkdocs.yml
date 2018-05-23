@@ -30,8 +30,8 @@ extra_javascript:
   - js/app.js
 
 # To style components
-# extra_css:
-#   - css/cn-tailwind.scoped.css
+extra_css:
+  - css/cn-tailwind.scoped.css
 
 # Google Analytics
 # google_analytics:
@@ -83,3 +83,4 @@ pages:
     # - 'Advice for writing better render functions': 'index.md'
     # - 'Controlling component behavior from HTML': 'index.md'
     - 'Understanding QueryF': 'index.md'
+  - Examples: 'examples.md'
