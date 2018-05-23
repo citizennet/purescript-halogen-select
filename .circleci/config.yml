@@ -44,9 +44,9 @@ jobs:
             yarn build-docs
 
       - persist_to_workspace:
-          root: docs/js
+          root: docs
           paths:
-            - .
+            - js
 
   css:
     <<: *defaults
@@ -59,9 +59,9 @@ jobs:
             yarn fetch-css && yarn move-css
 
       - persist_to_workspace:
-          root: docs/css
+          root: docs
           paths:
-            - .
+            - css
 
   site:
     working_directory: ~/select
@@ -77,10 +77,7 @@ jobs:
           command: pip install mkdocs mkdocs-material
 
       - attach_workspace:
-          at: docs/js
-
-      - attach_workspace:
-          at: docs/css
+          at: docs
 
       - run:
           name: Run site generation
