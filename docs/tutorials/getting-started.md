@@ -7,7 +7,7 @@ Instead of creating a new Halogen project from scratch, we’ll start with a min
 First, clone the Halogen template project from CitizenNet, install dependencies, and make sure things build properly. If they don’t, please reach out on the [Purescript user forum](https://purescript-users.ml) so we can fix it!
 
 !!! note ""
-    We prefer Yarn over NPM for package management and scripts, but either one will work. Anywhere you see `#!sh yarn <script>`, you can substitute `#!npm run <script>` instead. Feel free to look at the `package.json` file if you want to see what these scripts are doing.
+    We prefer Yarn over NPM for package management and scripts, but either one will work. Anywhere you see `#!sh yarn <script>`, you can substitute `#!sh npm run <script>` instead. Feel free to look at the `package.json` file if you want to see what these scripts are doing.
 
 The following steps should get you set up with everything you need to complete these tutorials:
 
