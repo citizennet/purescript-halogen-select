@@ -38,45 +38,53 @@ jobs:
           paths:
             - ~/select/node_modules
 
-      # Verify all examples successfully build...
       - run:
-          name: Build all components via docs
-          command: yarn run build-docs
+          name: Build example components
+          command: |
+            yarn build-docs
 
-      # Persist the specified paths into the workspace
       - persist_to_workspace:
-          root: docs/dist
+          root: docs
           paths:
-            - .
+            - js
 
-  site:
-    working_directory: ~/select
-    docker:
-      - image: rustlang/rust:nightly
+  css:
+    <<: *defaults
     steps:
       - checkout
 
       - run:
-          name: Install Gutenberg
+          name: Fetch and persist CSS
           command: |
-            wget https://github.com/Keats/gutenberg/releases/download/v0.3.1/gutenberg-v0.3.1-x86_64-unknown-linux-gnu.tar.gz -O gb.tar.gz
-            tar -xvzf gb.tar.gz
+            yarn fetch-css && yarn move-css
 
-      - attach_workspace:
-          at: docs/dist
+      - persist_to_workspace:
+          root: docs
+          paths:
+            - css
+
+  site:
+    working_directory: ~/select
+    docker:
+      - image: jfloff/alpine-python:3.4-slim
+    steps:
+      - checkout
+
+      - setup_remote_docker
 
       - run:
-          name: Build site
-          command: |
-            mv gutenberg docs/site
-            cd docs/site
-            ./gutenberg build
-            cd ../
-            cp -r site/public/. dist/
+          name: Install dependencies
+          command: pip install mkdocs mkdocs-material
 
-      # Persist the dist folder
+      - attach_workspace:
+          at: docs
+
+      - run:
+          name: Run site generation
+          command: mkdocs build
+
       - persist_to_workspace:
-          root: docs/dist
+          root: site
           paths:
             - .
 
@@ -98,7 +106,7 @@ jobs:
             git worktree add ../gh-pages gh-pages
 
       - attach_workspace:
-          at: dist
+          at: site
 
       # Enable building docs
       - add_ssh_keys:
@@ -108,14 +116,14 @@ jobs:
       - run:
           name: Copy over files to gh-pages branch
           command: |
-            cp -r dist/. ../gh-pages
+            cp -r site/. ../gh-pages
             cp -r .circleci/. ../gh-pages/.circleci
 
       - run:
           name: Push update to GitHub
           command: |
             cd ../gh-pages
-            git config --global user.email "dev@citizennet.com"
+            git config --global user.email "admin@thomashoneyman.com"
             git config --global user.name "CircleCI Build"
             git add .
             git commit --allow-empty -m "Build triggered by CircleCI"
@@ -131,10 +139,22 @@ workflows:
               ignore: gh-pages
 
       # On master branch, rebuild docs
+      - css:
+          filters:
+            branches:
+              only:
+                - master
+                - docs
+
+          requires:
+            - test
+
       - site:
           filters:
             branches:
-              only: master
+              only:
+                - master
+                - docs
 
           requires:
             - test
@@ -142,7 +162,10 @@ workflows:
       - docs:
           filters:
             branches:
-              only: master
+              only:
+                - master
+                - docs
 
           requires:
             - site
+            - css
