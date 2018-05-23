@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "build-docs": "pulp --then 'mkdocs build' build -I examples --to docs/js/app.js",
+    "build-docs": "pulp build -I examples --to docs/js/app.js",
     "watch-docs": "pulp -w --then 'mkdocs serve' build -I examples --to docs/js/app.js",
     "clean": "rm -rf output bower_components node_modules site docs/js docs/css",
     "postinstall": "bower i --silent && yarn fetch-css && yarn move-css",
