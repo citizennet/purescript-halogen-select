@@ -82,5 +82,5 @@ pages:
   - Concepts:
     # - 'Advice for writing better render functions': 'index.md'
     # - 'Controlling component behavior from HTML': 'index.md'
-    - 'Understanding QueryF': 'index.md'
+    - 'Understanding free queries': 'concepts/understanding-free-queries.md'
   - Examples: 'examples.md'
