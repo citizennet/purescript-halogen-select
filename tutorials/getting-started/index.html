@@ -731,7 +731,7 @@ open dist/index.html
 </pre></div>
 </td></tr></table>
 
-<p>After you complete a step in the tutorial, make sure to rebuild the project and refresh your browser to see your updated component.</p>
+<p>After you complete each step in the tutorial, make sure to rebuild the project and refresh your browser to see your updated component.</p>
 <h3 id="helpful-tip-watching-for-file-changes">Helpful tip: Watching for file changes<a class="headerlink" href="#helpful-tip-watching-for-file-changes" title="Permanent link">&para;</a></h3>
 <p>It’s convenient to keep a terminal running which watches for file changes, rebuilds the project, and bundles JavaScript on your behalf. Then, when you make a change to a file, all you have to do is wait a moment and refresh the page to see your updates.</p>
 <p>When I write PureScript, I usually work with two terminals open. I use the first to write code, and the second to watch those changes and rebuild. I recommend using the same technique as you walk through these tutorials. These three steps are all you need:</p>
@@ -755,7 +755,7 @@ yarn watch
 </div>
 <h3 id="query-algebra">Query Algebra<a class="headerlink" href="#query-algebra" title="Permanent link">&para;</a></h3>
 <p>How does a component know what to do?</p>
-<p>In Halogen, we give names to each computation we'd like a component to run. Computations that can side effects but don't return anything are colloquially called <em>actions</em>; those that can have side effects and also return something are called <em>requests</em>. The type that lists out the possible actions and requests for a component is called the component's <em>query algebra</em>. The Halogen guide has a relevant <a href="https://github.com/slamdata/purescript-halogen/blob/master/docs/2%20-%20Defining%20a%20component.md#query-algebra">section about query algebras</a> if you'd like to know more.</p>
+<p>In Halogen, we give names to each computation we'd like a component to run. Computations that can have side effects but don't return anything are colloquially called <em>actions</em>; those that can have side effects and also return something are called <em>requests</em>. The type that lists out the possible actions and requests for a component is called the component's <em>query algebra</em>. The Halogen guide has a relevant <a href="https://github.com/slamdata/purescript-halogen/blob/master/docs/2%20-%20Defining%20a%20component.md#query-algebra">section about query algebras</a> if you'd like to know more.</p>
 <p>What actions and requests can our starter component perform? By looking at the query algebra, we see just one constructor:</p>
 <table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
 2</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">data</span> <span class="kt">Query</span> <span class="n">a</span>
