@@ -36,7 +36,7 @@ yarn build
 open dist/index.html
 ```
 
-After you complete a step in the tutorial, make sure to rebuild the project and refresh your browser to see your updated component.
+After you complete each step in the tutorial, make sure to rebuild the project and refresh your browser to see your updated component.
 
 ### Helpful tip: Watching for file changes
 It’s convenient to keep a terminal running which watches for file changes, rebuilds the project, and bundles JavaScript on your behalf. Then, when you make a change to a file, all you have to do is wait a moment and refresh the page to see your updates.
@@ -65,7 +65,7 @@ The project starts off with a minimal Halogen component. As a brief refresher, I
 
 How does a component know what to do?
 
-In Halogen, we give names to each computation we'd like a component to run. Computations that can side effects but don't return anything are colloquially called *actions*; those that can have side effects and also return something are called *requests*. The type that lists out the possible actions and requests for a component is called the component's *query algebra*. The Halogen guide has a relevant [section about query algebras](https://github.com/slamdata/purescript-halogen/blob/master/docs/2%20-%20Defining%20a%20component.md#query-algebra) if you'd like to know more.
+In Halogen, we give names to each computation we'd like a component to run. Computations that can have side effects but don't return anything are colloquially called *actions*; those that can have side effects and also return something are called *requests*. The type that lists out the possible actions and requests for a component is called the component's *query algebra*. The Halogen guide has a relevant [section about query algebras](https://github.com/slamdata/purescript-halogen/blob/master/docs/2%20-%20Defining%20a%20component.md#query-algebra) if you'd like to know more.
 
 What actions and requests can our starter component perform? By looking at the query algebra, we see just one constructor:
 
