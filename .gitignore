@@ -11,8 +11,9 @@ package-lock.json
 generated-docs
 
 # Dist
-docs/dist
-docs/site/public
+docs/css
+docs/js
+site
 
 # IDE
 *.swo

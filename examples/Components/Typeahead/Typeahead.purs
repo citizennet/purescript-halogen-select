@@ -18,6 +18,8 @@ import Halogen.HTML.Properties as HP
 import Select as Select
 import Select.Utils.Setters as Setters
 
+import Docs.CSS as CSS
+
 type TypeaheadItem = String
 
 type Effects eff = ( avar :: AVAR, dom :: DOM, console :: CONSOLE | eff )
@@ -134,7 +136,7 @@ renderInputContainer :: ∀ e
 renderInputContainer state = HH.div_ [ renderInput, renderContainer ]
   where
     renderInput = HH.input $ Setters.setInputProps
-      [ class_ "rounded-sm bg-white w-full flex py-2 px-3"
+      [ HP.classes CSS.input
       , HP.placeholder "Type to search..." ]
 
     renderContainer =

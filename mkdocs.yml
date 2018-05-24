@@ -1,0 +1,87 @@
+# Project information
+site_name: 'Select Documentation'
+site_description: 'Building blocks for common selection user interfaces in PureScript & Halogen'
+site_author: 'Thomas Honeyman'
+site_url: 'https://citizennet.github.io/purescript-halogen-select'
+
+# Repository
+repo_name: 'purescript-halogen-select'
+repo_url: 'https://github.com/citizennet/purescript-halogen-select'
+
+# Copyright
+copyright: 'Copyright &copy; 2018 CitizenNet'
+
+# Config
+theme:
+  name: 'material'
+  custom_dir: 'docs/theme'
+  language: 'en'
+  palette:
+    primary: 'cyan'
+    accent: 'cyan'
+  font:
+    text: 'Open Sans'
+    code: 'Roboto Mono'
+  logo:
+    icon: 'school'
+
+# To mount components
+extra_javascript:
+  - js/app.js
+
+# To style components
+extra_css:
+  - css/cn-tailwind.scoped.css
+
+# Google Analytics
+# google_analytics:
+#   - 'UA-XXXXXXXX-X'
+#   - 'auto'
+
+# Extensions
+# Recommended here:
+# https://squidfunk.github.io/mkdocs-material/getting-started/#extensions
+markdown_extensions:
+  - admonition
+  - codehilite:
+      guess_lang: false
+      linenums: true
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.critic
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_generator: !!python/name:pymdownx.emoji.to_svg
+  - pymdownx.inlinehilite
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+# Site architecture
+pages:
+  - Home: 'index.md'
+  # - Design Philosophy: 'index.md'
+  - Tutorials:
+    - 'Project setup': 'tutorials/getting-started.md'
+    - 'Build a dropdown': 'tutorials/dropdown.md'
+    # - 'Build a typeahead': 'index.md'
+    # - 'Build a date picker': 'index.md'
+  - How To:
+    - 'How to embed parent queries': 'how-to/embed-parent-queries.md'
+    # - 'How to leverage the parent state for rendering': 'index.md'
+    # - 'How to watch a key on the parent state': 'index.md'
+    # - 'How to understand common type errors': 'index.md'
+    # - 'How to write your own setProps functions': 'index.md'
+  - Concepts:
+    # - 'Advice for writing better render functions': 'index.md'
+    # - 'Controlling component behavior from HTML': 'index.md'
+    - 'Understanding free queries': 'concepts/understanding-free-queries.md'
+  - Examples: 'examples.md'

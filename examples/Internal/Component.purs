@@ -1,6 +1,6 @@
 -- | A centralized module ready for use to mount components into documentation pages.
 
-module Docs.App.Component where
+module Docs.Internal.Component where
 
 import Prelude
 

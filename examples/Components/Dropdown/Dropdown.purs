@@ -14,12 +14,22 @@ import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Select as Select
 import Select.Utils.Setters as Setters
+import Docs.CSS as CSS
 
 type Effects eff = ( avar :: AVAR, dom :: DOM, console :: CONSOLE | eff )
-type State = { items :: Array String, text :: String }
-type Input = { items :: Array String }
-data Query a = HandleSelect (Select.Message Query String) a
-data Message = Void
+
+type State =
+  { items :: Array String
+  , text :: String }
+
+type Input =
+  { items :: Array String }
+
+data Query a
+  = HandleSelect (Select.Message Query String) a
+
+data Message
+  = Void
 
 type ChildSlot = Unit
 type ChildQuery eff = Select.Query Query String eff
@@ -45,8 +55,7 @@ component =
       HandleSelect (Select.Selected item) a -> do
         st <- H.get
         _ <- H.query unit $ Select.setVisibility Select.Off
-        _ <- H.query unit $ Select.triggerBlur
-        _ <- H.query unit $ Select.replaceItems (difference st.items [ item ])
+        _ <- H.query unit $ Select.replaceItems $ difference st.items [ item ]
         H.modify _ { text = item }
         pure a
 
@@ -57,7 +66,7 @@ component =
       -> H.ParentHTML Query (ChildQuery (Effects e)) ChildSlot m
     render st =
       HH.div
-        [ class_ "w-full" ]
+        [ HP.class_ $ HH.ClassName "w-full" ]
         [ HH.slot unit Select.component input (HE.input HandleSelect) ]
       where
         input =
@@ -68,38 +77,36 @@ component =
           , render: renderDropdown
           }
 
-        class_ :: ∀ p i. String -> H.IProp ( "class" :: String | i ) p
-        class_ = HP.class_ <<< HH.ClassName
-
         renderDropdown :: Select.State String (Effects e) -> Select.ComponentHTML Query String (Effects e)
-        renderDropdown state = HH.div_ [ renderToggle, renderContainer ]
+        renderDropdown state = HH.div_ [ renderToggle, renderMenu ]
           where
             renderToggle =
               HH.button
-                ( Setters.setToggleProps props )
+                ( Setters.setToggleProps [ HP.classes CSS.button ] )
                 [ HH.text st.text ]
-                where
-                  props = [ class_ "bg-blue hover:bg-blue-dark text-white font-bold py-2 px-4 rounded-sm w-full flex" ]
 
-            renderContainer =
-              HH.div [ class_ "relative z-50" ]
+            renderMenu =
+              HH.div [ HP.classes CSS.menu ]
               $ if state.visibility == Select.Off
                 then []
-                else [ renderItems $ renderItem `mapWithIndex` state.items ]
+                else [ renderContainer $ renderItem `mapWithIndex` state.items ]
               where
-                renderItems html =
+                renderContainer html =
                   HH.div
-                    ( Setters.setContainerProps props )
-                    [ HH.ul [ class_ "list-reset" ] html ]
-                  where
-                    props = [ class_ "absolute bg-white shadow rounded-sm pin-t pin-l w-full" ]
+                    ( Setters.setContainerProps [ HP.classes CSS.itemContainer ] )
+                    [ HH.ul [ HP.classes CSS.ul ] html ]
 
                 renderItem index item =
                   HH.li
                     ( Setters.setItemProps index props )
                     [ HH.text item ]
                   where
-                    props = [ class_
-                      $ "px-4 py-1 text-grey-darkest"
-                      <> if state.highlightedIndex == Just index then " bg-grey-lighter" else ""
+                    props =
+                      [ HP.classes
+                        ( CSS.li <>
+                          if state.highlightedIndex == Just index
+                            then [ HH.ClassName "bg-grey-lighter" ]
+                            else []
+                        )
                       ]
+

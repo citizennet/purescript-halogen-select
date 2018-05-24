@@ -28,22 +28,23 @@ import Halogen.Aff as HA
 import Halogen.HTML as HH
 import Halogen.VDom.Driver (runUI)
 
-import Docs.App.Proxy (ProxyS, proxy)
-
-import Docs.App.Component as Component
+import Docs.Internal.Proxy (ProxyS, proxy)
+import Docs.Internal.Component as Component
 
 -- Finds all nodes labeled "data-component-id" and retrieves the associated attribute.
 -- Then, mounts the right component at each node.
 main :: ∀ eff. Eff (HA.HalogenEffects (Component.Effects eff)) Unit
 main = HA.runHalogenAff do
-  elements <- awaitSelectAll $ { query: QuerySelector "div[data-component-id]", attr: "data-component-id" }
+  elements <- awaitSelectAll
+    { query: QuerySelector "div[data-component]"
+    , attr: "data-component"
+    }
   flip traverse_ elements $ \e -> runUI app e.attr e.element
 
 ----------
 -- Routes
 
 type ComponentQuery = ProxyS (Const Void) Unit
-
 type Components m = Map.Map String (H.Component HH.HTML ComponentQuery Unit Void m)
 
 routes :: ∀ eff m. MonadAff ( Component.Effects eff ) m => Components m
