@@ -23,6 +23,12 @@
      <changefreq>daily</changefreq>
     </url>
         
+    <url>
+     <loc>https://citizennet.github.io/purescript-halogen-select/tutorials/typeahead/</loc>
+     <lastmod>2018-05-24</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+        
     
 
     

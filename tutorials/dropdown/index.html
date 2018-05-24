@@ -448,6 +448,18 @@
   </li>
 
         
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../typeahead/" title="Build a typeahead" class="md-nav__link">
+      Build a typeahead
+    </a>
+  </li>
+
+        
       </ul>
     </nav>
   </li>
@@ -700,11 +712,13 @@
                 
                 <h1 id="lets-build-a-dropdown">Let's Build a Dropdown<a class="headerlink" href="#lets-build-a-dropdown" title="Permanent link">&para;</a></h1>
 <p>Dropdowns are among the simplest selection components you will build, but they can be tricky to get right. For example, you'll likely want to ensure that your users can type to highlight close text matches (like when you type "Ca" to highlight "California" in a state dropdown). You'll want to be accessible to folks using screen readers or keyboard-only navigation, too. And, of course, you'll want to achieve all this without compromising on your design.</p>
-<p>In this tutorial, we'll build a dropdown together using <code>Select</code>. It will be ugly but functional; we won't worry much about CSS.</p>
-<div class="admonition note">
+<p>This tutorial is intended as a beginner-friendly, thorough introduction to <code>Select</code>. We'll build a functional dropdown complete with keyboard navigation. Along the way, we'll learn more about how to work with Halogen components, diagnose type errors, and other common PureScript tasks.</p>
+<div class="admonition info">
 <p>This tutorial assumes you've followed the steps in the <a href="https://citizennet.github.io/purescript-halogen-select/tutorials/getting-started/">Project Setup</a> section. While not necessary, this code is tested with those steps in mind.</p>
-<p>It also assumes familiarity with the Halogen framework. If you need a refresher, try the official <a href="https://github.com/slamdata/purescript-halogen/tree/master/docs">Halogen guide</a> or the <a href="https://citizennet.github.io/purescript-halogen-select/tutorials/getting-started/#a-whirlwind-tour-of-our-starter-component">whirlwind tour of the component we're building from</a></p>
-<p><strong>If you are already an intermediate or advanced PureScript developer, then this tutorial will read slowly for you. Feel free to skim, get the gist of how the library works, and then move on to the much <a href="https://citizennet.github.io/purescript-halogen-select/tutorials/typeahead">more advanced typeahead tutorial</a>.</strong></p>
+<p>It also assumes familiarity with the Halogen framework. If you need a refresher, try the official <a href="https://github.com/slamdata/purescript-halogen/tree/master/docs">Halogen guide</a> or the <a href="https://citizennet.github.io/purescript-halogen-select/tutorials/getting-started/#a-whirlwind-tour-of-our-starter-component">whirlwind tour</a> of our starter component.</p>
+<div class="admonition warning">
+<p><strong>If you are already an intermediate or advanced PureScript developer, then this tutorial will read slowly for you. Feel free to skim, get the gist of how the library works, and then move on to the <a href="https://citizennet.github.io/purescript-halogen-select/tutorials/typeahead">faster-paced and more advanced typeahead tutorial</a>.</strong></p>
+</div>
 <p>Your code should work at the end of every step. If you run into issues or your code doesn't compile, please come visit us on the <a href="https://purescript-users.ml">PureScript user forum</a> or the <a href="https://functionalprogramming.slack.com">#fpchat Slack channel</a>.</p>
 </div>
 <p>We're going to build a dropdown that is functionally equivalent this one:</p>
@@ -746,8 +760,8 @@
 </pre></div>
 </td></tr></table>
 
-<div class="admonition warn">
-<p>Make sure to compile this code and view the new output! You should see a header, a button, and two items in the list.</p>
+<div class="admonition danger">
+<p>Make sure to compile this code and view the new output! You should see a header, a button, and two items in the list. After each step, make sure your code still compiles.</p>
 </div>
 <h3 id="a-better-state-type">A better <code class="codehilite"><span class="kt">State</span></code> type<a class="headerlink" href="#a-better-state-type" title="Permanent link">&para;</a></h3>
 <p>It's already clear we're going to need more than <code class="codehilite"><span class="kt">Unit</span></code> for our <code class="codehilite"><span class="kt">State</span></code> type. We at least need to know three things:</p>
@@ -1796,13 +1810,13 @@
           </a>
         
         
-          <a href="../../how-to/embed-parent-queries/" title="How to embed parent queries" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+          <a href="../typeahead/" title="Build a typeahead" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
             <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
               <span class="md-flex__ellipsis">
                 <span class="md-footer-nav__direction">
                   Next
                 </span>
-                How to embed parent queries
+                Build a typeahead
               </span>
             </div>
             <div class="md-flex__cell md-flex__cell--shrink">
