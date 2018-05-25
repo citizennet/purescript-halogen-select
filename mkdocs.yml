@@ -72,7 +72,7 @@ pages:
   - Tutorials:
     - 'Project setup': 'tutorials/getting-started.md'
     - 'Build a dropdown': 'tutorials/dropdown.md'
-    # - 'Build a typeahead': 'index.md'
+    - 'Build a typeahead': 'tutorials/typeahead.md'
     # - 'Build a date picker': 'index.md'
   - How To:
     - 'How to embed parent queries': 'how-to/embed-parent-queries.md'
