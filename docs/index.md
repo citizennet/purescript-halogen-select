@@ -1,3 +1,5 @@
+title: Documentation for PureScript Halogen Select
+
 # Welcome
 
 `Select` helps you build selection user interfaces in PureScript with Halogen. You can use it to build dropdowns, typeaheads and autocompletes, date pickers, image pickers, and more, with features like keyboard navigation, accessibility, and state management handled for you. This library takes a unique approach to component design to ensure you can leverage its features without compromising your design in any way.
@@ -16,9 +18,7 @@ $ bower install --save purescript-halogen-select
 
 ## Quick Start
 
-If this is your first time using `Select`, start with the [tutorials](https://citizennet.github.io/purescript-halogen-select/tutorials/getting-started). I'd recommend starting with the simplest example where you'll learn to make this dropdown component:
-
-<div class="ocelot-scoped" data-component="dropdown"></div>
+If this is your first time using `Select`, start with the [tutorials](https://citizennet.github.io/purescript-halogen-select/tutorials/getting-started). I'd recommend starting with the simplest example where you'll learn to make a keyboard-navigable dropdown component:
 
 !!! tip
     Don't want to build your own UI components? Check out the [Ocelot component library](https://citizennet.github.io/purescript-ocelot)!

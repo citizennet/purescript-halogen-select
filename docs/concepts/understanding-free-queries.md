@@ -1,3 +1,5 @@
+title: Free Queries in PureScript & Halogen
+
 # Understanding Free Monad Queries
 
 Most of the time Halogen queries look like this:

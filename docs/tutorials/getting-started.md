@@ -1,10 +1,12 @@
+title: Project Setup for PureScript Halogen Select
+
 # Introduction
 Halogen is a powerful framework for building PureScript applications. It’s used by several companies, including SlamData and my own company, CitizenNet (a Condé Nast company), among others. The `Select` library is written for the Halogen framework, so if you don’t know how to use Halogen yet, you ought to start with the [Halogen guide](https://github.com/slamdata/purescript-halogen/tree/master/docs). That said, with only passing familiarity with Halogen, you should be able to follow along just fine!
 
 ## Setup
 Instead of creating a new Halogen project from scratch, we’ll start with a minimal starter template. This template includes the HTML, build scripts, and basic `Main.purs` file necessary to run your Halogen application. It also includes a component with the bare minimum definitions in place. This component does nothing at all, which is nice because we can easily use it to start building dropdowns, typeaheads, and other components.
 
-!!! note ""
+!!! info
     We prefer Yarn over NPM for package management and scripts, but either one will work. Anywhere you see `#!sh yarn <script>`, you can substitute `#!sh npm run <script>` instead. Feel free to look at the `package.json` file if you want to see what these scripts are doing.
 
 ### Installation

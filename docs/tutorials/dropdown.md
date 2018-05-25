@@ -1,11 +1,12 @@
-# Let's Build a Dropdown
+title: Build a PureScript Dropdown in Halogen
+
+# Let's Build a Dropdown in PureScript!
 
 Dropdowns are among the simplest selection components you will build, but they can be tricky to get right. For example, you'll likely want to ensure that your users can type to highlight close text matches (like when you type "Ca" to highlight "California" in a state dropdown). You'll want to be accessible to folks using screen readers or keyboard-only navigation, too. And, of course, you'll want to achieve all this without compromising on your design.
 
 This tutorial is intended as a beginner-friendly, thorough introduction to `Select`. We'll build a functional dropdown complete with keyboard navigation. Along the way, we'll learn more about how to work with Halogen components, diagnose type errors, and other common PureScript tasks.
 
-
-!!! info ""
+!!! info
     This tutorial assumes you've followed the steps in the [Project Setup](https://citizennet.github.io/purescript-halogen-select/tutorials/getting-started/) section. While not necessary, this code is tested with those steps in mind.
 
     It also assumes familiarity with the Halogen framework. If you need a refresher, try the official [Halogen guide](https://github.com/slamdata/purescript-halogen/tree/master/docs) or the [whirlwind tour](https://citizennet.github.io/purescript-halogen-select/tutorials/getting-started/#a-whirlwind-tour-of-our-starter-component) of our starter component.
@@ -110,7 +111,7 @@ dropdown =
   ]
 ```
 
-!!! tip ""
+!!! tip
     Since the dropdown has no behavior yet, try changing the `#!hs initialState` to set `#!hs isOpen` to `#!hs true` to verify your items are in fact being rendered out to the page.
 
 It ain't pretty, but at this point we've got all the rendering we need for a basic dropdown! The next step is to actually wire in some behavior.
@@ -137,7 +138,7 @@ import Select as Select
 import Select.Utils.Setters as Setters
 ```
 
-!!! tip ""
+!!! tip
     You can always [view the module documentation for Select on Pursuit](https://pursuit.purescript.org/packages/purescript-halogen-select/1.0.0) or the [source code on GitHub](https://github.com/citizennet/purescript-halogen-select). This is useful when integrating with third-party components so that you can check out the `#!hs Input`, `#!hs State`, `#!hs Query`, and `#!hs Message` types.
 
 Next, we need to update our `#!hs ChildSlot` and `#!hs ChildQuery` types. We're only going to have one dropdown so we can leave the child slot as `#!hs Unit`; we do need to add the `Select` component's query type to our `#!hs ChildQuery` synonym, however.
@@ -562,7 +563,7 @@ in value declaration component
 
 This time it's because we've added a new query, but we never updated our `#!hs eval` function to describe what should happen when the query is triggered. What should we actually _do_ when a message comes up from the child component?
 
-!!! tip ""
+!!! tip
     You'll often see type errors that end in "... value declaration component." when the error occurred in any of the functions in the `where` clause for the component. It can be annoying to track down where the error actually is in your code. One way to help track these down is to move your code out of the `where` block and into the module level temporarily so the compiler can identify which particular function is causing the issue.
 
 There are four possible sub-cases that we need to handle, each described in the module documentation:
@@ -632,6 +633,9 @@ Nice and simple! While you may write all kinds of logic for the other messages r
 
 Congratulations! You have successfully built a keyboard-navigable dropdown using `Select`. You integrated the library, wrote your own render function, and then augmented it with helper functions from the library. Then, you handled the output messages and sent queries to update the component's state. You've done quite a lot of work!
 
+!!! tip
+    Did you notice anything you would improve about this tutorial or the `Select` library? I'd love to hear about it! Feel free to reach out on the [functional programming Slack](https://functionalprogramming.slack.com/) or on the [PureScript user forum](https://purescript-users.ml). If you found a bug or would like to make an improvement, please open an issue or pull request on the library.
+
 ### Next Steps
 
 This tutorial was a slow, thorough introduction to the `Select` library. But we've only scratched the surface of what you can do with it. I'd recommend continuing on to the faster-paced and more advanced [typeahead tutorial](https://citizennet.github.io/purescript-halogen-select/tutorials/typeahead).
@@ -659,12 +663,10 @@ If you'd like to use this component as a starting point from which to build your
     import Select.Utils.Setters as Setters
 
     data Query a
-      = NoOp a
-      | HandleSelect (Select.Message Query String) a
+      = HandleSelect (Select.Message Query String) a
 
     type State =
-      { isOpen :: Boolean
-      , selectedItem :: Maybe String
+      { selectedItem :: Maybe String
       , availableItems :: Array String
       }
 
@@ -747,8 +749,6 @@ If you'd like to use this component as a starting point from which to build your
 
       eval :: Query ~> H.ParentDSL State Query (ChildQuery (Effects eff)) ChildSlot Message m
       eval = case _ of
-        NoOp next -> pure next
-
         HandleSelect message next -> case message of
           Select.Searched string ->
             pure next

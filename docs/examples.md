@@ -1,6 +1,11 @@
+title: PureScript Halogen Select Examples
+
 # Examples
 
 You can play around with a few example components here. However, for a much richer set of components with much more functionality, check out the [Ocelot design system by CitizenNet](https://citizennet.github.io/purescript-ocelot/#typeaheads).
+
+!!! warning
+    The components on this page function properly, but look horrible while we migrate CSS.
 
 ### Dropdown
 
