@@ -916,12 +916,20 @@ yarn build
 <details class="tip"><summary>Writing useful item types</summary><p>Any time you need to render some items differently than others, or you need different logic for when one item is selected vs. another, you should encode that information in the item type. For example, at CitizenNet, our calendar component has an item type like this:</p><table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">data</span> <span class="kt">CalendarItem</span> <span class="ow">=</span> <span class="kt">CalendarItem</span> <span class="kt">SelectedStatus</span> <span class="kt">DisabledStatus</span> <span class="kt">Boundary</span> <span class="kt">Range</span> <span class="kt">Date</span>
 </pre></div>
 </td></tr></table>
-<p>These custom types give us everything we need to know to render various dates and handle them when selected. For example, if you want some items to be selectable and others to be disabled, you could create an item type like this:</p><p>```hs
-data Item = Selectable String | Disabled String</p><p>renderItem ix (Selectable str)
-  = HH.li ( Setters.setItemProps ix [ ] ) [ HH.text str ]
-renderItem _ (Disabled str)
-  = HH.li_  [ HH.text str ]
-    ```</p></details><p>With all this information in mind, let's go ahead and make those changes:</p>
+<p>These custom types give us everything we need to know to render various dates and handle them when selected. For example, if you want some items to be selectable and others to be disabled, you could create an item type like this:</p><table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">data</span> <span class="kt">Item</span> <span class="ow">=</span> <span class="kt">Selectable</span> <span class="kt">String</span> <span class="o">|</span> <span class="kt">Disabled</span> <span class="kt">String</span>
+
+<span class="nf">renderItem</span> <span class="n">ix</span> <span class="p">(</span><span class="kt">Selectable</span> <span class="n">str</span><span class="p">)</span>
+  <span class="ow">=</span> <span class="kt">HH</span><span class="o">.</span><span class="n">li</span> <span class="p">(</span> <span class="kt">Setters</span><span class="o">.</span><span class="n">setItemProps</span> <span class="n">ix</span> <span class="p">[</span> <span class="p">]</span> <span class="p">)</span> <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">text</span> <span class="n">str</span> <span class="p">]</span>
+<span class="nf">renderItem</span> <span class="kr">_</span> <span class="p">(</span><span class="kt">Disabled</span> <span class="n">str</span><span class="p">)</span>
+  <span class="ow">=</span> <span class="kt">HH</span><span class="o">.</span><span class="n">li_</span>  <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">text</span> <span class="n">str</span> <span class="p">]</span>
+</pre></div>
+</td></tr></table>
+</details><p>With all this information in mind, let's go ahead and make those changes:</p>
 <table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
  2
  3
@@ -1393,8 +1401,177 @@ renderItem _ (Disabled str)
 
 <p>That's it! Our typeahead has all the logic necessary to function as required. All that's left to do is actually write the render function.</p>
 <h2 id="rendering">Rendering<a class="headerlink" href="#rendering" title="Permanent link">&para;</a></h2>
-<p>We have all the state and behavior necessary to run a working typeahead. Now, let's write the render function. Within the <code>where</code> clause of our parent component <code class="codehilite"><span class="nf">render</span></code> function, let's write the render function we're going to pass in to <code>Select</code>.</p>
-<p>Note: The explanation for this code is a work in progress. For now, the entire render function is provided below. This will create a functioning typeahead.</p>
+<p>We have all the state and behavior necessary to run a working typeahead. Now, let's write the render function.</p>
+<p>When you write a render function for a <code>Select</code> component, keep in mind that the function is going to be run <em>by</em> the child component. You can see this right away from the type signature of the render function that <code>Select</code> expects:</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">myRenderFunction</span> <span class="ow">::</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">State</span> <span class="n">item</span> <span class="n">eff</span> <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">ComponentHTML</span> <span class="n">o</span> <span class="n">item</span> <span class="n">eff</span>
+</pre></div>
+</td></tr></table>
+
+<p>In our case, we've already specialized our parent query, item, and effects, so the type signature is actually this:</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">myRenderFunction</span>
+  <span class="ow">::</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">State</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
+  <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">ComponentHTML</span> <span class="kt">Query</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
+</pre></div>
+</td></tr></table>
+
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>When you write a component with <code>Select</code>, you'll usually want access to the parent component's state and query algebra. This is what makes the pattern powerful: you can use any values from your state in the render function you provide to <code>Select</code>, and you can embed any queries from your query algebra, too. Most of the time developers will stay in scope with the parent component by writing the <code>Select</code> render function within a <code class="codehilite"><span class="kr">where</span></code> clause. However, you could also write a render function outside the parent component so long as it takes the parent state as an argument, like this:</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">selectRenderFunction</span>
+  <span class="ow">::</span> <span class="kt">Parent</span><span class="o">.</span><span class="kt">State</span>
+  <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">State</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Parent</span><span class="o">.</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
+  <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">ComponentHTML</span> <span class="kt">Parent</span><span class="o">.</span><span class="kt">Query</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Parent</span><span class="o">.</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
+</pre></div>
+</td></tr></table>
+
+<p>Then you can write this render function anywhere you'd like while retaining access to the parent's state and query algebra. <code>Select</code> will not accept this function as-is, however; you'll need to apply it to the parent state before sending the function in as input:</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">selectInput</span> <span class="ow">=</span> <span class="p">{</span> <span class="o">...</span><span class="p">,</span> <span class="n">render</span><span class="kt">:</span> <span class="n">selectRenderFunction</span> <span class="n">parentState</span><span class="p">,</span> <span class="o">...</span> <span class="p">}</span>
+</pre></div>
+</td></tr></table>
+
+</div>
+<p>Since you write the render function to pass to Select, you retain full control of the design and most of the structure of your HTML. All that <code>Select</code> expects from you is that you apply the three helper functions from <code class="codehilite"><span class="kt">Setters</span></code>:</p>
+<ul>
+<li><code class="codehilite"><span class="nf">setItemProps</span></code> on each item that can be selected</li>
+<li><code class="codehilite"><span class="nf">setContainerProps</span></code> on the parent HTML element of all the items</li>
+<li><code class="codehilite"><span class="nf">setInputProps</span></code> on the text input</li>
+</ul>
+<p>For this reason, I usually break my component's render function into three helpers. Let's go ahead and write our render function for the typeahead.</p>
+<p>Our overall function is going to take the parent state, the <code>Select</code> state, and output the <code>Select</code> component HTML type:</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">typeahead</span>
+  <span class="ow">::</span> <span class="kt">State</span>
+  <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">State</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
+  <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">ComponentHTML</span> <span class="kt">Query</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
+<span class="nf">typeahead</span> <span class="n">parentState</span> <span class="n">childState</span> <span class="ow">=</span> <span class="o">...</span>
+</pre></div>
+</td></tr></table>
+
+<p>Let's write this function from top to bottom. We want our typeahead to have the list of selected items above the input field, then the input field, then the list of available items (if there are any). Ultimately, with helper functions, we'd like to write this:</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">typeahead</span> <span class="n">parentState</span> <span class="n">childState</span> <span class="ow">=</span>
+  <span class="kt">HH</span><span class="o">.</span><span class="n">div_</span>
+  <span class="p">[</span> <span class="n">renderSelections</span><span class="p">,</span> <span class="n">renderInput</span><span class="p">,</span> <span class="n">renderContainer</span> <span class="p">]</span>
+  <span class="kr">where</span>
+    <span class="o">...</span>
+</pre></div>
+</td></tr></table>
+
+<p>Let's start with the first one: <code class="codehilite"><span class="nf">renderSelections</span></code>. This function will leverage only the parent state, which contains the selections, and won't use anything from <code>Select</code>.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>In fact you don't need to render the selections inside <code>Select</code> at all -- you could render the selections first, and then mount the <code>Select</code> component below. We use this approach for our own typeaheads at CitizenNet. However, embedding the selections into the <code>Select</code> component allows me to show off how embedding parent queries works and it's an equally viable design, so that's the approach taken here.</p>
+</div>
+<p>We're just going to render an unordered list of items that have been selected. If the user clicks on one of them, then we'll remove the selection. We can remove items with the <code class="codehilite"><span class="kt">Remove</span></code> query that we wrote a little earlier.</p>
+<p>But wait! Since this is rendering inside of <code>Select</code>, it needs to have the <code>Select</code> type signature. If we try to write this function it will fail:</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="c1">-- The items that have already been selected and can be removed</span>
+<span class="nf">renderSelections</span> <span class="ow">::</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">ComponentHTML</span> <span class="kt">Query</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
+<span class="nf">renderSelections</span> <span class="ow">=</span>
+  <span class="kt">HH</span><span class="o">.</span><span class="n">ul_</span>
+  <span class="p">(</span> <span class="n">st</span><span class="o">.</span><span class="n">selections</span> <span class="o">&lt;#&gt;</span>
+      <span class="p">(</span><span class="nf">\</span><span class="n">item</span> <span class="ow">-&gt;</span>
+        <span class="kt">HH</span><span class="o">.</span><span class="n">li</span>
+        <span class="p">[</span> <span class="kt">HE</span><span class="o">.</span><span class="n">onClick</span> <span class="o">$</span> <span class="kt">HE</span><span class="o">.</span><span class="n">input_</span> <span class="o">$</span> <span class="kt">Remove</span> <span class="n">item</span> <span class="p">]</span>
+        <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">text</span> <span class="n">item</span> <span class="p">]</span>
+      <span class="p">)</span>
+  <span class="p">)</span>
+</pre></div>
+</td></tr></table>
+
+<p>The compiler gives us this error:</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kt">Error</span> <span class="n">found</span> <span class="kr">in</span> <span class="kr">module</span> <span class="nn">Component</span>
+
+  <span class="kt">Could</span> <span class="n">not</span> <span class="n">match</span> <span class="kr">type</span>
+
+    <span class="kt">Free</span> <span class="p">(</span><span class="kt">QueryF</span> <span class="n">t2</span> <span class="n">t3</span> <span class="n">t4</span><span class="p">)</span>
+
+  <span class="n">with</span> <span class="kr">type</span>
+
+    <span class="kt">Query</span>
+
+<span class="nf">while</span> <span class="n">trying</span> <span class="n">to</span> <span class="n">match</span> <span class="kr">type</span> <span class="kt">Free</span> <span class="p">(</span><span class="kt">QueryF</span> <span class="n">t2</span> <span class="n">t3</span> <span class="n">t4</span><span class="p">)</span> <span class="kt">Unit</span>
+  <span class="n">with</span> <span class="kr">type</span> <span class="kt">Query</span> <span class="kt">Unit</span>
+</pre></div>
+</td></tr></table>
+
+<p>The problem is that we're using a parent query in the body of a render function for a component with an entirely different query algebra. If we tried to run this in <code>Select</code> it would have no idea what to do with the <code>!#hs Remove</code> query! Instead, we need to <strong>embed</strong> this query.</p>
+<p>To embed a parent query into <code>Select</code>, we'll use a query from <code>Select</code> called <code class="codehilite"><span class="kt">Raise</span></code> and a message called <code class="codehilite"><span class="kt">Emit</span></code>.</p>
+<p>We've already seen <code class="codehilite"><span class="kt">Emit</span></code> before -- when we receive this message, we simply evaluate the query within it. That's how we can evaluate queries like <code class="codehilite"><span class="kt">Remove</span></code> in the parent component even though the event actually happened inside its child, the <code>Select</code> component.</p>
+<p><code class="codehilite"><span class="kt">Raise</span></code> is a new one: this query exists to wrap parent queries so they can be embedded. That's why <code>Select</code> carries around your parent query in its type signature everywhere!</p>
+<p>As a rule of thumb, any time you need to extend functionality in <code>Select</code>, you will:</p>
+<ol>
+<li>Write the new functionality as a query in your parent component and accompanying <code class="codehilite"><span class="nf">eval</span></code> handler. This handler can freely trigger queries and updates in <code>Select</code>, or modify parent state that is then used in the <code>Select</code> render function. This is quite powerful!</li>
+<li>Ensure that you are handling output messages from <code>Select</code>, and specifically that when you receive the <code class="codehilite"><span class="kt">Emit</span></code> message that you recursively evaluate it as was demonstrated earlier in the tutorial.</li>
+<li>Place the query in <code>Select</code>'s render function wrapped in <code class="codehilite"><span class="kt">Select</span><span class="o">.</span><span class="n">raise</span></code>, triggered by whatever event you would like.</li>
+</ol>
+<p>Let's see all of this in action:</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">renderSelections</span> <span class="ow">=</span>
+  <span class="kt">HH</span><span class="o">.</span><span class="n">ul_</span>
+  <span class="p">(</span> <span class="n">st</span><span class="o">.</span><span class="n">selections</span> <span class="o">&lt;#&gt;</span>
+      <span class="p">(</span><span class="nf">\</span><span class="n">item</span> <span class="ow">-&gt;</span>
+        <span class="kt">HH</span><span class="o">.</span><span class="n">li</span>
+        <span class="p">[</span> <span class="kt">HE</span><span class="o">.</span><span class="n">onClick</span> <span class="o">$</span> <span class="kt">Select</span><span class="o">.</span><span class="n">always</span> <span class="o">$</span> <span class="kt">Select</span><span class="o">.</span><span class="n">raise</span> <span class="o">$</span> <span class="kt">Remove</span> <span class="n">item</span> <span class="n">unit</span> <span class="p">]</span>
+        <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">text</span> <span class="n">item</span> <span class="p">]</span>
+      <span class="p">)</span>
+  <span class="p">)</span>
+</pre></div>
+</td></tr></table>
+
+<p>Now we can use this inside <code>Select</code> and it will behave just as if it had been written in the parent all along!</p>
+<p>Let's move on to the input field. This field needs to be controlled by <code>Select</code> and must have the <code class="codehilite"><span class="nf">setInputProps</span></code> helper used on its array of properties:</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="c1">-- The text input field that will capture key events</span>
+<span class="nf">renderInput</span> <span class="ow">=</span> <span class="kt">HH</span><span class="o">.</span><span class="n">input</span> <span class="p">(</span> <span class="kt">Setters</span><span class="o">.</span><span class="n">setInputProps</span> <span class="kt">[]</span> <span class="p">)</span>
+</pre></div>
+</td></tr></table>
+
+<p>That's it! Now we have all the key events wired up for you. You could embed your own queries here, or add CSS, or whatever you want and the behavior will still work just fine.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p><code>Select</code> will append the properties it needs to the input field, including <code class="codehilite"><span class="nf">onMouseDown</span></code>, <code>onValueInput</code>, and so on. Unfortunately there can only be one of these handlers in the list of properties, so if you already placed an <code class="codehilite"><span class="nf">onValueInput</span></code> handler it will be overwritten by <code>Select</code>. If you need to trigger some new functionality from the same handler that <code>Select</code> is using, then you can always write a custom <code class="codehilite"><span class="nf">setInputProps</span></code> function for yourself that routes the event to your own query <em>and</em> the relevant <code>Select</code> query. Take a look at the module documentation for <code>Select.Utils.Setters</code> to see how.</p>
+</div>
+<p>Next, let's render the actual items. Remember that we need to use <code class="codehilite"><span class="nf">setContainerProps</span></code> on the containing element (in this case <code class="codehilite"><span class="kt">HH</span><span class="o">.</span><span class="n">ul</span></code>) and <code class="codehilite"><span class="nf">setItemProps</span></code> on each item.</p>
+<p>This code is a little trickier. We only want to show the items when the user has focused the typeahead and hide them otherwise. If there are no items, then we want to embed a "Refresh Data" button with some custom functionality. And we want to use <code>Select</code>'s information about which item is highlighted to apply a little CSS.</p>
 <table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
  2
  3
@@ -1425,61 +1602,60 @@ renderItem _ (Disabled str)
 28
 29
 30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">typeahead</span>
-  <span class="ow">::</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">State</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
-  <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">ComponentHTML</span> <span class="kt">Query</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
-<span class="nf">typeahead</span> <span class="n">childState</span> <span class="ow">=</span>
-  <span class="kt">HH</span><span class="o">.</span><span class="n">div_</span>
-  <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">ul_</span>
-    <span class="p">(</span> <span class="n">st</span><span class="o">.</span><span class="n">selections</span> <span class="o">&lt;#&gt;</span>
-      <span class="p">(</span><span class="nf">\</span><span class="n">item</span> <span class="ow">-&gt;</span>
-        <span class="kt">HH</span><span class="o">.</span><span class="n">li</span>
-        <span class="p">[</span> <span class="kt">HE</span><span class="o">.</span><span class="n">onClick</span> <span class="o">$</span> <span class="kt">Select</span><span class="o">.</span><span class="n">always</span> <span class="o">$</span> <span class="kt">Select</span><span class="o">.</span><span class="n">raise</span> <span class="o">$</span> <span class="kt">Remove</span> <span class="n">item</span> <span class="n">unit</span> <span class="p">]</span>
-        <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">text</span> <span class="n">item</span> <span class="p">]</span>
-      <span class="p">)</span>
+31</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="c1">-- The parent element holding the items</span>
+<span class="nf">renderContainer</span> <span class="ow">=</span> <span class="kr">case</span> <span class="n">childState</span><span class="o">.</span><span class="n">visibility</span> <span class="kr">of</span>
+  <span class="kt">Select</span><span class="o">.</span><span class="kt">Off</span> <span class="ow">-&gt;</span> <span class="kt">HH</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;&quot;</span>
+  <span class="kt">Select</span><span class="o">.</span><span class="kt">On</span> <span class="ow">-&gt;</span>
+    <span class="kt">HH</span><span class="o">.</span><span class="n">ul</span>
+    <span class="p">(</span> <span class="kt">Setters</span><span class="o">.</span><span class="n">setContainerProps</span> <span class="kt">[]</span> <span class="p">)</span>
+    <span class="p">(</span> <span class="kr">case</span> <span class="n">null</span> <span class="n">childState</span><span class="o">.</span><span class="n">items</span> <span class="kr">of</span>
+        <span class="n">true</span> <span class="ow">-&gt;</span>
+          <span class="n">mapWithIndex</span> <span class="n">renderItem</span> <span class="n">childState</span><span class="o">.</span><span class="n">items</span>
+        <span class="kr">_</span> <span class="ow">-&gt;</span>
+          <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">li</span>
+            <span class="p">[</span> <span class="kt">HE</span><span class="o">.</span><span class="n">onClick</span>
+              <span class="o">$</span> <span class="kt">Select</span><span class="o">.</span><span class="n">always</span>
+              <span class="o">$</span> <span class="kt">Select</span><span class="o">.</span><span class="n">raise</span>
+              <span class="o">$</span> <span class="kt">H</span><span class="o">.</span><span class="n">action</span>
+              <span class="o">$</span> <span class="kt">HandleSelect</span> <span class="p">(</span><span class="kt">Select</span><span class="o">.</span><span class="kt">Searched</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+            <span class="p">]</span>
+            <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;Fetch data again.&quot;</span> <span class="p">]</span>
+          <span class="p">]</span>
     <span class="p">)</span>
-  <span class="p">,</span> <span class="kt">HH</span><span class="o">.</span><span class="n">input</span>
-    <span class="p">(</span> <span class="kt">Setters</span><span class="o">.</span><span class="n">setInputProps</span> <span class="kt">[]</span> <span class="p">)</span>
-    <span class="p">,</span> <span class="kr">case</span> <span class="n">childState</span><span class="o">.</span><span class="n">visibility</span> <span class="kr">of</span>
-        <span class="kt">Select</span><span class="o">.</span><span class="kt">Off</span> <span class="ow">-&gt;</span> <span class="kt">HH</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;&quot;</span>
-        <span class="kt">Select</span><span class="o">.</span><span class="kt">On</span> <span class="ow">-&gt;</span> <span class="kt">HH</span><span class="o">.</span><span class="n">ul</span> <span class="p">(</span><span class="kt">Setters</span><span class="o">.</span><span class="n">setContainerProps</span> <span class="kt">[]</span><span class="p">)</span> <span class="o">$</span>
-          <span class="kr">case</span> <span class="n">length</span> <span class="n">childState</span><span class="o">.</span><span class="n">items</span> <span class="kr">of</span>
-            <span class="mi">0</span> <span class="ow">-&gt;</span>
-              <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">li</span>
-                <span class="p">[</span> <span class="kt">HE</span><span class="o">.</span><span class="n">onClick</span>
-                  <span class="o">$</span> <span class="kt">Select</span><span class="o">.</span><span class="n">always</span>
-                  <span class="o">$</span> <span class="kt">Select</span><span class="o">.</span><span class="n">raise</span>
-                  <span class="o">$</span> <span class="kt">HandleSelect</span> <span class="p">(</span><span class="kt">Select</span><span class="o">.</span><span class="kt">Searched</span> <span class="s">&quot;&quot;</span><span class="p">)</span> <span class="n">unit</span> <span class="p">]</span>
-                  <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;Fetch new data&quot;</span> <span class="p">]</span>
-              <span class="p">]</span>
-            <span class="kr">_</span> <span class="ow">-&gt;</span> <span class="kt">[]</span>
-      <span class="o">&lt;&gt;</span>
-      <span class="p">(</span> <span class="n">mapWithIndex</span>
-        <span class="p">(</span><span class="nf">\</span><span class="n">ix</span> <span class="n">item</span> <span class="ow">-&gt;</span>
-          <span class="kt">HH</span><span class="o">.</span><span class="n">li</span>
-          <span class="p">(</span> <span class="kt">Setters</span><span class="o">.</span><span class="n">setItemProps</span> <span class="n">ix</span>
-            <span class="o">$</span> <span class="kr">case</span> <span class="kt">Just</span> <span class="n">ix</span> <span class="o">==</span> <span class="n">childState</span><span class="o">.</span><span class="n">highlightedIndex</span> <span class="kr">of</span>
-                <span class="n">true</span> <span class="ow">-&gt;</span> <span class="p">[</span> <span class="kt">HP</span><span class="o">.</span><span class="n">attr</span> <span class="p">(</span><span class="kt">HH</span><span class="o">.</span><span class="kt">AttrName</span> <span class="s">&quot;style&quot;</span><span class="p">)</span> <span class="s">&quot;color: red;&quot;</span> <span class="p">]</span>
-                <span class="kr">_</span> <span class="ow">-&gt;</span> <span class="kt">[]</span> <span class="p">)</span>
-          <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">text</span> <span class="n">item</span> <span class="p">]</span>
-        <span class="p">)</span>
-      <span class="n">childState</span><span class="o">.</span><span class="n">items</span>
-      <span class="p">)</span>
-  <span class="p">]</span>
+
+<span class="c1">-- Each individual item, which will receive an index and the item</span>
+<span class="nf">renderItem</span> <span class="n">ix</span> <span class="n">item</span> <span class="ow">=</span>
+  <span class="kt">HH</span><span class="o">.</span><span class="n">li</span>
+  <span class="p">(</span> <span class="kt">Setters</span><span class="o">.</span><span class="n">setItemProps</span> <span class="n">ix</span>
+      <span class="c1">-- If this is the highlighted item, then apply CSS</span>
+    <span class="o">$</span> <span class="kr">case</span> <span class="kt">Just</span> <span class="n">ix</span> <span class="o">==</span> <span class="n">childState</span><span class="o">.</span><span class="n">highlightedIndex</span> <span class="kr">of</span>
+        <span class="n">true</span> <span class="ow">-&gt;</span> <span class="p">[</span> <span class="kt">HP</span><span class="o">.</span><span class="n">attr</span> <span class="p">(</span><span class="kt">HH</span><span class="o">.</span><span class="kt">AttrName</span> <span class="s">&quot;style&quot;</span><span class="p">)</span> <span class="s">&quot;color: red;&quot;</span> <span class="p">]</span>
+        <span class="kr">_</span> <span class="ow">-&gt;</span> <span class="kt">[]</span>
+  <span class="p">)</span>
+  <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">text</span> <span class="n">item</span> <span class="p">]</span>
 </pre></div>
 </td></tr></table>
 
+<p>To recap, we'll use these helper functions in the overall render function we're passing to <code>Select</code>:</p>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">typeahead</span> <span class="n">parentState</span> <span class="n">childState</span> <span class="ow">=</span>
+  <span class="kt">HH</span><span class="o">.</span><span class="n">div_</span>
+  <span class="p">[</span> <span class="n">renderSelections</span><span class="p">,</span> <span class="n">renderInput</span><span class="p">,</span> <span class="n">renderContainer</span> <span class="p">]</span>
+  <span class="kr">where</span>
+    <span class="n">renderSelections</span> <span class="ow">=</span> <span class="o">...</span>
+    <span class="n">renderInput</span> <span class="ow">=</span> <span class="o">...</span>
+    <span class="n">renderContainer</span> <span class="ow">=</span> <span class="o">...</span>
+</pre></div>
+</td></tr></table>
+
+<p>If you got a little lost in all the rendering code here, don't worry: the full code is contained at the end of the tutorial.</p>
 <h2 id="conclusion">Conclusion<a class="headerlink" href="#conclusion" title="Permanent link">&para;</a></h2>
+<p>That's it! We now have a fully-functioning typeahead that will fetch data remotely after debouncing a user's search, and if there are no results, will allow the user to refresh the data. Notably, several parts of this typeahead are not supported in any way by <code>Select</code>, but we've been able to freely extend the component to make this possible.</p>
 <h3 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h3>
 <p>Now that you're able to build a typeahead with <code>Select</code> you know everything you need to build more complex components like date pickers and image pickers. The next tutorial in the series, <em>Let's build a date picker</em>, is currently a work in progress.</p>
 <div class="admonition tip">
@@ -1655,7 +1831,21 @@ renderItem _ (Disabled str)
 165
 166
 167
-168</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">module</span> <span class="nn">Component</span> <span class="kr">where</span>
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">module</span> <span class="nn">Component</span> <span class="kr">where</span>
 
 <span class="kr">import</span> <span class="nn">Prelude</span>
 
@@ -1664,7 +1854,7 @@ renderItem _ (Disabled str)
 <span class="kr">import</span> <span class="nn">Control.Monad.Aff.Class</span> <span class="p">(</span><span class="nf">class</span> <span class="kt">MonadAff</span><span class="p">)</span>
 <span class="kr">import</span> <span class="nn">DOM</span> <span class="p">(</span><span class="kt">DOM</span><span class="p">)</span>
 <span class="kr">import</span> <span class="nn">Data.Argonaut</span> <span class="p">(</span><span class="kt">Json</span><span class="p">,</span> <span class="nf">decodeJson</span><span class="p">,</span> <span class="p">(</span><span class="o">.?</span><span class="p">))</span>
-<span class="kr">import</span> <span class="nn">Data.Array</span> <span class="p">(</span><span class="nf">difference</span><span class="p">,</span> <span class="nf">filter</span><span class="p">,</span> <span class="nf">length</span><span class="p">,</span> <span class="nf">mapWithIndex</span><span class="p">,</span> <span class="p">(</span><span class="o">:</span><span class="p">))</span>
+<span class="kr">import</span> <span class="nn">Data.Array</span> <span class="p">(</span><span class="nf">difference</span><span class="p">,</span> <span class="nf">filter</span><span class="p">,</span> <span class="nf">mapWithIndex</span><span class="p">,</span> <span class="nf">null</span><span class="p">,</span> <span class="p">(</span><span class="o">:</span><span class="p">))</span>
 <span class="kr">import</span> <span class="nn">Data.Either</span> <span class="p">(</span><span class="kt">Either</span><span class="p">)</span>
 <span class="kr">import</span> <span class="nn">Data.Maybe</span> <span class="p">(</span><span class="kt">Maybe</span><span class="p">(</span><span class="o">..</span><span class="p">))</span>
 <span class="kr">import</span> <span class="nn">Data.Time.Duration</span> <span class="p">(</span><span class="kt">Milliseconds</span><span class="p">(</span><span class="o">..</span><span class="p">))</span>
@@ -1742,50 +1932,62 @@ renderItem _ (Disabled str)
       <span class="p">,</span> <span class="n">items</span><span class="kt">:</span> <span class="kt">[]</span>
       <span class="p">,</span> <span class="n">initialSearch</span><span class="kt">:</span> <span class="kt">Nothing</span>
       <span class="p">,</span> <span class="n">debounceTime</span><span class="kt">:</span> <span class="kt">Just</span> <span class="o">$</span> <span class="kt">Milliseconds</span> <span class="mf">250.0</span>
-      <span class="p">,</span> <span class="n">render</span><span class="kt">:</span> <span class="n">typeahead</span>
+      <span class="p">,</span> <span class="n">render</span><span class="kt">:</span> <span class="n">typeahead</span> <span class="n">st</span>
       <span class="p">}</span>
 
     <span class="n">typeahead</span>
-      <span class="ow">::</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">State</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
+      <span class="ow">::</span> <span class="kt">State</span>
+      <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">State</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
       <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">ComponentHTML</span> <span class="kt">Query</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
-    <span class="n">typeahead</span> <span class="n">childState</span> <span class="ow">=</span>
+    <span class="n">typeahead</span> <span class="n">parentState</span> <span class="n">childState</span> <span class="ow">=</span>
       <span class="kt">HH</span><span class="o">.</span><span class="n">div_</span>
-      <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">ul_</span>
-        <span class="p">(</span> <span class="n">st</span><span class="o">.</span><span class="n">selections</span> <span class="o">&lt;#&gt;</span>
-          <span class="p">(</span><span class="nf">\</span><span class="n">item</span> <span class="ow">-&gt;</span>
-              <span class="kt">HH</span><span class="o">.</span><span class="n">li</span>
-              <span class="p">[</span> <span class="kt">HE</span><span class="o">.</span><span class="n">onClick</span> <span class="o">$</span> <span class="kt">Select</span><span class="o">.</span><span class="n">always</span> <span class="o">$</span> <span class="kt">Select</span><span class="o">.</span><span class="n">raise</span> <span class="o">$</span> <span class="kt">Remove</span> <span class="n">item</span> <span class="n">unit</span> <span class="p">]</span>
-              <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">text</span> <span class="n">item</span> <span class="p">]</span>
-          <span class="p">)</span>
-        <span class="p">)</span>
-      <span class="p">,</span> <span class="kt">HH</span><span class="o">.</span><span class="n">input</span>
-        <span class="p">(</span> <span class="kt">Setters</span><span class="o">.</span><span class="n">setInputProps</span> <span class="kt">[]</span> <span class="p">)</span>
-      <span class="p">,</span> <span class="kr">case</span> <span class="n">childState</span><span class="o">.</span><span class="n">visibility</span> <span class="kr">of</span>
-          <span class="kt">Select</span><span class="o">.</span><span class="kt">Off</span> <span class="ow">-&gt;</span> <span class="kt">HH</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;&quot;</span>
-          <span class="kt">Select</span><span class="o">.</span><span class="kt">On</span> <span class="ow">-&gt;</span> <span class="kt">HH</span><span class="o">.</span><span class="n">ul</span> <span class="p">(</span><span class="kt">Setters</span><span class="o">.</span><span class="n">setContainerProps</span> <span class="kt">[]</span><span class="p">)</span> <span class="o">$</span>
-            <span class="kr">case</span> <span class="n">length</span> <span class="n">childState</span><span class="o">.</span><span class="n">items</span> <span class="kr">of</span>
-              <span class="mi">0</span> <span class="ow">-&gt;</span>
-                <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">li</span>
-                  <span class="p">[</span> <span class="kt">HE</span><span class="o">.</span><span class="n">onClick</span>
-                    <span class="o">$</span> <span class="kt">Select</span><span class="o">.</span><span class="n">always</span>
-                    <span class="o">$</span> <span class="kt">Select</span><span class="o">.</span><span class="n">raise</span>
-                    <span class="o">$</span> <span class="kt">HandleSelect</span> <span class="p">(</span><span class="kt">Select</span><span class="o">.</span><span class="kt">Searched</span> <span class="s">&quot;&quot;</span><span class="p">)</span> <span class="n">unit</span> <span class="p">]</span>
-                  <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;Fetch new data&quot;</span> <span class="p">]</span>
-                <span class="p">]</span>
-              <span class="kr">_</span> <span class="ow">-&gt;</span> <span class="kt">[]</span>
-            <span class="o">&lt;&gt;</span>
-            <span class="p">(</span> <span class="n">mapWithIndex</span>
-              <span class="p">(</span><span class="nf">\</span><span class="n">ix</span> <span class="n">item</span> <span class="ow">-&gt;</span>
+      <span class="p">[</span> <span class="n">renderSelections</span><span class="p">,</span> <span class="n">renderInput</span><span class="p">,</span> <span class="n">renderContainer</span> <span class="p">]</span>
+      <span class="kr">where</span>
+        <span class="c1">-- The items that have already been selected and can be removed</span>
+        <span class="n">renderSelections</span> <span class="ow">=</span>
+          <span class="kt">HH</span><span class="o">.</span><span class="n">ul_</span>
+          <span class="p">(</span> <span class="n">st</span><span class="o">.</span><span class="n">selections</span> <span class="o">&lt;#&gt;</span>
+              <span class="p">(</span><span class="nf">\</span><span class="n">item</span> <span class="ow">-&gt;</span>
                 <span class="kt">HH</span><span class="o">.</span><span class="n">li</span>
-                  <span class="p">(</span> <span class="kt">Setters</span><span class="o">.</span><span class="n">setItemProps</span> <span class="n">ix</span>
-                    <span class="o">$</span> <span class="kr">case</span> <span class="kt">Just</span> <span class="n">ix</span> <span class="o">==</span> <span class="n">childState</span><span class="o">.</span><span class="n">highlightedIndex</span> <span class="kr">of</span>
-                        <span class="n">true</span> <span class="ow">-&gt;</span> <span class="p">[</span> <span class="kt">HP</span><span class="o">.</span><span class="n">attr</span> <span class="p">(</span><span class="kt">HH</span><span class="o">.</span><span class="kt">AttrName</span> <span class="s">&quot;style&quot;</span><span class="p">)</span> <span class="s">&quot;color: red;&quot;</span> <span class="p">]</span>
-                        <span class="kr">_</span> <span class="ow">-&gt;</span> <span class="kt">[]</span> <span class="p">)</span>
-                  <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">text</span> <span class="n">item</span> <span class="p">]</span>
+                <span class="p">[</span> <span class="kt">HE</span><span class="o">.</span><span class="n">onClick</span> <span class="o">$</span> <span class="kt">Select</span><span class="o">.</span><span class="n">always</span> <span class="o">$</span> <span class="kt">Select</span><span class="o">.</span><span class="n">raise</span> <span class="o">$</span> <span class="kt">Remove</span> <span class="n">item</span> <span class="n">unit</span> <span class="p">]</span>
+                <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">text</span> <span class="n">item</span> <span class="p">]</span>
               <span class="p">)</span>
-              <span class="n">childState</span><span class="o">.</span><span class="n">items</span>
+          <span class="p">)</span>
+
+        <span class="c1">-- The text input field that will capture key events</span>
+        <span class="n">renderInput</span> <span class="ow">=</span> <span class="kt">HH</span><span class="o">.</span><span class="n">input</span> <span class="p">(</span> <span class="kt">Setters</span><span class="o">.</span><span class="n">setInputProps</span> <span class="kt">[]</span> <span class="p">)</span>
+
+        <span class="c1">-- The parent element holding the items  container</span>
+        <span class="n">renderContainer</span> <span class="ow">=</span> <span class="kr">case</span> <span class="n">childState</span><span class="o">.</span><span class="n">visibility</span> <span class="kr">of</span>
+          <span class="kt">Select</span><span class="o">.</span><span class="kt">Off</span> <span class="ow">-&gt;</span> <span class="kt">HH</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;&quot;</span>
+          <span class="kt">Select</span><span class="o">.</span><span class="kt">On</span> <span class="ow">-&gt;</span>
+            <span class="kt">HH</span><span class="o">.</span><span class="n">ul</span>
+            <span class="p">(</span> <span class="kt">Setters</span><span class="o">.</span><span class="n">setContainerProps</span> <span class="kt">[]</span> <span class="p">)</span>
+            <span class="p">(</span> <span class="kr">case</span> <span class="n">null</span> <span class="n">childState</span><span class="o">.</span><span class="n">items</span> <span class="kr">of</span>
+                <span class="n">true</span> <span class="ow">-&gt;</span>
+                  <span class="n">mapWithIndex</span> <span class="n">renderItem</span> <span class="n">childState</span><span class="o">.</span><span class="n">items</span>
+                <span class="kr">_</span> <span class="ow">-&gt;</span>
+                  <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">li</span>
+                    <span class="p">[</span> <span class="kt">HE</span><span class="o">.</span><span class="n">onClick</span>
+                      <span class="o">$</span> <span class="kt">Select</span><span class="o">.</span><span class="n">always</span>
+                      <span class="o">$</span> <span class="kt">Select</span><span class="o">.</span><span class="n">raise</span>
+                      <span class="o">$</span> <span class="kt">HandleSelect</span> <span class="p">(</span><span class="kt">Select</span><span class="o">.</span><span class="kt">Searched</span> <span class="s">&quot;&quot;</span><span class="p">)</span> <span class="n">unit</span>
+                    <span class="p">]</span>
+                    <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;Fetch data again.&quot;</span> <span class="p">]</span>
+                  <span class="p">]</span>
             <span class="p">)</span>
-      <span class="p">]</span>
+
+        <span class="c1">-- Each individual item, which will receive an index and the item</span>
+        <span class="n">renderItem</span> <span class="n">ix</span> <span class="n">item</span> <span class="ow">=</span>
+          <span class="kt">HH</span><span class="o">.</span><span class="n">li</span>
+          <span class="p">(</span> <span class="kt">Setters</span><span class="o">.</span><span class="n">setItemProps</span> <span class="n">ix</span>
+            <span class="c1">-- If this is the highlighted item, then apply CSS</span>
+            <span class="o">$</span> <span class="kr">case</span> <span class="kt">Just</span> <span class="n">ix</span> <span class="o">==</span> <span class="n">childState</span><span class="o">.</span><span class="n">highlightedIndex</span> <span class="kr">of</span>
+                <span class="n">true</span> <span class="ow">-&gt;</span> <span class="p">[</span> <span class="kt">HP</span><span class="o">.</span><span class="n">attr</span> <span class="p">(</span><span class="kt">HH</span><span class="o">.</span><span class="kt">AttrName</span> <span class="s">&quot;style&quot;</span><span class="p">)</span> <span class="s">&quot;color: red;&quot;</span> <span class="p">]</span>
+                <span class="kr">_</span> <span class="ow">-&gt;</span> <span class="kt">[]</span>
+          <span class="p">)</span>
+          <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">text</span> <span class="n">item</span> <span class="p">]</span>
+
 
   <span class="n">eval</span> <span class="ow">::</span> <span class="kt">Query</span> <span class="o">~&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">ParentDSL</span> <span class="kt">State</span> <span class="kt">Query</span> <span class="p">(</span><span class="kt">ChildQuery</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">))</span> <span class="kt">ChildSlot</span> <span class="kt">Message</span> <span class="n">m</span>
   <span class="n">eval</span> <span class="ow">=</span> <span class="kr">case</span> <span class="kr">_</span> <span class="kr">of</span>
@@ -1822,7 +2024,9 @@ renderItem _ (Disabled str)
       <span class="kt">Select</span><span class="o">.</span><span class="kt">VisibilityChanged</span> <span class="n">vis</span> <span class="ow">-&gt;</span>
         <span class="n">pure</span> <span class="n">next</span>
 
-      <span class="kt">Select</span><span class="o">.</span><span class="kt">Emit</span> <span class="n">query</span> <span class="ow">-&gt;</span> <span class="n">eval</span> <span class="n">query</span> <span class="o">*&gt;</span> <span class="n">pure</span> <span class="n">next</span>
+      <span class="kt">Select</span><span class="o">.</span><span class="kt">Emit</span> <span class="n">query</span> <span class="ow">-&gt;</span> <span class="kr">do</span>
+        <span class="n">eval</span> <span class="n">query</span>
+        <span class="n">pure</span> <span class="n">next</span>
 </pre></div>
 </td></tr></table>
 </details>

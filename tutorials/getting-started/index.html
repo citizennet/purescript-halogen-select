@@ -908,7 +908,7 @@ yarn watch
 <li>The <code class="codehilite"><span class="nf">eval</span></code> function can recursively call itself while evaluating a query</li>
 </ul>
 <p>The <code>eval</code> function is where you get to actually define what all your queries <em>do</em>. Unlike the render function, you can actually perform all kinds of side effects here, like make API calls, update state, trigger queries in child components, raise messages, and more.</p>
-<p>As usual, our starter component won't do much in its <code class="codehilite"><span class="nf">eval</span></code>. When it receives the <code class="codehilite"><span class="kt">NoOp</span></code> constructor, it will do nothing and return the next query.</p>
+<p>As usual, our starter component won't do much in its <code class="codehilite"><span class="nf">eval</span></code>. When it receives the <code class="codehilite"><span class="kt">NoOp</span></code> constructor, it will do nothing and return the contents of the query, which in this case will always be <code>unit</code>.</p>
 <table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
 2
 3</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">eval</span> <span class="ow">::</span> <span class="kt">Query</span> <span class="o">~&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">ParentDSL</span> <span class="kt">State</span> <span class="kt">Query</span> <span class="kt">ChildQuery</span> <span class="kt">ChildSlot</span> <span class="kt">Message</span> <span class="n">m</span>
