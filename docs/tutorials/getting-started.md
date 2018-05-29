@@ -228,7 +228,7 @@ The `#!hs eval` function describes what to do when one of the queries from the c
 
 The `#! eval` function is where you get to actually define what all your queries *do*. Unlike the render function, you can actually perform all kinds of side effects here, like make API calls, update state, trigger queries in child components, raise messages, and more.
 
-As usual, our starter component won't do much in its `#!hs eval`. When it receives the `#!hs NoOp` constructor, it will do nothing and return the next query.
+As usual, our starter component won't do much in its `#!hs eval`. When it receives the `#!hs NoOp` constructor, it will do nothing and return the contents of the query, which in this case will always be `unit`.
 
 ```hs
 eval :: Query ~> H.ParentDSL State Query ChildQuery ChildSlot Message m

@@ -154,7 +154,7 @@ The second type argument is more interesting. `Select` allows you to provide any
       = HH.li ( Setters.setItemProps ix [ ] ) [ HH.text str ]
     renderItem _ (Disabled str)
       = HH.li_  [ HH.text str ]
-		```
+    ```
 
 With all this information in mind, let's go ahead and make those changes:
 
@@ -511,55 +511,203 @@ That's it! Our typeahead has all the logic necessary to function as required. Al
 
 ## Rendering
 
-We have all the state and behavior necessary to run a working typeahead. Now, let's write the render function. Within the `where` clause of our parent component `#!hs render` function, let's write the render function we're going to pass in to `Select`.
+We have all the state and behavior necessary to run a working typeahead. Now, let's write the render function.
 
-Note: The explanation for this code is a work in progress. For now, the entire render function is provided below. This will create a functioning typeahead.
+When you write a render function for a `Select` component, keep in mind that the function is going to be run *by* the child component. You can see this right away from the type signature of the render function that `Select` expects:
+
+```hs
+myRenderFunction :: Select.State item eff -> Select.ComponentHTML o item eff
+```
+
+In our case, we've already specialized our parent query, item, and effects, so the type signature is actually this:
+
+```hs
+myRenderFunction
+  :: Select.State String (Effects eff)
+  -> Select.ComponentHTML Query String (Effects eff)
+```
+
+!!! tip
+    When you write a component with `Select`, you'll usually want access to the parent component's state and query algebra. This is what makes the pattern powerful: you can use any values from your state in the render function you provide to `Select`, and you can embed any queries from your query algebra, too. Most of the time developers will stay in scope with the parent component by writing the `Select` render function within a `#!hs where` clause. However, you could also write a render function outside the parent component so long as it takes the parent state as an argument, like this:
+
+    ```hs
+    selectRenderFunction
+      :: Parent.State
+      -> Select.State String (Parent.Effects eff)
+      -> Select.ComponentHTML Parent.Query String (Parent.Effects eff)
+    ```
+
+    Then you can write this render function anywhere you'd like while retaining access to the parent's state and query algebra. `Select` will not accept this function as-is, however; you'll need to apply it to the parent state before sending the function in as input:
+
+    ```hs
+    selectInput = { ..., render: selectRenderFunction parentState, ... }
+    ```
+
+Since you write the render function to pass to Select, you retain full control of the design and most of the structure of your HTML. All that `Select` expects from you is that you apply the three helper functions from `#!hs Setters`:
+
+- `#!hs setItemProps` on each item that can be selected
+- `#!hs setContainerProps` on the parent HTML element of all the items
+- `#!hs setInputProps` on the text input
+
+For this reason, I usually break my component's render function into three helpers. Let's go ahead and write our render function for the typeahead.
+
+Our overall function is going to take the parent state, the `Select` state, and output the `Select` component HTML type:
 
 ```hs
 typeahead
-  :: Select.State String (Effects eff)
+  :: State
+  -> Select.State String (Effects eff)
   -> Select.ComponentHTML Query String (Effects eff)
-typeahead childState =
+typeahead parentState childState = ...
+```
+
+Let's write this function from top to bottom. We want our typeahead to have the list of selected items above the input field, then the input field, then the list of available items (if there are any). Ultimately, with helper functions, we'd like to write this:
+
+```hs
+typeahead parentState childState =
   HH.div_
-  [ HH.ul_
-    ( st.selections <#>
+  [ renderSelections, renderInput, renderContainer ]
+  where
+    ...
+```
+
+Let's start with the first one: `#!hs renderSelections`. This function will leverage only the parent state, which contains the selections, and won't use anything from `Select`.
+
+!!! tip
+    In fact you don't need to render the selections inside `Select` at all -- you could render the selections first, and then mount the `Select` component below. We use this approach for our own typeaheads at CitizenNet. However, embedding the selections into the `Select` component allows me to show off how embedding parent queries works and it's an equally viable design, so that's the approach taken here.
+
+We're just going to render an unordered list of items that have been selected. If the user clicks on one of them, then we'll remove the selection. We can remove items with the `#!hs Remove` query that we wrote a little earlier.
+
+But wait! Since this is rendering inside of `Select`, it needs to have the `Select` type signature. If we try to write this function it will fail:
+
+```hs
+-- The items that have already been selected and can be removed
+renderSelections :: Select.ComponentHTML Query String (Effects eff)
+renderSelections =
+  HH.ul_
+  ( st.selections <#>
+      (\item ->
+        HH.li
+        [ HE.onClick $ HE.input_ $ Remove item ]
+        [ HH.text item ]
+      )
+  )
+```
+
+The compiler gives us this error:
+
+```hs
+Error found in module Component
+
+  Could not match type
+
+    Free (QueryF t2 t3 t4)
+
+  with type
+
+    Query
+
+while trying to match type Free (QueryF t2 t3 t4) Unit
+  with type Query Unit
+```
+
+The problem is that we're using a parent query in the body of a render function for a component with an entirely different query algebra. If we tried to run this in `Select` it would have no idea what to do with the `!#hs Remove` query! Instead, we need to **embed** this query.
+
+To embed a parent query into `Select`, we'll use a query from `Select` called `#!hs Raise` and a message called `#!hs Emit`.
+
+We've already seen `#!hs Emit` before -- when we receive this message, we simply evaluate the query within it. That's how we can evaluate queries like `#!hs Remove` in the parent component even though the event actually happened inside its child, the `Select` component.
+
+`#!hs Raise` is a new one: this query exists to wrap parent queries so they can be embedded. That's why `Select` carries around your parent query in its type signature everywhere!
+
+As a rule of thumb, any time you need to extend functionality in `Select`, you will:
+
+1. Write the new functionality as a query in your parent component and accompanying `#!hs eval` handler. This handler can freely trigger queries and updates in `Select`, or modify parent state that is then used in the `Select` render function. This is quite powerful!
+2. Ensure that you are handling output messages from `Select`, and specifically that when you receive the `#!hs Emit` message that you recursively evaluate it as was demonstrated earlier in the tutorial.
+3. Place the query in `Select`'s render function wrapped in `#!hs Select.raise`, triggered by whatever event you would like.
+
+Let's see all of this in action:
+
+```hs
+renderSelections =
+  HH.ul_
+  ( st.selections <#>
       (\item ->
         HH.li
         [ HE.onClick $ Select.always $ Select.raise $ Remove item unit ]
         [ HH.text item ]
       )
-    )
-  , HH.input
-    ( Setters.setInputProps [] )
-    , case childState.visibility of
-        Select.Off -> HH.text ""
-        Select.On -> HH.ul (Setters.setContainerProps []) $
-          case length childState.items of
-            0 ->
-              [ HH.li
-                [ HE.onClick
-                  $ Select.always
-                  $ Select.raise
-                  $ HandleSelect (Select.Searched "") unit ]
-                  [ HH.text "Fetch new data" ]
-              ]
-            _ -> []
-      <>
-      ( mapWithIndex
-        (\ix item ->
-          HH.li
-          ( Setters.setItemProps ix
-            $ case Just ix == childState.highlightedIndex of
-                true -> [ HP.attr (HH.AttrName "style") "color: red;" ]
-                _ -> [] )
-          [ HH.text item ]
-        )
-      childState.items
-      )
-  ]
+  )
 ```
 
+Now we can use this inside `Select` and it will behave just as if it had been written in the parent all along!
+
+Let's move on to the input field. This field needs to be controlled by `Select` and must have the `#!hs setInputProps` helper used on its array of properties:
+
+```hs
+-- The text input field that will capture key events
+renderInput = HH.input ( Setters.setInputProps [] )
+```
+
+That's it! Now we have all the key events wired up for you. You could embed your own queries here, or add CSS, or whatever you want and the behavior will still work just fine.
+
+!!! warning
+    `Select` will append the properties it needs to the input field, including `#!hs onMouseDown`, `#! onValueInput`, and so on. Unfortunately there can only be one of these handlers in the list of properties, so if you already placed an `#!hs onValueInput` handler it will be overwritten by `Select`. If you need to trigger some new functionality from the same handler that `Select` is using, then you can always write a custom `#!hs setInputProps` function for yourself that routes the event to your own query *and* the relevant `Select` query. Take a look at the module documentation for `Select.Utils.Setters` to see how.
+
+Next, let's render the actual items. Remember that we need to use `#!hs setContainerProps` on the containing element (in this case `#!hs HH.ul`) and `#!hs setItemProps` on each item.
+
+This code is a little trickier. We only want to show the items when the user has focused the typeahead and hide them otherwise. If there are no items, then we want to embed a "Refresh Data" button with some custom functionality. And we want to use `Select`'s information about which item is highlighted to apply a little CSS.
+
+```hs
+-- The parent element holding the items
+renderContainer = case childState.visibility of
+  Select.Off -> HH.text ""
+  Select.On ->
+    HH.ul
+    ( Setters.setContainerProps [] )
+    ( case null childState.items of
+        true ->
+          mapWithIndex renderItem childState.items
+        _ ->
+          [ HH.li
+            [ HE.onClick
+              $ Select.always
+              $ Select.raise
+              $ H.action
+              $ HandleSelect (Select.Searched "")
+            ]
+            [ HH.text "Fetch data again." ]
+          ]
+    )
+
+-- Each individual item, which will receive an index and the item
+renderItem ix item =
+  HH.li
+  ( Setters.setItemProps ix
+      -- If this is the highlighted item, then apply CSS
+    $ case Just ix == childState.highlightedIndex of
+        true -> [ HP.attr (HH.AttrName "style") "color: red;" ]
+        _ -> []
+  )
+  [ HH.text item ]
+```
+
+To recap, we'll use these helper functions in the overall render function we're passing to `Select`:
+
+```hs
+typeahead parentState childState =
+  HH.div_
+  [ renderSelections, renderInput, renderContainer ]
+  where
+    renderSelections = ...
+    renderInput = ...
+    renderContainer = ...
+```
+
+If you got a little lost in all the rendering code here, don't worry: the full code is contained at the end of the tutorial.
+
 ## Conclusion
+
+That's it! We now have a fully-functioning typeahead that will fetch data remotely after debouncing a user's search, and if there are no results, will allow the user to refresh the data. Notably, several parts of this typeahead are not supported in any way by `Select`, but we've been able to freely extend the component to make this possible.
 
 ### Next Steps
 
@@ -584,7 +732,7 @@ If you'd like to use this component as a starting point from which to build your
     import Control.Monad.Aff.Class (class MonadAff)
     import DOM (DOM)
     import Data.Argonaut (Json, decodeJson, (.?))
-    import Data.Array (difference, filter, length, mapWithIndex, (:))
+    import Data.Array (difference, filter, mapWithIndex, null, (:))
     import Data.Either (Either)
     import Data.Maybe (Maybe(..))
     import Data.Time.Duration (Milliseconds(..))
@@ -662,50 +810,62 @@ If you'd like to use this component as a starting point from which to build your
           , items: []
           , initialSearch: Nothing
           , debounceTime: Just $ Milliseconds 250.0
-          , render: typeahead
+          , render: typeahead st
           }
 
         typeahead
-          :: Select.State String (Effects eff)
+          :: State
+          -> Select.State String (Effects eff)
           -> Select.ComponentHTML Query String (Effects eff)
-        typeahead childState =
+        typeahead parentState childState =
           HH.div_
-          [ HH.ul_
-            ( st.selections <#>
-              (\item ->
-                  HH.li
-                  [ HE.onClick $ Select.always $ Select.raise $ Remove item unit ]
-                  [ HH.text item ]
-              )
-            )
-          , HH.input
-            ( Setters.setInputProps [] )
-          , case childState.visibility of
-              Select.Off -> HH.text ""
-              Select.On -> HH.ul (Setters.setContainerProps []) $
-                case length childState.items of
-                  0 ->
-                    [ HH.li
-                      [ HE.onClick
-                        $ Select.always
-                        $ Select.raise
-                        $ HandleSelect (Select.Searched "") unit ]
-                      [ HH.text "Fetch new data" ]
-                    ]
-                  _ -> []
-                <>
-                ( mapWithIndex
-                  (\ix item ->
+          [ renderSelections, renderInput, renderContainer ]
+          where
+            -- The items that have already been selected and can be removed
+            renderSelections =
+              HH.ul_
+              ( st.selections <#>
+                  (\item ->
                     HH.li
-                      ( Setters.setItemProps ix
-                        $ case Just ix == childState.highlightedIndex of
-                            true -> [ HP.attr (HH.AttrName "style") "color: red;" ]
-                            _ -> [] )
-                      [ HH.text item ]
+                    [ HE.onClick $ Select.always $ Select.raise $ Remove item unit ]
+                    [ HH.text item ]
                   )
-                  childState.items
+              )
+
+            -- The text input field that will capture key events
+            renderInput = HH.input ( Setters.setInputProps [] )
+
+            -- The parent element holding the items  container
+            renderContainer = case childState.visibility of
+              Select.Off -> HH.text ""
+              Select.On ->
+                HH.ul
+                ( Setters.setContainerProps [] )
+                ( case null childState.items of
+                    true ->
+                      mapWithIndex renderItem childState.items
+                    _ ->
+                      [ HH.li
+                        [ HE.onClick
+                          $ Select.always
+                          $ Select.raise
+                          $ HandleSelect (Select.Searched "") unit
+                        ]
+                        [ HH.text "Fetch data again." ]
+                      ]
                 )
-          ]
+
+            -- Each individual item, which will receive an index and the item
+            renderItem ix item =
+              HH.li
+              ( Setters.setItemProps ix
+                -- If this is the highlighted item, then apply CSS
+                $ case Just ix == childState.highlightedIndex of
+                    true -> [ HP.attr (HH.AttrName "style") "color: red;" ]
+                    _ -> []
+              )
+              [ HH.text item ]
+
 
       eval :: Query ~> H.ParentDSL State Query (ChildQuery (Effects eff)) ChildSlot Message m
       eval = case _ of
@@ -742,5 +902,7 @@ If you'd like to use this component as a starting point from which to build your
           Select.VisibilityChanged vis ->
             pure next
 
-          Select.Emit query -> eval query *> pure next
+          Select.Emit query -> do
+            eval query
+            pure next
     ```
