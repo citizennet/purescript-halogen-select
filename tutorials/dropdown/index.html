@@ -891,7 +891,7 @@
 </pre></div>
 </td></tr></table>
 
-<p>The compiler has noticed that <code class="codehilite"><span class="kt">ChildQuery</span></code>, a type synonym, now partially applied. That's because <code class="codehilite"><span class="kt">Select</span><span class="o">.</span><span class="kt">Query</span></code>, itself a type synonym, takes several arguments as described in the <a href="https://pursuit.purescript.org/packages/purescript-halogen-select/1.0.0/docs/Select#t:Query">module documentation on Pursuit</a>. Let's walk through each one:</p>
+<p>The compiler has noticed that <code class="codehilite"><span class="kt">ChildQuery</span></code>, a type synonym, is partially applied. That's because <code class="codehilite"><span class="kt">Select</span><span class="o">.</span><span class="kt">Query</span></code>, itself a type synonym, takes several arguments as described in the <a href="https://pursuit.purescript.org/packages/purescript-halogen-select/1.0.0/docs/Select#t:Query">module documentation on Pursuit</a>. Let's walk through each one:</p>
 <table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">type</span> <span class="kt">ChildQuery</span> <span class="n">o</span> <span class="n">item</span> <span class="n">eff</span> <span class="ow">=</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">Query</span> <span class="n">o</span> <span class="n">item</span> <span class="n">eff</span>
 </pre></div>
 </td></tr></table>
