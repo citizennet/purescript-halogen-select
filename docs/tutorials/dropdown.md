@@ -154,7 +154,7 @@ Error found:
 in type synonym ChildQuery
 ```
 
-The compiler has noticed that `#!hs ChildQuery`, a type synonym, now partially applied. That's because `#!hs Select.Query`, itself a type synonym, takes several arguments as described in the [module documentation on Pursuit](https://pursuit.purescript.org/packages/purescript-halogen-select/1.0.0/docs/Select#t:Query). Let's walk through each one:
+The compiler has noticed that `#!hs ChildQuery`, a type synonym, is partially applied. That's because `#!hs Select.Query`, itself a type synonym, takes several arguments as described in the [module documentation on Pursuit](https://pursuit.purescript.org/packages/purescript-halogen-select/1.0.0/docs/Select#t:Query). Let's walk through each one:
 
 ```hs
 type ChildQuery o item eff = Select.Query o item eff
