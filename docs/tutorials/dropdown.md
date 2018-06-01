@@ -665,7 +665,8 @@ If you'd like to use this component as a starting point from which to build your
       = HandleSelect (Select.Message Query String) a
 
     type State =
-      { selectedItem :: Maybe String
+      { isOpen :: Boolean
+      , selectedItem :: Maybe String
       , availableItems :: Array String
       }
 
