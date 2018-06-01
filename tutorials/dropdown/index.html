@@ -1652,7 +1652,8 @@
 117
 118
 119
-120</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">module</span> <span class="nn">Component</span> <span class="kr">where</span>
+120
+121</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">module</span> <span class="nn">Component</span> <span class="kr">where</span>
 
 <span class="kr">import</span> <span class="nn">Prelude</span>
 
@@ -1672,7 +1673,8 @@
   <span class="ow">=</span> <span class="kt">HandleSelect</span> <span class="p">(</span><span class="kt">Select</span><span class="o">.</span><span class="kt">Message</span> <span class="kt">Query</span> <span class="kt">String</span><span class="p">)</span> <span class="n">a</span>
 
 <span class="kr">type</span> <span class="kt">State</span> <span class="ow">=</span>
-  <span class="p">{</span> <span class="n">selectedItem</span> <span class="ow">::</span> <span class="kt">Maybe</span> <span class="kt">String</span>
+  <span class="p">{</span> <span class="n">isOpen</span> <span class="ow">::</span> <span class="kt">Boolean</span>
+  <span class="p">,</span> <span class="n">selectedItem</span> <span class="ow">::</span> <span class="kt">Maybe</span> <span class="kt">String</span>
   <span class="p">,</span> <span class="n">availableItems</span> <span class="ow">::</span> <span class="kt">Array</span> <span class="kt">String</span>
   <span class="p">}</span>
 
