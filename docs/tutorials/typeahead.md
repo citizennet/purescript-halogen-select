@@ -665,7 +665,7 @@ renderContainer = case childState.visibility of
     HH.ul
     ( Setters.setContainerProps [] )
     ( case null childState.items of
-        true ->
+        false ->
           mapWithIndex renderItem childState.items
         _ ->
           [ HH.li
@@ -842,7 +842,7 @@ If you'd like to use this component as a starting point from which to build your
                 HH.ul
                 ( Setters.setContainerProps [] )
                 ( case null childState.items of
-                    true ->
+                    false ->
                       mapWithIndex renderItem childState.items
                     _ ->
                       [ HH.li
