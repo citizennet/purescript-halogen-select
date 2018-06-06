@@ -19,7 +19,6 @@ import Web.UIEvent.KeyboardEvent as KE
 import Web.UIEvent.MouseEvent as ME
 import Web.HTML.HTMLElement (HTMLElement, blur, focus, fromEventTarget)
 import Data.Array (length, (!!))
-import Data.Either (hush)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (for_, traverse_)
