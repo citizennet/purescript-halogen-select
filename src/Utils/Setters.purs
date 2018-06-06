@@ -6,9 +6,9 @@ module Select.Utils.Setters where
 
 import Prelude
 
-import DOM.Event.FocusEvent as FE
-import DOM.Event.MouseEvent as ME
-import DOM.Event.Types as ET
+import Web.UIEvent.FocusEvent as FE
+import Web.UIEvent.MouseEvent as ME
+import Web.UIEvent.EventTypes as ET
 import Data.Maybe (Maybe(..))
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP

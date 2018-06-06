@@ -32,26 +32,12 @@
   ],
   "dependencies": {
     "purescript-halogen": "^4.0.0",
-    "purescript-control": "^4.0.0",
+    "purescript-web-html": "^1.0.0",
+    "purescript-aff": "^5.0.0",
     "purescript-transformers": "^4.1.0",
-    "purescript-dom": "^4.16.0",
-    "purescript-aff": "^5.0.0"
-  },
-  "devDependencies": {
-    "purescript-dom-classy": "^2.2.0",
-    "purescript-remotedata": "^3.0.0",
-    "purescript-console": "^4.1.0",
-    "purescript-css": "^4.0.0",
-    "purescript-halogen-css": "^7.0.0",
-    "purescript-datetime": "^4.0.0",
-    "purescript-formatters": "^3.0.2",
-    "purescript-debug": "^4.0.0",
-    "purescript-now": "^4.0.0",
-    "purescript-js-timers": "^4.0.0",
-    "purescript-routing": "^8.0.0",
-    "purescript-coroutines": "^5.0.0",
-    "purescript-aff-coroutines": "^7.0.0",
-    "purescript-affjax": "^6.0.0",
-    "purescript-strings": "^4.0.0"
+    "purescript-control": "^4.0.0",
+    "purescript-web-uievents": "^1.0.0",
+    "purescript-avar": "^3.0.0",
+    "purescript-web-events": "^1.0.0"
   }
 }

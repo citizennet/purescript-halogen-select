@@ -1,6 +1,8 @@
 {
   "private": true,
   "scripts": {
+    "build": "pulp build",
+    "watch": "pulp -w build",
     "build-docs": "pulp build -I examples --to docs/js/app.js",
     "watch-docs": "pulp -w --then 'mkdocs serve' build -I examples --to docs/js/app.js",
     "clean": "rm -rf output bower_components node_modules site docs/js docs/css",
@@ -8,11 +10,10 @@
     "fetch-css": "curl https://cdn.rawgit.com/citizennet/purescript-ocelot/dev/dist/cn-tailwind.scoped.css --output cn-tailwind.scoped.css",
     "move-css": "mkdir -p docs/css/ && mv cn-tailwind.scoped.css docs/css/"
   },
-  "devDependencies": {
-    "pulp": "^12.2.0",
-    "purescript": "^0.12.0"
-  },
+  "devDependencies": {},
   "dependencies": {
-    "npm-check-updates": "^2.14.2"
+    "global": "^4.3.2",
+    "npm-check-updates": "^2.14.2",
+    "purescript": "^0.12.0"
   }
 }
