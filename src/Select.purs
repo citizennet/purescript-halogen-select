@@ -26,7 +26,7 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (for_, traverse_)
 import Data.Tuple (Tuple(..))
-import Halogen (Component, ComponentDSL, ComponentHTML, component, liftAff, liftEffect, modify) as H
+import Halogen (Component, ComponentDSL, ComponentHTML, component, liftAff, liftEffect, modify_) as H
 import Halogen.HTML as HH
 import Halogen.Query.HalogenM (fork, raise) as H
 import Select.Internal.State (updateStore, getState)
@@ -283,7 +283,7 @@ component =
     eval = case _ of
       Search str a -> a <$ do
         (Tuple _ st) <- getState
-        H.modify $ seeks _ { search = str }
+        H.modify_ $ seeks _ { search = str }
         setVis On
 
         case st.inputType, st.debouncer of
@@ -297,11 +297,11 @@ component =
             -- var is finally filled, the .ct will run (raise a new search)
             _ <- H.fork do
               _ <- H.liftAff $ AVar.take var
-              H.modify $ seeks _ { debouncer = Nothing, highlightedIndex = Just 0 }
+              H.modify_ $ seeks _ { debouncer = Nothing, highlightedIndex = Just 0 }
               (Tuple _ newState) <- getState
               H.raise $ Searched newState.search
 
-            H.modify $ seeks _ { debouncer = Just { var, fiber } }
+            H.modify_ $ seeks _ { debouncer = Just { var, fiber } }
 
           TextInput, Just debouncer -> do
             let var = debouncer.var
@@ -310,7 +310,7 @@ component =
               delay st.debounceTime
               AVar.put unit var
 
-            H.modify $ seeks _ { debouncer = Just { var, fiber } }
+            H.modify_ $ seeks _ { debouncer = Just { var, fiber } }
 
           -- Key stream is not yet implemented. However, this should capture user
           -- key events and expire their search after a set number of milliseconds.
@@ -332,7 +332,8 @@ component =
                     Just 0
                 Index i ->
                   Just i
-          H.modify $ seeks _ { highlightedIndex = highlightedIndex }
+          H.modify_ $ seeks _ { highlightedIndex = highlightedIndex }
+        pure unit
 
       Select index a -> a <$ do
         (Tuple _ st) <- getState
@@ -348,7 +349,7 @@ component =
               <<< unsafeFromForeign
               <<< unsafeToForeign
               <<< currentTarget
-        H.modify $ seeks _ { inputElement = elementFromEvent event }
+        H.modify_ $ seeks _ { inputElement = elementFromEvent event }
         pure a
 
       Focus focusOrBlur a -> a <$ do
@@ -377,7 +378,7 @@ component =
       SetVisibility v a -> a <$ do
         (Tuple _ st) <- getState
         when (st.visibility /= v) do
-          H.modify $ seeks _ { visibility = v, highlightedIndex = Just 0 }
+          H.modify_ $ seeks _ { visibility = v, highlightedIndex = Just 0 }
           H.raise $ VisibilityChanged v
 
       GetVisibility f -> do
@@ -385,7 +386,7 @@ component =
         pure (f st.visibility)
 
       ReplaceItems items a -> a <$ do
-        H.modify $ seeks _
+        H.modify_ $ seeks _
           { items = items
           , lastIndex = length items - 1
           , highlightedIndex = Nothing }
@@ -394,4 +395,4 @@ component =
         H.raise (Emit parentQuery)
 
       Receive input a -> a <$ do
-        H.modify (updateStore input.render identity)
+        H.modify_ (updateStore input.render identity)
