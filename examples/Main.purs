@@ -2,22 +2,22 @@ module Main where
 
 import Prelude
 
-import Control.Monad.Aff (Aff)
-import Control.Monad.Aff.Class (class MonadAff)
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Class (liftEff)
+import Effect.Aff (Aff)
+import Effect.Aff.Class (class MonadAff)
+import Effect (Effect)
+import Effect.Class (liftEffect)
 import Control.Monad.Except (runExcept)
-import DOM (DOM)
-import DOM.Classy.HTMLElement (getAttribute)
-import DOM.HTML (window)
-import DOM.HTML.Types (HTMLElement, htmlDocumentToParentNode, readHTMLElement)
-import DOM.HTML.Window (document)
-import DOM.Node.NodeList (toArray)
-import DOM.Node.ParentNode (QuerySelector(QuerySelector), querySelectorAll)
+import Web.HTML.HTMLElement (HTMLElement, toElement)
+import Web.HTML (window)
+import Web.HTML.Window (document)
+import Web.HTML.HTMLDocument (toParentNode)
+import Web.DOM.Element (getAttribute)
+import Web.DOM.NodeList (toArray)
+import Web.DOM.ParentNode (QuerySelector(..), querySelectorAll)
 import Data.Array (zipWith)
 import Data.Const (Const)
 import Data.Either (either)
-import Data.Foreign (toForeign)
+import Foreign (unsafeToForeign, unsafeFromForeign)
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Traversable (sequence, traverse, traverse_)
@@ -33,7 +33,7 @@ import Docs.Internal.Component as Component
 
 -- Finds all nodes labeled "data-component-id" and retrieves the associated attribute.
 -- Then, mounts the right component at each node.
-main :: ∀ eff. Eff (HA.HalogenEffects (Component.Effects eff)) Unit
+main :: Effect Unit
 main = HA.runHalogenAff do
   elements <- awaitSelectAll
     { query: QuerySelector "div[data-component]"
@@ -45,19 +45,20 @@ main = HA.runHalogenAff do
 -- Routes
 
 type ComponentQuery = ProxyS (Const Void) Unit
-type Components m = Map.Map String (H.Component HH.HTML ComponentQuery Unit Void m)
+type Components m
+  = Map.Map String (H.Component HH.HTML ComponentQuery Unit Void m)
 
-routes :: ∀ eff m. MonadAff ( Component.Effects eff ) m => Components m
+routes :: ∀ m. MonadAff m => Components m
 routes = Map.fromFoldable
   [ Tuple "typeahead" $ proxy Component.typeahead
   , Tuple "dropdown" $ proxy Component.dropdown ]
 
 data Query a = NoOp a
 
-app :: ∀ eff m. MonadAff ( Component.Effects eff ) m => H.Component HH.HTML Query String Void m
+app :: ∀ m. MonadAff m => H.Component HH.HTML Query String Void m
 app =
   H.parentComponent
-    { initialState: id
+    { initialState: identity
     , render
     , eval
     , receiver: const Nothing
@@ -76,25 +77,27 @@ app =
 ----------
 -- Selection Helpers
 
-awaitSelectAll :: ∀ eff
-  . { query :: QuerySelector, attr :: String }
- -> Aff (dom :: DOM | eff) (Array { element :: HTMLElement, attr :: String })
+awaitSelectAll
+  :: { query :: QuerySelector, attr :: String }
+  -> Aff (Array { element :: HTMLElement, attr :: String })
 awaitSelectAll ask@{ query } = HA.awaitLoad >>= \_ -> selectElements ask >>= pure
 
-selectElements :: ∀ eff
-  . { query :: QuerySelector, attr :: String }
- -> Aff (dom :: DOM | eff) (Array { element :: HTMLElement, attr :: String })
+selectElements
+  :: { query :: QuerySelector, attr :: String }
+  -> Aff (Array { element :: HTMLElement, attr :: String })
 selectElements { query, attr } = do
-  nodeList <- liftEff
-    $ ((querySelectorAll query <<< htmlDocumentToParentNode <=< document) =<< window)
-
-  nodeArray <- liftEff $ toArray nodeList
+  nodeList <- liftEffect do
+    w <- window
+    d <- document w
+    let parentNode = toParentNode d
+    querySelectorAll query parentNode
+  nodeArray <- liftEffect $ toArray nodeList
 
   let elems :: Array HTMLElement
       elems = fromMaybe []
         $ sequence
-        $ either (const Nothing) Just <<< runExcept <<< readHTMLElement <<< toForeign
+        $ either (const Nothing) Just <<< runExcept <<< unsafeFromForeign <<< unsafeToForeign
         <$> nodeArray
 
-  attrs <- liftEff $ traverse (getAttribute attr) elems
+  attrs <- liftEffect $ traverse (getAttribute attr <<< toElement) elems
   pure $ zipWith ({ element: _, attr: _ }) elems (fromMaybe "" <$> attrs)

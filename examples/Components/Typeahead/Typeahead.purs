@@ -2,10 +2,7 @@ module Docs.Components.Typeahead where
 
 import Prelude
 
-import Control.Monad.Aff.Class (class MonadAff)
-import Control.Monad.Aff.Console (CONSOLE, log)
-import Control.Monad.Aff.AVar (AVAR)
-import DOM (DOM)
+import Effect.Aff.Class (class MonadAff)
 import Data.Array (elemIndex, mapWithIndex, difference, filter, (:))
 import Data.Foldable (length, traverse_)
 import Data.Maybe (Maybe(..))
@@ -22,8 +19,6 @@ import Docs.CSS as CSS
 
 type TypeaheadItem = String
 
-type Effects eff = ( avar :: AVAR, dom :: DOM, console :: CONSOLE | eff )
-
 data Query a
   = Log String a
   | HandleInputContainer (Select.Message Query TypeaheadItem) a
@@ -38,11 +33,9 @@ type Input = { items :: Array String, keepOpen :: Boolean }
 data Message = Void
 
 type ChildSlot = Unit
-type ChildQuery eff = Select.Query Query TypeaheadItem eff
+type ChildQuery = Select.Query Query TypeaheadItem
 
-component :: ∀ m e
-  . MonadAff ( Effects e ) m
- => H.Component HH.HTML Query Input Message m
+component :: ∀ m. MonadAff m => H.Component HH.HTML Query Input Message m
 component =
   H.parentComponent
     { initialState
@@ -54,9 +47,7 @@ component =
     initialState :: Input -> State
     initialState i = { items: i.items, selected: [], keepOpen: i.keepOpen }
 
-    render
-      :: State
-      -> H.ParentHTML Query (ChildQuery (Effects e)) ChildSlot m
+    render :: State -> H.ParentHTML Query ChildQuery ChildSlot m
     render st =
       HH.div
         [ class_ "w-full" ]
@@ -72,12 +63,9 @@ component =
           , render: renderInputContainer
           }
 
-    eval
-      :: Query
-      ~> H.ParentDSL State Query (ChildQuery (Effects e)) ChildSlot Message m
+    eval :: Query ~> H.ParentDSL State Query ChildQuery ChildSlot Message m
     eval = case _ of
-      Log str a -> a <$ do
-        H.liftAff $ log str
+      Log str a -> pure a
 
       HandleInputContainer m a -> a <$ case m of
         Select.Emit q -> eval q
@@ -88,7 +76,6 @@ component =
               index = elemIndex search st.items
           _ <- H.query unit $ Select.replaceItems newItems
           traverse_ (H.query unit <<< Select.highlight <<< Select.Index) index
-          H.liftAff $ log $ "New search: " <> search
 
         Select.Selected item -> do
           st <- H.get
@@ -100,21 +87,21 @@ component =
               pure unit
 
           if length (filter ((==) item) st.items) > 0
-            then H.modify _ { selected = ( item : st.selected ) }
-            else H.modify _
+            then H.modify_ _ { selected = ( item : st.selected ) }
+            else H.modify_ _
                   { items = ( item : st.items )
                   , selected = ( item : st.selected ) }
 
           newSt <- H.get
           let newItems = difference newSt.items newSt.selected
           _ <- H.query unit $ Select.replaceItems newItems
-          H.liftAff $ log $ "New item selected: " <> item
+          pure unit
 
         otherwise -> pure unit
 
       Removed item a -> do
         st <- H.get
-        H.modify _ { selected = filter ((/=) item) st.selected }
+        H.modify_ _ { selected = filter ((/=) item) st.selected }
         newSt <- H.get
         let newItems = difference newSt.items newSt.selected
         _ <- H.query unit $ Select.replaceItems newItems
@@ -130,9 +117,7 @@ class_ = HP.class_ <<< HH.ClassName
 filterItems :: TypeaheadItem -> Array TypeaheadItem -> Array TypeaheadItem
 filterItems str = filter (\i -> contains (Pattern str) i)
 
-renderInputContainer :: ∀ e
-  . Select.State TypeaheadItem e
- -> Select.ComponentHTML Query TypeaheadItem e
+renderInputContainer :: Select.State TypeaheadItem -> Select.ComponentHTML Query TypeaheadItem
 renderInputContainer state = HH.div_ [ renderInput, renderContainer ]
   where
     renderInput = HH.input $ Setters.setInputProps

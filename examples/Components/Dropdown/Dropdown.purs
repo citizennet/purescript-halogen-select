@@ -2,10 +2,7 @@ module Docs.Components.Dropdown where
 
 import Prelude
 
-import Control.Monad.Aff.AVar (AVAR)
-import Control.Monad.Aff.Class (class MonadAff)
-import Control.Monad.Aff.Console (CONSOLE)
-import DOM (DOM)
+import Effect.Aff.Class (class MonadAff)
 import Data.Array (difference, mapWithIndex)
 import Data.Maybe (Maybe(..))
 import Halogen as H
@@ -15,8 +12,6 @@ import Halogen.HTML.Properties as HP
 import Select as Select
 import Select.Utils.Setters as Setters
 import Docs.CSS as CSS
-
-type Effects eff = ( avar :: AVAR, dom :: DOM, console :: CONSOLE | eff )
 
 type State =
   { items :: Array String
@@ -32,11 +27,9 @@ data Message
   = Void
 
 type ChildSlot = Unit
-type ChildQuery eff = Select.Query Query String eff
+type ChildQuery = Select.Query Query String
 
-component :: ∀ m e
-  . MonadAff ( Effects e ) m
- => H.Component HH.HTML Query Input Message m
+component :: ∀ m. MonadAff m => H.Component HH.HTML Query Input Message m
 component =
   H.parentComponent
     { initialState
@@ -48,22 +41,18 @@ component =
     initialState :: Input -> State
     initialState i = { items: i.items, text: "Select an option" }
 
-    eval
-      :: Query
-      ~> H.ParentDSL State Query (ChildQuery (Effects e)) ChildSlot Message m
+    eval :: Query ~> H.ParentDSL State Query ChildQuery ChildSlot Message m
     eval = case _ of
       HandleSelect (Select.Selected item) a -> do
         st <- H.get
         _ <- H.query unit $ Select.setVisibility Select.Off
         _ <- H.query unit $ Select.replaceItems $ difference st.items [ item ]
-        H.modify _ { text = item }
+        H.modify_ _ { text = item }
         pure a
 
       HandleSelect other a -> pure a
 
-    render
-      :: State
-      -> H.ParentHTML Query (ChildQuery (Effects e)) ChildSlot m
+    render :: State -> H.ParentHTML Query ChildQuery ChildSlot m
     render st =
       HH.div
         [ HP.class_ $ HH.ClassName "w-full" ]
@@ -77,7 +66,7 @@ component =
           , render: renderDropdown
           }
 
-        renderDropdown :: Select.State String (Effects e) -> Select.ComponentHTML Query String (Effects e)
+        renderDropdown :: Select.State String -> Select.ComponentHTML Query String
         renderDropdown state = HH.div_ [ renderToggle, renderMenu ]
           where
             renderToggle =

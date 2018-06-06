@@ -4,12 +4,7 @@ module Docs.Internal.Component where
 
 import Prelude
 
-import Control.Monad.Aff.Class (class MonadAff)
-import Control.Monad.Eff.AVar (AVAR)
-import Control.Monad.Eff.Console (CONSOLE)
-import Control.Monad.Eff.Now (NOW)
-import Control.Monad.Eff.Timer (TIMER)
-import DOM (DOM)
+import Effect.Aff.Class (class MonadAff)
 import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML as HH
@@ -30,12 +25,10 @@ type Component m = H.Component HH.HTML Query Unit Void m
 type DSL q m = H.ParentDSL State Query q Unit Void m
 type HTML q m = H.ParentHTML Query q Unit m
 
-type Effects eff = ( console :: CONSOLE, dom :: DOM, now :: NOW, avar :: AVAR, timer :: TIMER | eff )
-
 ----------
 -- Built components
 
-typeahead :: ∀ eff m. MonadAff ( Effects eff ) m => Component m
+typeahead :: ∀ m. MonadAff m => Component m
 typeahead =
   H.parentComponent
     { initialState: const unit
@@ -60,7 +53,7 @@ typeahead =
       , "Rico Suave"
       ]
 
-dropdown :: ∀ eff m. MonadAff ( Effects eff ) m => Component m
+dropdown :: ∀ m. MonadAff m => Component m
 dropdown =
   H.parentComponent
     { initialState: const unit
