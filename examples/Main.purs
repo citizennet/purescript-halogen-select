@@ -6,8 +6,7 @@ import Effect.Aff (Aff)
 import Effect.Aff.Class (class MonadAff)
 import Effect (Effect)
 import Effect.Class (liftEffect)
-import Control.Monad.Except (runExcept)
-import Web.HTML.HTMLElement (HTMLElement, toElement)
+import Web.HTML.HTMLElement (HTMLElement, toElement, fromNode)
 import Web.HTML (window)
 import Web.HTML.Window (document)
 import Web.HTML.HTMLDocument (toParentNode)
@@ -16,8 +15,6 @@ import Web.DOM.NodeList (toArray)
 import Web.DOM.ParentNode (QuerySelector(..), querySelectorAll)
 import Data.Array (zipWith)
 import Data.Const (Const)
-import Data.Either (either)
-import Foreign (unsafeToForeign, unsafeFromForeign)
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Traversable (sequence, traverse, traverse_)
@@ -86,18 +83,11 @@ selectElements
   :: { query :: QuerySelector, attr :: String }
   -> Aff (Array { element :: HTMLElement, attr :: String })
 selectElements { query, attr } = do
-  nodeList <- liftEffect do
-    w <- window
-    d <- document w
-    let parentNode = toParentNode d
-    querySelectorAll query parentNode
-  nodeArray <- liftEffect $ toArray nodeList
+  nodeArray <- liftEffect do
+    toArray =<< querySelectorAll query <<< toParentNode =<< document =<< window
 
   let elems :: Array HTMLElement
-      elems = fromMaybe []
-        $ sequence
-        $ either (const Nothing) Just <<< runExcept <<< unsafeFromForeign <<< unsafeToForeign
-        <$> nodeArray
+      elems = fromMaybe [] <<< sequence $ fromNode <$> nodeArray
 
   attrs <- liftEffect $ traverse (getAttribute attr <<< toElement) elems
   pure $ zipWith ({ element: _, attr: _ }) elems (fromMaybe "" <$> attrs)

@@ -39,5 +39,8 @@
     "purescript-web-uievents": "^1.0.0",
     "purescript-avar": "^3.0.0",
     "purescript-web-events": "^1.0.0"
+  },
+  "devDependencies": {
+    "purescript-debug": "^4.0.0"
   }
 }

@@ -13,13 +13,11 @@ import Effect.Aff (Fiber, delay, error, forkAff, killFiber)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Aff.AVar (AVar)
 import Effect.Aff.AVar as AVar
-import Foreign (unsafeToForeign, unsafeFromForeign)
-import Control.Monad.Except (runExcept)
 import Control.Monad.Free (Free, foldFree, liftF)
 import Web.Event.Event (preventDefault, currentTarget, Event)
 import Web.UIEvent.KeyboardEvent as KE
 import Web.UIEvent.MouseEvent as ME
-import Web.HTML.HTMLElement (HTMLElement, blur, focus)
+import Web.HTML.HTMLElement (HTMLElement, blur, focus, fromEventTarget)
 import Data.Array (length, (!!))
 import Data.Either (hush)
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -343,13 +341,7 @@ component =
 
       CaptureRef event a -> a <$ do
         (Tuple _ st) <- getState
-        let elementFromEvent
-              = hush
-              <<< runExcept
-              <<< unsafeFromForeign
-              <<< unsafeToForeign
-              <<< currentTarget
-        H.modify_ $ seeks _ { inputElement = elementFromEvent event }
+        H.modify_ $ seeks _ { inputElement = fromEventTarget =<< currentTarget event }
         pure a
 
       Focus focusOrBlur a -> a <$ do
