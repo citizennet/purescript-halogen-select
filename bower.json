@@ -31,27 +31,27 @@
     "generated-docs"
   ],
   "dependencies": {
-    "purescript-halogen": "^3.1.1",
-    "purescript-control": "^3.3.1",
-    "purescript-transformers": "^3.5.0",
-    "purescript-dom": "^4.15.0",
-    "purescript-aff": "^4.0.0"
+    "purescript-halogen": "^4.0.0",
+    "purescript-control": "^4.0.0",
+    "purescript-transformers": "^4.1.0",
+    "purescript-dom": "^4.16.0",
+    "purescript-aff": "^5.0.0"
   },
   "devDependencies": {
-    "purescript-dom-classy": "^2.1.0",
-    "purescript-remotedata": "^2.2.0",
-    "purescript-console": "^3.0.0",
-    "purescript-css": "^3.4.0",
+    "purescript-dom-classy": "^2.2.0",
+    "purescript-remotedata": "^3.0.0",
+    "purescript-console": "^4.1.0",
+    "purescript-css": "^4.0.0",
     "purescript-halogen-css": "^7.0.0",
-    "purescript-datetime": "^3.4.1",
-    "purescript-formatters": "^3.0.1",
-    "purescript-debug": "^3.0.0",
-    "purescript-now": "^3.0.0",
-    "purescript-js-timers": "^3.0.0",
-    "purescript-routing": "^7.0.0",
-    "purescript-coroutines": "^4.0.0",
-    "purescript-aff-coroutines": "^6.0.0",
-    "purescript-affjax": "^5.0.0",
-    "purescript-strings": "^3.5.0"
+    "purescript-datetime": "^4.0.0",
+    "purescript-formatters": "^3.0.2",
+    "purescript-debug": "^4.0.0",
+    "purescript-now": "^4.0.0",
+    "purescript-js-timers": "^4.0.0",
+    "purescript-routing": "^8.0.0",
+    "purescript-coroutines": "^5.0.0",
+    "purescript-aff-coroutines": "^7.0.0",
+    "purescript-affjax": "^6.0.0",
+    "purescript-strings": "^4.0.0"
   }
 }
