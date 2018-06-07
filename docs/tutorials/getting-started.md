@@ -19,6 +19,9 @@ Next, make sure to install `Select`:
 bower i --save purescript-halogen-select
 ```
 
+!!! warning
+    The PureScript compiler recently updated to version `0.12` and many core libraries updated at the same time. If you run into version conflicts, please reach out on the [Purescript user forum](https://purescript-users.ml).
+
 And that's it! You now have everything you need to complete the tutorials. This is the full set of steps you can follow to get all set up:
 
 ```shell
@@ -171,9 +174,7 @@ type ChildSlot = Unit
 Ah! We can finally create our component. The actual component definition is simple: we call the `#!hs parentComponent` function from Halogen to assert we're creating a component that can have further child components and provide it with the four functions it needs to operate. More on those in a moment!
 
 ```hs
-component :: ∀ eff m
-  . MonadAff eff m
- => H.Component HH.HTML Query Input Message m
+component :: ∀ m. MonadAff m => H.Component HH.HTML Query Input Message m
 component =
   H.parentComponent
     { initialState

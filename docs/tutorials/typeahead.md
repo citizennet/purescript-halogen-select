@@ -33,7 +33,7 @@ If you didn't follow the project setup, grab the source for our starting compone
 
     import Prelude
 
-    import Control.Monad.Aff.Class (class MonadAff)
+    import Effect.Aff.Class (class MonadAff)
     import Data.Const (Const)
     import Data.Maybe (Maybe(..))
     import Halogen as H
@@ -50,9 +50,7 @@ If you didn't follow the project setup, grab the source for our starting compone
     type ChildSlot = Unit
     type ChildQuery = Const Void
 
-    component :: ∀ eff m
-      . MonadAff eff m
-     => H.Component HH.HTML Query Input Message m
+    component :: ∀ m. MonadAff m => H.Component HH.HTML Query Input Message m
     component =
       H.parentComponent
         { initialState
@@ -115,8 +113,7 @@ Of course, we won't be prepared to handle messages or use `Select`'s queries wit
 -- |        This allows you to embed your own queries into the `Select` component.
 -- | - `item`: Your custom item type. It can be a simple type like `String`, or something
 -- |           complex like `CalendarItem StartDate EndDate (Maybe Disabled)`.
--- | - `eff`: The component's effects.
-data QueryF o item eff a
+data QueryF o item a
   = Search String a
   | Highlight Target a
   | Select Int a
@@ -128,13 +125,12 @@ data QueryF o item eff a
   | GetVisibility (Visibility -> a)
   | ReplaceItems (Array item) a
   | Raise (o Unit) a
-  | Receive (Input o item eff) a
+  | Receive (Input o item) a
 ```
 
-Already we're faced with an interesting decision: how should we fill in the type variables that `Select` expects? Two of them are straightforward:
+Already we're faced with an interesting decision: how should we fill in the type variables that `Select` expects?
 
 - `o` represents the type of queries that can be embedded in the component. You should fill this in with your parent component's query type. If you follow Halogen convention and name your type `#!hs Query`, then filling this variable in will produce `#!hs Select.Query Query item eff`. If you take a look at where this variable is used, you'll see it shows up in the `Select` component's `#!hs Raise` and `#!hs Receive` queries. The `#!hs Raise` query is a wrapper that you can use to embed your query into the render function you provide to the component. The `#!hs Receive` query leverages `Select`'s `#!hs Input` type, which includes that render function. I'll have a lot more to say about embedding your own query type into `Select` later on.
-- `eff` is the effect row that the `Select` component is going to use. The component uses `#!hs DOM` and `#!hs AVAR` effects. `#!hs eff` is required for the `#!hs State` type, which is itself in the type for the render function, which is itself passed to `Select` via the component's `#!hs Input` type, which is handled with the `#!hs Receive` query, and so you'll see the type variable present in all the key component types.
 
 The second type argument is more interesting. `Select` allows you to provide any type as your selectable "item". While in this tutorial we're going to stick with strings you could very well make a significantly more information-rich type.
 
@@ -163,14 +159,14 @@ data Query a
   = HandleSelect (Select.Message Query String) a
 
 type ChildSlot = Unit
-type ChildQuery eff = Select.Query Query String eff
+type ChildQuery = Select.Query Query String
 
 component =
   ...
-  render :: State -> H.ParentHTML Query (ChildQuery eff) ChildSlot m
+  render :: State -> H.ParentHTML Query ChildQuery ChildSlot m
   render st = HH.div_ []
 
-  eval :: Query ~> H.ParentDSL State Query (ChildQuery eff) ChildSlot Message m
+  eval :: Query ~> H.ParentDSL State Query ChildQuery ChildSlot Message m
   eval = case _ of
     -- We'll just stub this out for the time being.
     HandleSelect message next -> pure next
@@ -181,75 +177,13 @@ Next, we'll actually mount the `Select` component. We have everything except for
 ```hs
 import Halogen.HTML.Events as HE
 
-render :: State -> H.ParentHTML Query (ChildQuery eff) ChildSlot m
+render :: State -> H.ParentHTML Query ChildQuery ChildSlot m
 render st =
 	HH.div_
 	[ HH.slot unit Select.component ?input (HE.input HandleSelect) ]
 ```
 
-Right away we get a type error:
-
-```hs
-Error found in module Component
-
-  Could not match type
-
-		( avar :: AVAR
-		, dom :: DOM
-		| t2
-		)
-
-	with type
-
-		eff0
-
-while trying to match type
-
-	QueryF Query String
-		( avar :: AVAR
-		, dom :: DOM
-		| t2
-		)
-
-	with type QueryF Query String eff0
-
-in value declaration component
-```
-
-It's an easy fix: we've stated that our component can use any row of effects, but `Select` requires at least `#!hs AVAR` and `#!hs DOM`. The component uses `#!hs AVAR` in order to implement debouncing, and since it manipulates the DOM, it needs the relevant effect. We need to add these effects to the parent component, too. We already know our component is going to make API calls on our behalf, so we'll add the `#!hs AJAX` effect as well.
-
-Once we've created our `Effects` type, we'll need to apply it to every function that uses the `#!hs eff` variable (but not to type synonyms).
-
-??? info "Why apply `Effects` to function signatures, not type synonyms?"
-    Effect rows can be surprisingly finicky to get right, especially when you have multiple levels of components and your code becomes more complex. Type synonyms help make your functions more readable by hiding unnecessary details, but in the case of effect rows, they tend to make it much more difficult to debug issues when two rows that are meant to unify don't. At CitizenNet, we follow a rule of thumb to always apply effects in function signatures, but not in type synonyms.
-
-    That's why, as a general rule, you won't see this in our code:
-
-    ```hs
-    type ChildQuery eff = Select.Query Query String (Effects eff)
-    ```
-
-```hs
-import Control.Monad.Aff.AVar (AVAR)
-import DOM (DOM)
-import Network.HTTP.Affjax (AJAX)
-
-type Effects eff =
-  ( avar :: AVAR
-  , dom :: DOM
-  , ajax :: AJAX
-  | eff
-  )
-
-component :: ∀ eff m
-  . MonadAff (Effects eff) m
- => H.Component HH.HTML Query Input Message m
-
-  render :: State -> H.ParentHTML Query (ChildQuery (Effects eff)) ChildSlot m
-  eval :: Query ~> H.ParentDSL State Query (ChildQuery (Effects eff)) ChildSlot Message m
-```
-
-With that out of the way, we can turn to the component's input type. Here's what we're required to fill in, as per the [`Select` module documentation](https://pursuit.purescript.org/packages/purescript-halogen-select/1.0.0/docs/Select#t:Input):
+With that out of the way, we can turn to the component's input type. Here's what we're required to fill in, as per the [`Select` module documentation](https://pursuit.purescript.org/packages/purescript-halogen-select/2.0.0/docs/Select#t:Input):
 
 ```hs
 -- | Text-driven inputs will operate like a normal search-driven selection component.
@@ -262,12 +196,12 @@ data InputType
 -- | The component's input type, which includes the component's render function. This
 -- | render function can also be used to share data with the parent component, as every
 -- | time the parent re-renders, the render function will refresh in `Select`.
-type Input o item eff =
+type Input o item =
   { inputType     :: InputType
   , items         :: Array item
   , initialSearch :: Maybe String
   , debounceTime  :: Maybe Milliseconds
-  , render        :: State item eff -> ComponentHTML o item eff
+  , render        :: State item -> ComponentHTML o item
   }
 ```
 
@@ -284,12 +218,12 @@ Let's write that input record now:
 ```hs
 import Data.Time.Duration (Milliseconds(..))
 
-render :: State -> H.ParentHTML Query (ChildQuery (Effects eff)) ChildSlot m
+render :: State -> H.ParentHTML Query ChildQuery ChildSlot m
 render st =
   HH.div_
   [ HH.slot unit Select.component selectInput (HE.input HandleSelect) ]
 
-selectInput :: Select.Input Query String (Effects eff)
+selectInput :: Select.Input Query String
 selectInput =
   { inputType: Select.TextInput
   , items: []
@@ -334,11 +268,11 @@ We have access to two distinct `#!hs State` types when we use `Select`: the pare
 Let's take a quick look at what `Select` provides (take a look at the [module documentation](https://pursuit.purescript.org/packages/purescript-halogen-select/1.0.0/docs/Select#t:State) for more details):
 
 ```hs
-type State item eff =
+type State item =
   { inputType        :: InputType
   , search           :: String
   , debounceTime     :: Milliseconds
-  , debouncer        :: Maybe (Debouncer eff)
+  , debouncer        :: Maybe Debouncer
   , inputElement     :: Maybe HTMLElement
   , items            :: Array item
   , visibility       :: Visibility
@@ -399,7 +333,7 @@ initialState = const
 
 Now that we've got a usable `#!hs State` type, let's turn to our queries. Queries are the computations available to the component, so they're the place where we ought to think about what the typeahead should *do*, rather than just how it should render.
 
-Just like `#!hs State`, when we write our own `#!hs Query` type on top of `Select`, we should consider what is already available in the component. As usual, we'll turn to the [module documentation](https://pursuit.purescript.org/packages/purescript-halogen-select/1.0.0/docs/Select#t:QueryF) to look at our available queries. I'd recommend scrolling through the available functions to get a glimpse of what `Select` offers, but we'll skip to the main points here.
+Just like `#!hs State`, when we write our own `#!hs Query` type on top of `Select`, we should consider what is already available in the component. As usual, we'll turn to the [module documentation](https://pursuit.purescript.org/packages/purescript-halogen-select/2.0.0/docs/Select#t:QueryF) to look at our available queries. I'd recommend scrolling through the available functions to get a glimpse of what `Select` offers, but we'll skip to the main points here.
 
 `Select` is going to manage all the keyboard events, text input, debouncing, moving the highlighted index, and so on. On top of that, we'll need to add some extra functionality: the ability to remove items that have already been selected, and the ability to fetch new items when the user performs a search. We'll at least need two queries to handle these two features.
 
@@ -410,7 +344,7 @@ data Query a
   = HandleSelect (Select.Message Query String) a
   | Remove String a
 
-eval :: Query ~> H.ParentDSL State Query (ChildQuery (Effects eff)) ChildSlot Message m
+eval :: Query ~> H.ParentDSL State Query ChildQuery ChildSlot Message m
 eval = case _ of
   HandleSelect message next -> case message of
     Select.Searched str ->
@@ -477,12 +411,16 @@ Our function will hit the Star Wars API, decode the result into an array of stri
 
 ```hs
 import Data.Argonaut (Json, decodeJson, (.?))
-import Network.HTTP.Affjax (AJAX, get)
+import Network.HTTP.Affjax as AX
+import Network.HTTP.Affjax.Response as Response
 
-fetchItems :: String -> Aff (Effects eff) (Either String (Array String))
+fetchItems :: String -> Aff (Either String (Array String))
 fetchItems str = do
-  (res :: Json) <- _.response
-    <$> get ("https://swapi.co/api/people/?search=" <> str)
+  res <- _.response <$>
+    ( AX.get
+    $ Respondable.json
+    $ "https://swapi.co/api/people/?search=" <> str
+    )
 
   pure $ do
     obj <- decodeJson res
@@ -516,15 +454,15 @@ We have all the state and behavior necessary to run a working typeahead. Now, le
 When you write a render function for a `Select` component, keep in mind that the function is going to be run *by* the child component. You can see this right away from the type signature of the render function that `Select` expects:
 
 ```hs
-myRenderFunction :: Select.State item eff -> Select.ComponentHTML o item eff
+myRenderFunction :: Select.State item -> Select.ComponentHTML o item
 ```
 
 In our case, we've already specialized our parent query, item, and effects, so the type signature is actually this:
 
 ```hs
 myRenderFunction
-  :: Select.State String (Effects eff)
-  -> Select.ComponentHTML Query String (Effects eff)
+  :: Select.State String
+  -> Select.ComponentHTML Query String
 ```
 
 !!! tip
@@ -533,8 +471,8 @@ myRenderFunction
     ```hs
     selectRenderFunction
       :: Parent.State
-      -> Select.State String (Parent.Effects eff)
-      -> Select.ComponentHTML Parent.Query String (Parent.Effects eff)
+      -> Select.State String
+      -> Select.ComponentHTML Parent.Query String
     ```
 
     Then you can write this render function anywhere you'd like while retaining access to the parent's state and query algebra. `Select` will not accept this function as-is, however; you'll need to apply it to the parent state before sending the function in as input:
@@ -556,8 +494,8 @@ Our overall function is going to take the parent state, the `Select` state, and 
 ```hs
 typeahead
   :: State
-  -> Select.State String (Effects eff)
-  -> Select.ComponentHTML Query String (Effects eff)
+  -> Select.State String
+  -> Select.ComponentHTML Query String
 typeahead parentState childState = ...
 ```
 
@@ -582,7 +520,7 @@ But wait! Since this is rendering inside of `Select`, it needs to have the `Sele
 
 ```hs
 -- The items that have already been selected and can be removed
-renderSelections :: Select.ComponentHTML Query String (Effects eff)
+renderSelections :: Select.ComponentHTML Query String
 renderSelections =
   HH.ul_
   ( st.selections <#>
@@ -727,10 +665,8 @@ If you'd like to use this component as a starting point from which to build your
 
     import Prelude
 
-    import Control.Monad.Aff (Aff)
-    import Control.Monad.Aff.AVar (AVAR)
-    import Control.Monad.Aff.Class (class MonadAff)
-    import DOM (DOM)
+    import Effect.Aff (Aff)
+    import Effect.Aff.Class (class MonadAff)
     import Data.Argonaut (Json, decodeJson, (.?))
     import Data.Array (difference, filter, mapWithIndex, null, (:))
     import Data.Either (Either)
@@ -741,7 +677,8 @@ If you'd like to use this component as a starting point from which to build your
     import Halogen.HTML as HH
     import Halogen.HTML.Events as HE
     import Halogen.HTML.Properties (attr) as HP
-    import Network.HTTP.Affjax (AJAX, get)
+    import Network.HTTP.Affjax as AX
+    import Network.HTTP.Affjax.Respondable as Respondable
     import Network.RemoteData (RemoteData(..), fromEither, withDefault)
     import Select as Select
     import Select.Utils.Setters as Setters
@@ -760,17 +697,10 @@ If you'd like to use this component as a starting point from which to build your
     type Message = Void
 
     type ChildSlot = Unit
-    type ChildQuery eff = Select.Query Query String eff
+    type ChildQuery = Select.Query Query String
 
-    type Effects eff =
-      ( avar :: AVAR
-      , dom :: DOM
-      , ajax :: AJAX
-      | eff
-      )
-
-    component :: ∀ eff m
-      . MonadAff (Effects eff) m
+    component :: ∀ m
+      . MonadAff m
      => H.Component HH.HTML Query Input Message m
     component =
       H.parentComponent
@@ -787,24 +717,28 @@ If you'd like to use this component as a starting point from which to build your
         , selections: []
         }
 
-      fetchItems :: String -> Aff (Effects eff) (Either String (Array String))
+      fetchItems :: String -> Aff (Either String (Array String))
       fetchItems str = do
-         (res :: Json) <- _.response
-           <$> get ("https://swapi.co/api/people/?search=" <> str)
+         res <- _.response <$>
+           ( AX.get
+           $ Respondable.json
+           $ "https://swapi.co/api/people/?search=" <> str
+           )
+
 
          pure $ do
            obj <- decodeJson res
            arr <- obj .? "results"
            traverse (decodeJson <=< flip (.?) "name") arr
 
-      render :: State -> H.ParentHTML Query (ChildQuery (Effects eff)) ChildSlot m
+      render :: State -> H.ParentHTML Query ChildQuery ChildSlot m
       render st =
         HH.div_
         [ HH.slot unit Select.component selectInput (HE.input HandleSelect) ]
 
         where
 
-        selectInput :: Select.Input Query String (Effects eff)
+        selectInput :: Select.Input Query String
         selectInput =
           { inputType: Select.TextInput
           , items: []
@@ -815,8 +749,8 @@ If you'd like to use this component as a starting point from which to build your
 
         typeahead
           :: State
-          -> Select.State String (Effects eff)
-          -> Select.ComponentHTML Query String (Effects eff)
+          -> Select.State String
+          -> Select.ComponentHTML Query String
         typeahead parentState childState =
           HH.div_
           [ renderSelections, renderInput, renderContainer ]
@@ -867,7 +801,7 @@ If you'd like to use this component as a starting point from which to build your
               [ HH.text item ]
 
 
-      eval :: Query ~> H.ParentDSL State Query (ChildQuery (Effects eff)) ChildSlot Message m
+      eval :: Query ~> H.ParentDSL State Query ChildQuery ChildSlot Message m
       eval = case _ of
         Remove item next -> do
           H.modify \st -> st { selections = filter (_ /= item) st.selections }
