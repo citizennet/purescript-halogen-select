@@ -713,6 +713,10 @@
 </pre></div>
 </td></tr></table>
 
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The PureScript compiler recently updated to version <code>0.12</code> and many core libraries updated at the same time. If you run into version conflicts, please reach out on the <a href="https://purescript-users.ml">Purescript user forum</a>.</p>
+</div>
 <p>And that's it! You now have everything you need to complete the tutorials. This is the full set of steps you can follow to get all set up:</p>
 <table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
  2
@@ -850,11 +854,7 @@ yarn watch
  7
  8
  9
-10
-11
-12</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">component</span> <span class="ow">::</span> <span class="err">∀</span> <span class="n">eff</span> <span class="n">m</span>
-  <span class="o">.</span> <span class="kt">MonadAff</span> <span class="n">eff</span> <span class="n">m</span>
- <span class="ow">=&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">Component</span> <span class="kt">HH</span><span class="o">.</span><span class="kt">HTML</span> <span class="kt">Query</span> <span class="kt">Input</span> <span class="kt">Message</span> <span class="n">m</span>
+10</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">component</span> <span class="ow">::</span> <span class="err">∀</span> <span class="n">m</span><span class="o">.</span> <span class="kt">MonadAff</span> <span class="n">m</span> <span class="ow">=&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">Component</span> <span class="kt">HH</span><span class="o">.</span><span class="kt">HTML</span> <span class="kt">Query</span> <span class="kt">Input</span> <span class="kt">Message</span> <span class="n">m</span>
 <span class="nf">component</span> <span class="ow">=</span>
   <span class="kt">H</span><span class="o">.</span><span class="n">parentComponent</span>
     <span class="p">{</span> <span class="n">initialState</span>

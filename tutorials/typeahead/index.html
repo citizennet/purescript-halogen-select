@@ -782,13 +782,11 @@
 37
 38
 39
-40
-41
-42</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">module</span> <span class="nn">Component</span> <span class="kr">where</span>
+40</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">module</span> <span class="nn">Component</span> <span class="kr">where</span>
 
 <span class="kr">import</span> <span class="nn">Prelude</span>
 
-<span class="kr">import</span> <span class="nn">Control.Monad.Aff.Class</span> <span class="p">(</span><span class="nf">class</span> <span class="kt">MonadAff</span><span class="p">)</span>
+<span class="kr">import</span> <span class="nn">Effect.Aff.Class</span> <span class="p">(</span><span class="nf">class</span> <span class="kt">MonadAff</span><span class="p">)</span>
 <span class="kr">import</span> <span class="nn">Data.Const</span> <span class="p">(</span><span class="kt">Const</span><span class="p">)</span>
 <span class="kr">import</span> <span class="nn">Data.Maybe</span> <span class="p">(</span><span class="kt">Maybe</span><span class="p">(</span><span class="o">..</span><span class="p">))</span>
 <span class="kr">import</span> <span class="nn">Halogen</span> <span class="k">as</span> <span class="n">H</span>
@@ -805,9 +803,7 @@
 <span class="kr">type</span> <span class="kt">ChildSlot</span> <span class="ow">=</span> <span class="kt">Unit</span>
 <span class="kr">type</span> <span class="kt">ChildQuery</span> <span class="ow">=</span> <span class="kt">Const</span> <span class="kt">Void</span>
 
-<span class="nf">component</span> <span class="ow">::</span> <span class="err">∀</span> <span class="n">eff</span> <span class="n">m</span>
-  <span class="o">.</span> <span class="kt">MonadAff</span> <span class="n">eff</span> <span class="n">m</span>
- <span class="ow">=&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">Component</span> <span class="kt">HH</span><span class="o">.</span><span class="kt">HTML</span> <span class="kt">Query</span> <span class="kt">Input</span> <span class="kt">Message</span> <span class="n">m</span>
+<span class="nf">component</span> <span class="ow">::</span> <span class="err">∀</span> <span class="n">m</span><span class="o">.</span> <span class="kt">MonadAff</span> <span class="n">m</span> <span class="ow">=&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">Component</span> <span class="kt">HH</span><span class="o">.</span><span class="kt">HTML</span> <span class="kt">Query</span> <span class="kt">Input</span> <span class="kt">Message</span> <span class="n">m</span>
 <span class="nf">component</span> <span class="ow">=</span>
   <span class="kt">H</span><span class="o">.</span><span class="n">parentComponent</span>
     <span class="p">{</span> <span class="n">initialState</span>
@@ -885,13 +881,11 @@ yarn build
 14
 15
 16
-17
-18</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="c1">-- | - `o`: The query type of the component that will mount this component in a child slot.</span>
+17</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="c1">-- | - `o`: The query type of the component that will mount this component in a child slot.</span>
 <span class="c1">-- |        This allows you to embed your own queries into the `Select` component.</span>
 <span class="c1">-- | - `item`: Your custom item type. It can be a simple type like `String`, or something</span>
 <span class="c1">-- |           complex like `CalendarItem StartDate EndDate (Maybe Disabled)`.</span>
-<span class="c1">-- | - `eff`: The component&#39;s effects.</span>
-<span class="kr">data</span> <span class="kt">QueryF</span> <span class="n">o</span> <span class="n">item</span> <span class="n">eff</span> <span class="n">a</span>
+<span class="kr">data</span> <span class="kt">QueryF</span> <span class="n">o</span> <span class="n">item</span> <span class="n">a</span>
   <span class="ow">=</span> <span class="kt">Search</span> <span class="kt">String</span> <span class="n">a</span>
   <span class="o">|</span> <span class="kt">Highlight</span> <span class="kt">Target</span> <span class="n">a</span>
   <span class="o">|</span> <span class="kt">Select</span> <span class="kt">Int</span> <span class="n">a</span>
@@ -903,14 +897,13 @@ yarn build
   <span class="o">|</span> <span class="kt">GetVisibility</span> <span class="p">(</span><span class="kt">Visibility</span> <span class="ow">-&gt;</span> <span class="n">a</span><span class="p">)</span>
   <span class="o">|</span> <span class="kt">ReplaceItems</span> <span class="p">(</span><span class="kt">Array</span> <span class="n">item</span><span class="p">)</span> <span class="n">a</span>
   <span class="o">|</span> <span class="kt">Raise</span> <span class="p">(</span><span class="n">o</span> <span class="kt">Unit</span><span class="p">)</span> <span class="n">a</span>
-  <span class="o">|</span> <span class="kt">Receive</span> <span class="p">(</span><span class="kt">Input</span> <span class="n">o</span> <span class="n">item</span> <span class="n">eff</span><span class="p">)</span> <span class="n">a</span>
+  <span class="o">|</span> <span class="kt">Receive</span> <span class="p">(</span><span class="kt">Input</span> <span class="n">o</span> <span class="n">item</span><span class="p">)</span> <span class="n">a</span>
 </pre></div>
 </td></tr></table>
 
-<p>Already we're faced with an interesting decision: how should we fill in the type variables that <code>Select</code> expects? Two of them are straightforward:</p>
+<p>Already we're faced with an interesting decision: how should we fill in the type variables that <code>Select</code> expects?</p>
 <ul>
 <li><code>o</code> represents the type of queries that can be embedded in the component. You should fill this in with your parent component's query type. If you follow Halogen convention and name your type <code class="codehilite"><span class="kt">Query</span></code>, then filling this variable in will produce <code class="codehilite"><span class="kt">Select</span><span class="o">.</span><span class="kt">Query</span> <span class="kt">Query</span> <span class="n">item</span> <span class="n">eff</span></code>. If you take a look at where this variable is used, you'll see it shows up in the <code>Select</code> component's <code class="codehilite"><span class="kt">Raise</span></code> and <code class="codehilite"><span class="kt">Receive</span></code> queries. The <code class="codehilite"><span class="kt">Raise</span></code> query is a wrapper that you can use to embed your query into the render function you provide to the component. The <code class="codehilite"><span class="kt">Receive</span></code> query leverages <code>Select</code>'s <code class="codehilite"><span class="kt">Input</span></code> type, which includes that render function. I'll have a lot more to say about embedding your own query type into <code>Select</code> later on.</li>
-<li><code>eff</code> is the effect row that the <code>Select</code> component is going to use. The component uses <code class="codehilite"><span class="kt">DOM</span></code> and <code class="codehilite"><span class="kt">AVAR</span></code> effects. <code class="codehilite"><span class="nf">eff</span></code> is required for the <code class="codehilite"><span class="kt">State</span></code> type, which is itself in the type for the render function, which is itself passed to <code>Select</code> via the component's <code class="codehilite"><span class="kt">Input</span></code> type, which is handled with the <code class="codehilite"><span class="kt">Receive</span></code> query, and so you'll see the type variable present in all the key component types.</li>
 </ul>
 <p>The second type argument is more interesting. <code>Select</code> allows you to provide any type as your selectable "item". While in this tutorial we're going to stick with strings you could very well make a significantly more information-rich type.</p>
 <details class="tip"><summary>Writing useful item types</summary><p>Any time you need to render some items differently than others, or you need different logic for when one item is selected vs. another, you should encode that information in the item type. For example, at CitizenNet, our calendar component has an item type like this:</p><table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">data</span> <span class="kt">CalendarItem</span> <span class="ow">=</span> <span class="kt">CalendarItem</span> <span class="kt">SelectedStatus</span> <span class="kt">DisabledStatus</span> <span class="kt">Boundary</span> <span class="kt">Range</span> <span class="kt">Date</span>
@@ -948,14 +941,14 @@ yarn build
   <span class="ow">=</span> <span class="kt">HandleSelect</span> <span class="p">(</span><span class="kt">Select</span><span class="o">.</span><span class="kt">Message</span> <span class="kt">Query</span> <span class="kt">String</span><span class="p">)</span> <span class="n">a</span>
 
 <span class="kr">type</span> <span class="kt">ChildSlot</span> <span class="ow">=</span> <span class="kt">Unit</span>
-<span class="kr">type</span> <span class="kt">ChildQuery</span> <span class="n">eff</span> <span class="ow">=</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">Query</span> <span class="kt">Query</span> <span class="kt">String</span> <span class="n">eff</span>
+<span class="kr">type</span> <span class="kt">ChildQuery</span> <span class="ow">=</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">Query</span> <span class="kt">Query</span> <span class="kt">String</span>
 
 <span class="nf">component</span> <span class="ow">=</span>
   <span class="o">...</span>
-  <span class="n">render</span> <span class="ow">::</span> <span class="kt">State</span> <span class="ow">-&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">ParentHTML</span> <span class="kt">Query</span> <span class="p">(</span><span class="kt">ChildQuery</span> <span class="n">eff</span><span class="p">)</span> <span class="kt">ChildSlot</span> <span class="n">m</span>
+  <span class="n">render</span> <span class="ow">::</span> <span class="kt">State</span> <span class="ow">-&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">ParentHTML</span> <span class="kt">Query</span> <span class="kt">ChildQuery</span> <span class="kt">ChildSlot</span> <span class="n">m</span>
   <span class="n">render</span> <span class="n">st</span> <span class="ow">=</span> <span class="kt">HH</span><span class="o">.</span><span class="n">div_</span> <span class="kt">[]</span>
 
-  <span class="n">eval</span> <span class="ow">::</span> <span class="kt">Query</span> <span class="o">~&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">ParentDSL</span> <span class="kt">State</span> <span class="kt">Query</span> <span class="p">(</span><span class="kt">ChildQuery</span> <span class="n">eff</span><span class="p">)</span> <span class="kt">ChildSlot</span> <span class="kt">Message</span> <span class="n">m</span>
+  <span class="n">eval</span> <span class="ow">::</span> <span class="kt">Query</span> <span class="o">~&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">ParentDSL</span> <span class="kt">State</span> <span class="kt">Query</span> <span class="kt">ChildQuery</span> <span class="kt">ChildSlot</span> <span class="kt">Message</span> <span class="n">m</span>
   <span class="n">eval</span> <span class="ow">=</span> <span class="kr">case</span> <span class="kr">_</span> <span class="kr">of</span>
     <span class="c1">-- We&#39;ll just stub this out for the time being.</span>
     <span class="kt">HandleSelect</span> <span class="n">message</span> <span class="n">next</span> <span class="ow">-&gt;</span> <span class="n">pure</span> <span class="n">next</span>
@@ -970,106 +963,14 @@ yarn build
 5
 6</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">import</span> <span class="nn">Halogen.HTML.Events</span> <span class="k">as</span> <span class="n">HE</span>
 
-<span class="nf">render</span> <span class="ow">::</span> <span class="kt">State</span> <span class="ow">-&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">ParentHTML</span> <span class="kt">Query</span> <span class="p">(</span><span class="kt">ChildQuery</span> <span class="n">eff</span><span class="p">)</span> <span class="kt">ChildSlot</span> <span class="n">m</span>
+<span class="nf">render</span> <span class="ow">::</span> <span class="kt">State</span> <span class="ow">-&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">ParentHTML</span> <span class="kt">Query</span> <span class="kt">ChildQuery</span> <span class="kt">ChildSlot</span> <span class="n">m</span>
 <span class="nf">render</span> <span class="n">st</span> <span class="ow">=</span>
     <span class="kt">HH</span><span class="o">.</span><span class="n">div_</span>
     <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">slot</span> <span class="n">unit</span> <span class="kt">Select</span><span class="o">.</span><span class="n">component</span> <span class="o">?</span><span class="n">input</span> <span class="p">(</span><span class="kt">HE</span><span class="o">.</span><span class="n">input</span> <span class="kt">HandleSelect</span><span class="p">)</span> <span class="p">]</span>
 </pre></div>
 </td></tr></table>
 
-<p>Right away we get a type error:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
- 2
- 3
- 4
- 5
- 6
- 7
- 8
- 9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kt">Error</span> <span class="n">found</span> <span class="kr">in</span> <span class="kr">module</span> <span class="nn">Component</span>
-
-  <span class="kt">Could</span> <span class="n">not</span> <span class="n">match</span> <span class="kr">type</span>
-
-        <span class="p">(</span> <span class="n">avar</span> <span class="ow">::</span> <span class="kt">AVAR</span>
-        <span class="p">,</span> <span class="n">dom</span> <span class="ow">::</span> <span class="kt">DOM</span>
-        <span class="o">|</span> <span class="n">t2</span>
-        <span class="p">)</span>
-
-    <span class="n">with</span> <span class="kr">type</span>
-
-        <span class="n">eff0</span>
-
-<span class="nf">while</span> <span class="n">trying</span> <span class="n">to</span> <span class="n">match</span> <span class="kr">type</span>
-
-    <span class="kt">QueryF</span> <span class="kt">Query</span> <span class="kt">String</span>
-        <span class="p">(</span> <span class="n">avar</span> <span class="ow">::</span> <span class="kt">AVAR</span>
-        <span class="p">,</span> <span class="n">dom</span> <span class="ow">::</span> <span class="kt">DOM</span>
-        <span class="o">|</span> <span class="n">t2</span>
-        <span class="p">)</span>
-
-    <span class="n">with</span> <span class="kr">type</span> <span class="kt">QueryF</span> <span class="kt">Query</span> <span class="kt">String</span> <span class="n">eff0</span>
-
-<span class="kr">in</span> <span class="n">value</span> <span class="n">declaration</span> <span class="n">component</span>
-</pre></div>
-</td></tr></table>
-
-<p>It's an easy fix: we've stated that our component can use any row of effects, but <code>Select</code> requires at least <code class="codehilite"><span class="kt">AVAR</span></code> and <code class="codehilite"><span class="kt">DOM</span></code>. The component uses <code class="codehilite"><span class="kt">AVAR</span></code> in order to implement debouncing, and since it manipulates the DOM, it needs the relevant effect. We need to add these effects to the parent component, too. We already know our component is going to make API calls on our behalf, so we'll add the <code class="codehilite"><span class="kt">AJAX</span></code> effect as well.</p>
-<p>Once we've created our <code>Effects</code> type, we'll need to apply it to every function that uses the <code class="codehilite"><span class="nf">eff</span></code> variable (but not to type synonyms).</p>
-<details class="info"><summary>Why apply <code>Effects</code> to function signatures, not type synonyms?</summary><p>Effect rows can be surprisingly finicky to get right, especially when you have multiple levels of components and your code becomes more complex. Type synonyms help make your functions more readable by hiding unnecessary details, but in the case of effect rows, they tend to make it much more difficult to debug issues when two rows that are meant to unify don't. At CitizenNet, we follow a rule of thumb to always apply effects in function signatures, but not in type synonyms.</p><p>That's why, as a general rule, you won't see this in our code:</p><table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">type</span> <span class="kt">ChildQuery</span> <span class="n">eff</span> <span class="ow">=</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">Query</span> <span class="kt">Query</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
-</pre></div>
-</td></tr></table>
-</details><table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
- 2
- 3
- 4
- 5
- 6
- 7
- 8
- 9
-10
-11
-12
-13
-14
-15
-16
-17</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">import</span> <span class="nn">Control.Monad.Aff.AVar</span> <span class="p">(</span><span class="kt">AVAR</span><span class="p">)</span>
-<span class="kr">import</span> <span class="nn">DOM</span> <span class="p">(</span><span class="kt">DOM</span><span class="p">)</span>
-<span class="kr">import</span> <span class="nn">Network.HTTP.Affjax</span> <span class="p">(</span><span class="kt">AJAX</span><span class="p">)</span>
-
-<span class="kr">type</span> <span class="kt">Effects</span> <span class="n">eff</span> <span class="ow">=</span>
-  <span class="p">(</span> <span class="n">avar</span> <span class="ow">::</span> <span class="kt">AVAR</span>
-  <span class="p">,</span> <span class="n">dom</span> <span class="ow">::</span> <span class="kt">DOM</span>
-  <span class="p">,</span> <span class="n">ajax</span> <span class="ow">::</span> <span class="kt">AJAX</span>
-  <span class="o">|</span> <span class="n">eff</span>
-  <span class="p">)</span>
-
-<span class="nf">component</span> <span class="ow">::</span> <span class="err">∀</span> <span class="n">eff</span> <span class="n">m</span>
-  <span class="o">.</span> <span class="kt">MonadAff</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span> <span class="n">m</span>
- <span class="ow">=&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">Component</span> <span class="kt">HH</span><span class="o">.</span><span class="kt">HTML</span> <span class="kt">Query</span> <span class="kt">Input</span> <span class="kt">Message</span> <span class="n">m</span>
-
-  <span class="n">render</span> <span class="ow">::</span> <span class="kt">State</span> <span class="ow">-&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">ParentHTML</span> <span class="kt">Query</span> <span class="p">(</span><span class="kt">ChildQuery</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">))</span> <span class="kt">ChildSlot</span> <span class="n">m</span>
-  <span class="n">eval</span> <span class="ow">::</span> <span class="kt">Query</span> <span class="o">~&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">ParentDSL</span> <span class="kt">State</span> <span class="kt">Query</span> <span class="p">(</span><span class="kt">ChildQuery</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">))</span> <span class="kt">ChildSlot</span> <span class="kt">Message</span> <span class="n">m</span>
-</pre></div>
-</td></tr></table>
-
-<p>With that out of the way, we can turn to the component's input type. Here's what we're required to fill in, as per the <a href="https://pursuit.purescript.org/packages/purescript-halogen-select/1.0.0/docs/Select#t:Input"><code>Select</code> module documentation</a>:</p>
+<p>With that out of the way, we can turn to the component's input type. Here's what we're required to fill in, as per the <a href="https://pursuit.purescript.org/packages/purescript-halogen-select/2.0.0/docs/Select#t:Input"><code>Select</code> module documentation</a>:</p>
 <table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
  2
  3
@@ -1096,12 +997,12 @@ yarn build
 <span class="c1">-- | The component&#39;s input type, which includes the component&#39;s render function. This</span>
 <span class="c1">-- | render function can also be used to share data with the parent component, as every</span>
 <span class="c1">-- | time the parent re-renders, the render function will refresh in `Select`.</span>
-<span class="kr">type</span> <span class="kt">Input</span> <span class="n">o</span> <span class="n">item</span> <span class="n">eff</span> <span class="ow">=</span>
+<span class="kr">type</span> <span class="kt">Input</span> <span class="n">o</span> <span class="n">item</span> <span class="ow">=</span>
   <span class="p">{</span> <span class="n">inputType</span>     <span class="ow">::</span> <span class="kt">InputType</span>
   <span class="p">,</span> <span class="n">items</span>         <span class="ow">::</span> <span class="kt">Array</span> <span class="n">item</span>
   <span class="p">,</span> <span class="n">initialSearch</span> <span class="ow">::</span> <span class="kt">Maybe</span> <span class="kt">String</span>
   <span class="p">,</span> <span class="n">debounceTime</span>  <span class="ow">::</span> <span class="kt">Maybe</span> <span class="kt">Milliseconds</span>
-  <span class="p">,</span> <span class="n">render</span>        <span class="ow">::</span> <span class="kt">State</span> <span class="n">item</span> <span class="n">eff</span> <span class="ow">-&gt;</span> <span class="kt">ComponentHTML</span> <span class="n">o</span> <span class="n">item</span> <span class="n">eff</span>
+  <span class="p">,</span> <span class="n">render</span>        <span class="ow">::</span> <span class="kt">State</span> <span class="n">item</span> <span class="ow">-&gt;</span> <span class="kt">ComponentHTML</span> <span class="n">o</span> <span class="n">item</span>
   <span class="p">}</span>
 </pre></div>
 </td></tr></table>
@@ -1131,12 +1032,12 @@ yarn build
 14
 15</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">import</span> <span class="nn">Data.Time.Duration</span> <span class="p">(</span><span class="kt">Milliseconds</span><span class="p">(</span><span class="o">..</span><span class="p">))</span>
 
-<span class="nf">render</span> <span class="ow">::</span> <span class="kt">State</span> <span class="ow">-&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">ParentHTML</span> <span class="kt">Query</span> <span class="p">(</span><span class="kt">ChildQuery</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">))</span> <span class="kt">ChildSlot</span> <span class="n">m</span>
+<span class="nf">render</span> <span class="ow">::</span> <span class="kt">State</span> <span class="ow">-&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">ParentHTML</span> <span class="kt">Query</span> <span class="kt">ChildQuery</span> <span class="kt">ChildSlot</span> <span class="n">m</span>
 <span class="nf">render</span> <span class="n">st</span> <span class="ow">=</span>
   <span class="kt">HH</span><span class="o">.</span><span class="n">div_</span>
   <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">slot</span> <span class="n">unit</span> <span class="kt">Select</span><span class="o">.</span><span class="n">component</span> <span class="n">selectInput</span> <span class="p">(</span><span class="kt">HE</span><span class="o">.</span><span class="n">input</span> <span class="kt">HandleSelect</span><span class="p">)</span> <span class="p">]</span>
 
-<span class="nf">selectInput</span> <span class="ow">::</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">Input</span> <span class="kt">Query</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
+<span class="nf">selectInput</span> <span class="ow">::</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">Input</span> <span class="kt">Query</span> <span class="kt">String</span>
 <span class="nf">selectInput</span> <span class="ow">=</span>
   <span class="p">{</span> <span class="n">inputType</span><span class="kt">:</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">TextInput</span>
   <span class="p">,</span> <span class="n">items</span><span class="kt">:</span> <span class="kt">[]</span>
@@ -1189,11 +1090,11 @@ yarn build
 14
 15
 16
-17</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">type</span> <span class="kt">State</span> <span class="n">item</span> <span class="n">eff</span> <span class="ow">=</span>
+17</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">type</span> <span class="kt">State</span> <span class="n">item</span> <span class="ow">=</span>
   <span class="p">{</span> <span class="n">inputType</span>        <span class="ow">::</span> <span class="kt">InputType</span>
   <span class="p">,</span> <span class="n">search</span>           <span class="ow">::</span> <span class="kt">String</span>
   <span class="p">,</span> <span class="n">debounceTime</span>     <span class="ow">::</span> <span class="kt">Milliseconds</span>
-  <span class="p">,</span> <span class="n">debouncer</span>        <span class="ow">::</span> <span class="kt">Maybe</span> <span class="p">(</span><span class="kt">Debouncer</span> <span class="n">eff</span><span class="p">)</span>
+  <span class="p">,</span> <span class="n">debouncer</span>        <span class="ow">::</span> <span class="kt">Maybe</span> <span class="kt">Debouncer</span>
   <span class="p">,</span> <span class="n">inputElement</span>     <span class="ow">::</span> <span class="kt">Maybe</span> <span class="kt">HTMLElement</span>
   <span class="p">,</span> <span class="n">items</span>            <span class="ow">::</span> <span class="kt">Array</span> <span class="n">item</span>
   <span class="p">,</span> <span class="n">visibility</span>       <span class="ow">::</span> <span class="kt">Visibility</span>
@@ -1260,7 +1161,7 @@ yarn build
 
 <h3 id="query">Query<a class="headerlink" href="#query" title="Permanent link">&para;</a></h3>
 <p>Now that we've got a usable <code class="codehilite"><span class="kt">State</span></code> type, let's turn to our queries. Queries are the computations available to the component, so they're the place where we ought to think about what the typeahead should <em>do</em>, rather than just how it should render.</p>
-<p>Just like <code class="codehilite"><span class="kt">State</span></code>, when we write our own <code class="codehilite"><span class="kt">Query</span></code> type on top of <code>Select</code>, we should consider what is already available in the component. As usual, we'll turn to the <a href="https://pursuit.purescript.org/packages/purescript-halogen-select/1.0.0/docs/Select#t:QueryF">module documentation</a> to look at our available queries. I'd recommend scrolling through the available functions to get a glimpse of what <code>Select</code> offers, but we'll skip to the main points here.</p>
+<p>Just like <code class="codehilite"><span class="kt">State</span></code>, when we write our own <code class="codehilite"><span class="kt">Query</span></code> type on top of <code>Select</code>, we should consider what is already available in the component. As usual, we'll turn to the <a href="https://pursuit.purescript.org/packages/purescript-halogen-select/2.0.0/docs/Select#t:QueryF">module documentation</a> to look at our available queries. I'd recommend scrolling through the available functions to get a glimpse of what <code>Select</code> offers, but we'll skip to the main points here.</p>
 <p><code>Select</code> is going to manage all the keyboard events, text input, debouncing, moving the highlighted index, and so on. On top of that, we'll need to add some extra functionality: the ability to remove items that have already been selected, and the ability to fetch new items when the user performs a search. We'll at least need two queries to handle these two features.</p>
 <p>Luckily, though, we already <em>have</em> a query available for when a new search has been performed: our <code class="codehilite"><span class="kt">HandleSelect</span></code> query tied to the <code class="codehilite"><span class="kt">Select</span><span class="o">.</span><span class="kt">Searched</span></code> message! That means we really only need one new query:</p>
 <table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
@@ -1284,7 +1185,7 @@ yarn build
   <span class="ow">=</span> <span class="kt">HandleSelect</span> <span class="p">(</span><span class="kt">Select</span><span class="o">.</span><span class="kt">Message</span> <span class="kt">Query</span> <span class="kt">String</span><span class="p">)</span> <span class="n">a</span>
   <span class="o">|</span> <span class="kt">Remove</span> <span class="kt">String</span> <span class="n">a</span>
 
-<span class="nf">eval</span> <span class="ow">::</span> <span class="kt">Query</span> <span class="o">~&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">ParentDSL</span> <span class="kt">State</span> <span class="kt">Query</span> <span class="p">(</span><span class="kt">ChildQuery</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">))</span> <span class="kt">ChildSlot</span> <span class="kt">Message</span> <span class="n">m</span>
+<span class="nf">eval</span> <span class="ow">::</span> <span class="kt">Query</span> <span class="o">~&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">ParentDSL</span> <span class="kt">State</span> <span class="kt">Query</span> <span class="kt">ChildQuery</span> <span class="kt">ChildSlot</span> <span class="kt">Message</span> <span class="n">m</span>
 <span class="nf">eval</span> <span class="ow">=</span> <span class="kr">case</span> <span class="kr">_</span> <span class="kr">of</span>
   <span class="kt">HandleSelect</span> <span class="n">message</span> <span class="n">next</span> <span class="ow">-&gt;</span> <span class="kr">case</span> <span class="n">message</span> <span class="kr">of</span>
     <span class="kt">Select</span><span class="o">.</span><span class="kt">Searched</span> <span class="n">str</span> <span class="ow">-&gt;</span>
@@ -1360,13 +1261,21 @@ yarn build
  9
 10
 11
-12</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">import</span> <span class="nn">Data.Argonaut</span> <span class="p">(</span><span class="kt">Json</span><span class="p">,</span> <span class="nf">decodeJson</span><span class="p">,</span> <span class="p">(</span><span class="o">.?</span><span class="p">))</span>
-<span class="kr">import</span> <span class="nn">Network.HTTP.Affjax</span> <span class="p">(</span><span class="kt">AJAX</span><span class="p">,</span> <span class="nf">get</span><span class="p">)</span>
+12
+13
+14
+15
+16</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">import</span> <span class="nn">Data.Argonaut</span> <span class="p">(</span><span class="kt">Json</span><span class="p">,</span> <span class="nf">decodeJson</span><span class="p">,</span> <span class="p">(</span><span class="o">.?</span><span class="p">))</span>
+<span class="kr">import</span> <span class="nn">Network.HTTP.Affjax</span> <span class="k">as</span> <span class="n">AX</span>
+<span class="kr">import</span> <span class="nn">Network.HTTP.Affjax.Response</span> <span class="k">as</span> <span class="n">Response</span>
 
-<span class="nf">fetchItems</span> <span class="ow">::</span> <span class="kt">String</span> <span class="ow">-&gt;</span> <span class="kt">Aff</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span> <span class="p">(</span><span class="kt">Either</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Array</span> <span class="kt">String</span><span class="p">))</span>
+<span class="nf">fetchItems</span> <span class="ow">::</span> <span class="kt">String</span> <span class="ow">-&gt;</span> <span class="kt">Aff</span> <span class="p">(</span><span class="kt">Either</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Array</span> <span class="kt">String</span><span class="p">))</span>
 <span class="nf">fetchItems</span> <span class="n">str</span> <span class="ow">=</span> <span class="kr">do</span>
-  <span class="p">(</span><span class="n">res</span> <span class="ow">::</span> <span class="kt">Json</span><span class="p">)</span> <span class="ow">&lt;-</span> <span class="kr">_</span><span class="o">.</span><span class="n">response</span>
-    <span class="o">&lt;$&gt;</span> <span class="n">get</span> <span class="p">(</span><span class="s">&quot;https://swapi.co/api/people/?search=&quot;</span> <span class="o">&lt;&gt;</span> <span class="n">str</span><span class="p">)</span>
+  <span class="n">res</span> <span class="ow">&lt;-</span> <span class="kr">_</span><span class="o">.</span><span class="n">response</span> <span class="o">&lt;$&gt;</span>
+    <span class="p">(</span> <span class="kt">AX</span><span class="o">.</span><span class="n">get</span>
+    <span class="o">$</span> <span class="kt">Respondable</span><span class="o">.</span><span class="n">json</span>
+    <span class="o">$</span> <span class="s">&quot;https://swapi.co/api/people/?search=&quot;</span> <span class="o">&lt;&gt;</span> <span class="n">str</span>
+    <span class="p">)</span>
 
   <span class="n">pure</span> <span class="o">$</span> <span class="kr">do</span>
     <span class="n">obj</span> <span class="ow">&lt;-</span> <span class="n">decodeJson</span> <span class="n">res</span>
@@ -1403,7 +1312,7 @@ yarn build
 <h2 id="rendering">Rendering<a class="headerlink" href="#rendering" title="Permanent link">&para;</a></h2>
 <p>We have all the state and behavior necessary to run a working typeahead. Now, let's write the render function.</p>
 <p>When you write a render function for a <code>Select</code> component, keep in mind that the function is going to be run <em>by</em> the child component. You can see this right away from the type signature of the render function that <code>Select</code> expects:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">myRenderFunction</span> <span class="ow">::</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">State</span> <span class="n">item</span> <span class="n">eff</span> <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">ComponentHTML</span> <span class="n">o</span> <span class="n">item</span> <span class="n">eff</span>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">myRenderFunction</span> <span class="ow">::</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">State</span> <span class="n">item</span> <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">ComponentHTML</span> <span class="n">o</span> <span class="n">item</span>
 </pre></div>
 </td></tr></table>
 
@@ -1411,8 +1320,8 @@ yarn build
 <table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
 2
 3</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">myRenderFunction</span>
-  <span class="ow">::</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">State</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
-  <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">ComponentHTML</span> <span class="kt">Query</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
+  <span class="ow">::</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">State</span> <span class="kt">String</span>
+  <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">ComponentHTML</span> <span class="kt">Query</span> <span class="kt">String</span>
 </pre></div>
 </td></tr></table>
 
@@ -1424,8 +1333,8 @@ yarn build
 3
 4</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">selectRenderFunction</span>
   <span class="ow">::</span> <span class="kt">Parent</span><span class="o">.</span><span class="kt">State</span>
-  <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">State</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Parent</span><span class="o">.</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
-  <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">ComponentHTML</span> <span class="kt">Parent</span><span class="o">.</span><span class="kt">Query</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Parent</span><span class="o">.</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
+  <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">State</span> <span class="kt">String</span>
+  <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">ComponentHTML</span> <span class="kt">Parent</span><span class="o">.</span><span class="kt">Query</span> <span class="kt">String</span>
 </pre></div>
 </td></tr></table>
 
@@ -1449,8 +1358,8 @@ yarn build
 4
 5</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">typeahead</span>
   <span class="ow">::</span> <span class="kt">State</span>
-  <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">State</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
-  <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">ComponentHTML</span> <span class="kt">Query</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
+  <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">State</span> <span class="kt">String</span>
+  <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">ComponentHTML</span> <span class="kt">Query</span> <span class="kt">String</span>
 <span class="nf">typeahead</span> <span class="n">parentState</span> <span class="n">childState</span> <span class="ow">=</span> <span class="o">...</span>
 </pre></div>
 </td></tr></table>
@@ -1486,7 +1395,7 @@ yarn build
  9
 10
 11</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="c1">-- The items that have already been selected and can be removed</span>
-<span class="nf">renderSelections</span> <span class="ow">::</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">ComponentHTML</span> <span class="kt">Query</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
+<span class="nf">renderSelections</span> <span class="ow">::</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">ComponentHTML</span> <span class="kt">Query</span> <span class="kt">String</span>
 <span class="nf">renderSelections</span> <span class="ow">=</span>
   <span class="kt">HH</span><span class="o">.</span><span class="n">ul_</span>
   <span class="p">(</span> <span class="n">st</span><span class="o">.</span><span class="n">selections</span> <span class="o">&lt;#&gt;</span>
@@ -1841,18 +1750,12 @@ yarn build
 175
 176
 177
-178
-179
-180
-181
-182</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">module</span> <span class="nn">Component</span> <span class="kr">where</span>
+178</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">module</span> <span class="nn">Component</span> <span class="kr">where</span>
 
 <span class="kr">import</span> <span class="nn">Prelude</span>
 
-<span class="kr">import</span> <span class="nn">Control.Monad.Aff</span> <span class="p">(</span><span class="kt">Aff</span><span class="p">)</span>
-<span class="kr">import</span> <span class="nn">Control.Monad.Aff.AVar</span> <span class="p">(</span><span class="kt">AVAR</span><span class="p">)</span>
-<span class="kr">import</span> <span class="nn">Control.Monad.Aff.Class</span> <span class="p">(</span><span class="nf">class</span> <span class="kt">MonadAff</span><span class="p">)</span>
-<span class="kr">import</span> <span class="nn">DOM</span> <span class="p">(</span><span class="kt">DOM</span><span class="p">)</span>
+<span class="kr">import</span> <span class="nn">Effect.Aff</span> <span class="p">(</span><span class="kt">Aff</span><span class="p">)</span>
+<span class="kr">import</span> <span class="nn">Effect.Aff.Class</span> <span class="p">(</span><span class="nf">class</span> <span class="kt">MonadAff</span><span class="p">)</span>
 <span class="kr">import</span> <span class="nn">Data.Argonaut</span> <span class="p">(</span><span class="kt">Json</span><span class="p">,</span> <span class="nf">decodeJson</span><span class="p">,</span> <span class="p">(</span><span class="o">.?</span><span class="p">))</span>
 <span class="kr">import</span> <span class="nn">Data.Array</span> <span class="p">(</span><span class="nf">difference</span><span class="p">,</span> <span class="nf">filter</span><span class="p">,</span> <span class="nf">mapWithIndex</span><span class="p">,</span> <span class="nf">null</span><span class="p">,</span> <span class="p">(</span><span class="o">:</span><span class="p">))</span>
 <span class="kr">import</span> <span class="nn">Data.Either</span> <span class="p">(</span><span class="kt">Either</span><span class="p">)</span>
@@ -1863,7 +1766,8 @@ yarn build
 <span class="kr">import</span> <span class="nn">Halogen.HTML</span> <span class="k">as</span> <span class="n">HH</span>
 <span class="kr">import</span> <span class="nn">Halogen.HTML.Events</span> <span class="k">as</span> <span class="n">HE</span>
 <span class="kr">import</span> <span class="nn">Halogen.HTML.Properties</span> <span class="p">(</span><span class="nf">attr</span><span class="p">)</span> <span class="n">as</span> <span class="kt">HP</span>
-<span class="kr">import</span> <span class="nn">Network.HTTP.Affjax</span> <span class="p">(</span><span class="kt">AJAX</span><span class="p">,</span> <span class="nf">get</span><span class="p">)</span>
+<span class="kr">import</span> <span class="nn">Network.HTTP.Affjax</span> <span class="k">as</span> <span class="n">AX</span>
+<span class="kr">import</span> <span class="nn">Network.HTTP.Affjax.Respondable</span> <span class="k">as</span> <span class="n">Respondable</span>
 <span class="kr">import</span> <span class="nn">Network.RemoteData</span> <span class="p">(</span><span class="kt">RemoteData</span><span class="p">(</span><span class="o">..</span><span class="p">),</span> <span class="nf">fromEither</span><span class="p">,</span> <span class="nf">withDefault</span><span class="p">)</span>
 <span class="kr">import</span> <span class="nn">Select</span> <span class="k">as</span> <span class="n">Select</span>
 <span class="kr">import</span> <span class="nn">Select.Utils.Setters</span> <span class="k">as</span> <span class="n">Setters</span>
@@ -1882,17 +1786,10 @@ yarn build
 <span class="kr">type</span> <span class="kt">Message</span> <span class="ow">=</span> <span class="kt">Void</span>
 
 <span class="kr">type</span> <span class="kt">ChildSlot</span> <span class="ow">=</span> <span class="kt">Unit</span>
-<span class="kr">type</span> <span class="kt">ChildQuery</span> <span class="n">eff</span> <span class="ow">=</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">Query</span> <span class="kt">Query</span> <span class="kt">String</span> <span class="n">eff</span>
+<span class="kr">type</span> <span class="kt">ChildQuery</span> <span class="ow">=</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">Query</span> <span class="kt">Query</span> <span class="kt">String</span>
 
-<span class="kr">type</span> <span class="kt">Effects</span> <span class="n">eff</span> <span class="ow">=</span>
-  <span class="p">(</span> <span class="n">avar</span> <span class="ow">::</span> <span class="kt">AVAR</span>
-  <span class="p">,</span> <span class="n">dom</span> <span class="ow">::</span> <span class="kt">DOM</span>
-  <span class="p">,</span> <span class="n">ajax</span> <span class="ow">::</span> <span class="kt">AJAX</span>
-  <span class="o">|</span> <span class="n">eff</span>
-  <span class="p">)</span>
-
-<span class="nf">component</span> <span class="ow">::</span> <span class="err">∀</span> <span class="n">eff</span> <span class="n">m</span>
-  <span class="o">.</span> <span class="kt">MonadAff</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span> <span class="n">m</span>
+<span class="nf">component</span> <span class="ow">::</span> <span class="err">∀</span> <span class="n">m</span>
+  <span class="o">.</span> <span class="kt">MonadAff</span> <span class="n">m</span>
  <span class="ow">=&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">Component</span> <span class="kt">HH</span><span class="o">.</span><span class="kt">HTML</span> <span class="kt">Query</span> <span class="kt">Input</span> <span class="kt">Message</span> <span class="n">m</span>
 <span class="nf">component</span> <span class="ow">=</span>
   <span class="kt">H</span><span class="o">.</span><span class="n">parentComponent</span>
@@ -1909,24 +1806,28 @@ yarn build
     <span class="p">,</span> <span class="n">selections</span><span class="kt">:</span> <span class="kt">[]</span>
     <span class="p">}</span>
 
-  <span class="n">fetchItems</span> <span class="ow">::</span> <span class="kt">String</span> <span class="ow">-&gt;</span> <span class="kt">Aff</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span> <span class="p">(</span><span class="kt">Either</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Array</span> <span class="kt">String</span><span class="p">))</span>
+  <span class="n">fetchItems</span> <span class="ow">::</span> <span class="kt">String</span> <span class="ow">-&gt;</span> <span class="kt">Aff</span> <span class="p">(</span><span class="kt">Either</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Array</span> <span class="kt">String</span><span class="p">))</span>
   <span class="n">fetchItems</span> <span class="n">str</span> <span class="ow">=</span> <span class="kr">do</span>
-     <span class="p">(</span><span class="n">res</span> <span class="ow">::</span> <span class="kt">Json</span><span class="p">)</span> <span class="ow">&lt;-</span> <span class="kr">_</span><span class="o">.</span><span class="n">response</span>
-       <span class="o">&lt;$&gt;</span> <span class="n">get</span> <span class="p">(</span><span class="s">&quot;https://swapi.co/api/people/?search=&quot;</span> <span class="o">&lt;&gt;</span> <span class="n">str</span><span class="p">)</span>
+     <span class="n">res</span> <span class="ow">&lt;-</span> <span class="kr">_</span><span class="o">.</span><span class="n">response</span> <span class="o">&lt;$&gt;</span>
+       <span class="p">(</span> <span class="kt">AX</span><span class="o">.</span><span class="n">get</span>
+       <span class="o">$</span> <span class="kt">Respondable</span><span class="o">.</span><span class="n">json</span>
+       <span class="o">$</span> <span class="s">&quot;https://swapi.co/api/people/?search=&quot;</span> <span class="o">&lt;&gt;</span> <span class="n">str</span>
+       <span class="p">)</span>
+
 
      <span class="n">pure</span> <span class="o">$</span> <span class="kr">do</span>
        <span class="n">obj</span> <span class="ow">&lt;-</span> <span class="n">decodeJson</span> <span class="n">res</span>
        <span class="n">arr</span> <span class="ow">&lt;-</span> <span class="n">obj</span> <span class="o">.?</span> <span class="s">&quot;results&quot;</span>
        <span class="n">traverse</span> <span class="p">(</span><span class="n">decodeJson</span> <span class="o">&lt;=&lt;</span> <span class="n">flip</span> <span class="p">(</span><span class="o">.?</span><span class="p">)</span> <span class="s">&quot;name&quot;</span><span class="p">)</span> <span class="n">arr</span>
 
-  <span class="n">render</span> <span class="ow">::</span> <span class="kt">State</span> <span class="ow">-&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">ParentHTML</span> <span class="kt">Query</span> <span class="p">(</span><span class="kt">ChildQuery</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">))</span> <span class="kt">ChildSlot</span> <span class="n">m</span>
+  <span class="n">render</span> <span class="ow">::</span> <span class="kt">State</span> <span class="ow">-&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">ParentHTML</span> <span class="kt">Query</span> <span class="kt">ChildQuery</span> <span class="kt">ChildSlot</span> <span class="n">m</span>
   <span class="n">render</span> <span class="n">st</span> <span class="ow">=</span>
     <span class="kt">HH</span><span class="o">.</span><span class="n">div_</span>
     <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">slot</span> <span class="n">unit</span> <span class="kt">Select</span><span class="o">.</span><span class="n">component</span> <span class="n">selectInput</span> <span class="p">(</span><span class="kt">HE</span><span class="o">.</span><span class="n">input</span> <span class="kt">HandleSelect</span><span class="p">)</span> <span class="p">]</span>
 
     <span class="kr">where</span>
 
-    <span class="n">selectInput</span> <span class="ow">::</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">Input</span> <span class="kt">Query</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
+    <span class="n">selectInput</span> <span class="ow">::</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">Input</span> <span class="kt">Query</span> <span class="kt">String</span>
     <span class="n">selectInput</span> <span class="ow">=</span>
       <span class="p">{</span> <span class="n">inputType</span><span class="kt">:</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">TextInput</span>
       <span class="p">,</span> <span class="n">items</span><span class="kt">:</span> <span class="kt">[]</span>
@@ -1937,8 +1838,8 @@ yarn build
 
     <span class="n">typeahead</span>
       <span class="ow">::</span> <span class="kt">State</span>
-      <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">State</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
-      <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">ComponentHTML</span> <span class="kt">Query</span> <span class="kt">String</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">)</span>
+      <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">State</span> <span class="kt">String</span>
+      <span class="ow">-&gt;</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">ComponentHTML</span> <span class="kt">Query</span> <span class="kt">String</span>
     <span class="n">typeahead</span> <span class="n">parentState</span> <span class="n">childState</span> <span class="ow">=</span>
       <span class="kt">HH</span><span class="o">.</span><span class="n">div_</span>
       <span class="p">[</span> <span class="n">renderSelections</span><span class="p">,</span> <span class="n">renderInput</span><span class="p">,</span> <span class="n">renderContainer</span> <span class="p">]</span>
@@ -1989,7 +1890,7 @@ yarn build
           <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">text</span> <span class="n">item</span> <span class="p">]</span>
 
 
-  <span class="n">eval</span> <span class="ow">::</span> <span class="kt">Query</span> <span class="o">~&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">ParentDSL</span> <span class="kt">State</span> <span class="kt">Query</span> <span class="p">(</span><span class="kt">ChildQuery</span> <span class="p">(</span><span class="kt">Effects</span> <span class="n">eff</span><span class="p">))</span> <span class="kt">ChildSlot</span> <span class="kt">Message</span> <span class="n">m</span>
+  <span class="n">eval</span> <span class="ow">::</span> <span class="kt">Query</span> <span class="o">~&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">ParentDSL</span> <span class="kt">State</span> <span class="kt">Query</span> <span class="kt">ChildQuery</span> <span class="kt">ChildSlot</span> <span class="kt">Message</span> <span class="n">m</span>
   <span class="n">eval</span> <span class="ow">=</span> <span class="kr">case</span> <span class="kr">_</span> <span class="kr">of</span>
     <span class="kt">Remove</span> <span class="n">item</span> <span class="n">next</span> <span class="ow">-&gt;</span> <span class="kr">do</span>
       <span class="kt">H</span><span class="o">.</span><span class="n">modify</span> <span class="nf">\</span><span class="n">st</span> <span class="ow">-&gt;</span> <span class="n">st</span> <span class="p">{</span> <span class="n">selections</span> <span class="ow">=</span> <span class="n">filter</span> <span class="p">(</span><span class="kr">_</span> <span class="o">/=</span> <span class="n">item</span><span class="p">)</span> <span class="n">st</span><span class="o">.</span><span class="n">selections</span> <span class="p">}</span>
