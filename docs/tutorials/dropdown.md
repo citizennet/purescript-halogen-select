@@ -20,8 +20,6 @@ We're going to build a dropdown that is functionally equivalent this one:
 
 <div class="ocelot-scoped" data-component="dropdown"></div>
 
-Our component will look a little bit worse, because we're not going to spend time on CSS.
-
 ## Basic Setup
 Let's get something on the screen!
 
@@ -138,7 +136,7 @@ import Select.Utils.Setters as Setters
 ```
 
 !!! tip
-    You can always [view the module documentation for Select on Pursuit](https://pursuit.purescript.org/packages/purescript-halogen-select/1.0.0) or the [source code on GitHub](https://github.com/citizennet/purescript-halogen-select). This is useful when integrating with third-party components so that you can check out the `#!hs Input`, `#!hs State`, `#!hs Query`, and `#!hs Message` types.
+    You can always [view the module documentation for Select on Pursuit](https://pursuit.purescript.org/packages/purescript-halogen-select) or the [source code on GitHub](https://github.com/citizennet/purescript-halogen-select). This is useful when integrating with third-party components so that you can check out the `#!hs Input`, `#!hs State`, `#!hs Query`, and `#!hs Message` types.
 
 Next, we need to update our `#!hs ChildSlot` and `#!hs ChildQuery` types. We're only going to have one dropdown so we can leave the child slot as `#!hs Unit`; we do need to add the `Select` component's query type to our `#!hs ChildQuery` synonym, however.
 
@@ -154,47 +152,19 @@ Error found:
 in type synonym ChildQuery
 ```
 
-The compiler has noticed that `#!hs ChildQuery`, a type synonym, is partially applied. That's because `#!hs Select.Query`, itself a type synonym, takes several arguments as described in the [module documentation on Pursuit](https://pursuit.purescript.org/packages/purescript-halogen-select/1.0.0/docs/Select#t:Query). Let's walk through each one:
+The compiler has noticed that `#!hs ChildQuery`, a type synonym, is partially applied. That's because `#!hs Select.Query`, itself a type synonym, takes several arguments as described in the [module documentation on Pursuit](https://pursuit.purescript.org/packages/purescript-halogen-select/2.0.0/docs/Select#t:Query). Let's walk through each one:
 
 ```hs
-type ChildQuery o item eff = Select.Query o item eff
+type ChildQuery o item = Select.Query o item
 ```
 
 `o` is *your* query type. Remember how you can embed your own queries into `Select`, and in that way extend the component's functionality? This is how. So we can fill in the first argument:
 
 ```hs
-type ChildQuery item eff = Select.Query Query item eff
+type ChildQuery item = Select.Query Query item
 ```
 
 `item` is the type of whatever items you want to be selectable. Commonly these are strings, but can also be custom data types. Later on, in the [typeahead tutorial](https://citizennet.github.io/purescript-halogen-select/tutorials/typeahead), we'll see how powerful custom data types can be for rendering purposes. For our simple dropdown we'll simply specialize this to `#!hs String`:
-
-```hs
-type ChildQuery eff = Select.Query Query String eff
-```
-
-`eff` is the type of whatever effect rows your component leverages. `Select` performs some effects, like manipulating the DOM or using threads to perform debouncing on your behalf asynchronously, and it must verify that its effects match your parent component effects. We'll leave this as an argument for now, but when we mount the component, we'll provide some concrete effects.
-
-What happens if we try to save this?
-
-```hs
-Error found in module Component :
-
-  Could not match kind
-    Type
-
-  with kind
-    # Control.Monad.Eff.Effect
-
-while checking the kind of State -> ParentHTML Query ChildQuery ChildSlot m0
-```
-
-Whoops! Our `#!hs render` and `#!hs eval` functions expect `#!hs ChildQuery` to have the kind `#!hs Type`, but instead we've provided a type synonym that's still awaiting an argument of kind `#!hs # Effect` (read: a row of effects). We need to supply that argument. Let's update those two functions:
-
-```hs
-render :: State -> H.ParentHTML Query (ChildQuery eff) ChildSlot m
-dropdown :: State -> H.ParentHTML Query (ChildQuery eff) ChildSlot m
-eval :: Query ~> H.ParentDSL State Query (ChildQuery eff) ChildSlot Message m
-```
 
 Now that `Select` has been imported and we've updated our `ChildQuery` and `ChildSlot` types to support it, we can worry about what to do when we receive a message from the component.
 
@@ -208,7 +178,7 @@ Let's stub out our render function in preparation:
 ```hs
 import Halogen.HTML.Events as HE
 
-render :: State -> H.ParentHTML Query (ChildQuery eff) ChildSlot m
+render :: State -> H.ParentHTML Query ChildQuery ChildSlot m
 render st =
   HH.div_
   [ HH.h1_
@@ -217,58 +187,15 @@ render st =
   ]
 ```
 
-Right away we get an error:
-
-```hs
-Error in module Component:
-
-  Could not match type
-    eff7
-
-  with type
-    ( dom :: DOM
-    , avar :: AVAR
-    | eff7
-    )
-
-when trying to match type QueryF Query String eff7
-  with type QueryF Query String
-```
-
-This happened because `Select` uses the `AVAR` and `DOM` effects, but we've asserted our component will work with ANY row. That's not true anymore! Our component will now work with any row that includes `DOM` and `AVAR`. It's easy enough to fix. We need to define our own effects row, extensible by `eff`:
-
-```hs
-import Control.Monad.Aff.AVar (AVAR)
-import DOM (DOM)
-
-type Effects eff =
-  ( dom :: DOM
-  , avar :: AVAR
-  | eff
-  )
-```
-
-Now we can update our various types to use our new row, verifying the effects are the same throughout the component. As a rule of thumb, anywhere a **function** uses `eff`, wrap it in our new `Effects` type synonym, but don't apply the same rule to types or type synonyms. As an example, we'll update `component`, but we won't update the `ChildQuery` type synonym:
-
-```hs
-component :: ∀ eff m
-  . MonadAff (Effects eff) m
- => H.Component HH.HTML Query Input Message m
-
-render :: State -> H.ParentHTML Query (ChildQuery (Effects eff)) ChildSlot m
-dropdown :: State -> H.ParentHTML Query (ChildQuery (Effects eff)) ChildSlot m
-eval :: Query ~> H.ParentDSL State Query (ChildQuery (Effects eff)) ChildSlot Message m
-```
-
 With that out of the way, we can turn to filling in our component's input type. We can either look at the module documentation for `Select.Input` or look at the type error that resulted from our typed hole, `?input`. Both will tell us that we need to provide a value of this type:
 
 ```hs
-type Input o item eff =
+type Input o item =
   { inputType     :: InputType
   , items         :: Array item
   , initialSearch :: Maybe String
   , debounceTime  :: Maybe Milliseconds
-  , render        :: State item eff -> ComponentHTML o item eff
+  , render        :: State item -> ComponentHTML o item
   }
 ```
 
@@ -286,7 +213,7 @@ data InputType
 We don't have any text input for our dropdown -- its a button -- so we'll go with the `#!hs Toggle` constructor.
 
 ```hs
-selectInput :: Select.Input Query String (Effects eff)
+selectInput :: Select.Input Query String
 selectInput =
   { inputType: Select.Toggle
   , ...
@@ -327,9 +254,9 @@ Finally, we're expected to provide a render function to the component. Ah ha! We
 Let's look at the types side-by-side:
 
 ```hs
-Select.render :: Select.State item eff -> Select.ComponentHTML o item eff
+Select.render :: Select.State item -> Select.ComponentHTML o item
 
-dropdown :: State -> H.ParentHTML Query (ChildQuery (Effects eff)) ChildSlot m
+dropdown :: State -> H.ParentHTML Query ChildQuery ChildSlot m
 dropdown st =
   HH.div_
   [ HH.button_
@@ -340,14 +267,14 @@ dropdown st =
   ]
 ```
 
-From this, we can see that we need to use the state type from `Select` to drive our render function, not the state from our parent component. Will our function still work? Let's look at [`Select`'s state type in the module documentation](https://pursuit.purescript.org/packages/purescript-halogen-select/1.0.0/docs/Select#t:State) to see what we have available:
+From this, we can see that we need to use the state type from `Select` to drive our render function, not the state from our parent component. Will our function still work? Let's look at [`Select`'s state type in the module documentation](https://pursuit.purescript.org/packages/purescript-halogen-select/2.0.0/docs/Select#t:State) to see what we have available:
 
 ```hs
-type State item eff =
+type State item =
   { inputType        :: InputType
   , search           :: String
   , debounceTime     :: Milliseconds
-  , debouncer        :: Maybe (Debouncer eff)
+  , debouncer        :: Maybe Debouncer
   , inputElement     :: Maybe HTMLElement
   , items            :: Array item
   , visibility       :: Visibility
@@ -373,8 +300,8 @@ render parentState =
   ]
   where
     dropdown
-      :: Select.State String (Effects eff)
-      -> Select.ComponentHTML Query String (Effects eff)
+      :: Select.State String
+      -> Select.ComponentHTML Query String
     dropdown childState =
       HH.div_
       [ HH.button_
@@ -388,7 +315,7 @@ render parentState =
 It works! Even better, we no longer have to manage things like `#!hs openState` in the parent anymore. Finally, now that we have the render function we need, we can finally finish our component's input type:
 
 ```hs
-render :: State -> H.ParentHTML Query (ChildQuery (Effects eff)) ChildSlot m
+render :: State -> H.ParentHTML Query ChildQuery ChildSlot m
 render parentState =
   HH.div_
   [ HH.h1_
@@ -396,7 +323,7 @@ render parentState =
   , HH.slot unit Select.component selectInput (HE.input <<< const Nothing)
   ]
   where
-    selectInput :: Select.Input Query String (Effects eff)
+    selectInput :: Select.Input Query String
     selectInput =
       { inputType: Select.Toggle
       , items: parentState.availableItems
@@ -533,7 +460,7 @@ Error found in module Component:
 in type constructor Query
 ```
 
-This looks similar to the type error we got when we tried to just use `Select.Query` in a type synonym. We need to provide a `#!hs Type` to `#!hs HandleSelect`, but `#!hs Select.Message` is still awaiting 2 arguments, the first of which is *itself* awaiting an argument! Let's go look at the [module documentation for `Select.Message`](https://pursuit.purescript.org/packages/purescript-halogen-select/1.0.0/docs/Select#t:Message).
+This looks similar to the type error we got when we tried to just use `Select.Query` in a type synonym. We need to provide a `#!hs Type` to `#!hs HandleSelect`, but `#!hs Select.Message` is still awaiting 2 arguments, the first of which is *itself* awaiting an argument! Let's go look at the [module documentation for `Select.Message`](https://pursuit.purescript.org/packages/purescript-halogen-select/2.0.0/docs/Select#t:Message).
 
 ```hs
 data Message o item
@@ -649,15 +576,13 @@ If you'd like to use this component as a starting point from which to build your
 
     import Prelude
 
-    import Control.Monad.Aff.AVar (AVAR)
-    import Control.Monad.Aff.Class (class MonadAff)
-    import DOM (DOM)
+    import Effect.Aff.Class (class MonadAff)
     import Data.Array (difference, mapWithIndex)
     import Data.Maybe (Maybe(..), fromMaybe)
     import Halogen as H
     import Halogen.HTML as HH
     import Halogen.HTML.Events as HE
-    import Halogen.HTML.Properties (attr) as HP
+    import Halogen.HTML.Properties as HP
     import Select as Select
     import Select.Utils.Setters as Setters
 
@@ -675,17 +600,9 @@ If you'd like to use this component as a starting point from which to build your
     type Message = Void
 
     type ChildSlot = Unit
-    type ChildQuery eff = Select.Query Query String eff
+    type ChildQuery = Select.Query Query String
 
-    type Effects eff =
-      ( dom :: DOM
-      , avar :: AVAR
-      | eff
-      )
-
-    component :: ∀ eff m
-      . MonadAff (Effects eff) m
-     => H.Component HH.HTML Query Input Message m
+    component :: ∀ m. MonadAff m => H.Component HH.HTML Query Input Message m
     component =
       H.parentComponent
         { initialState
@@ -706,7 +623,7 @@ If you'd like to use this component as a starting point from which to build your
             ]
         }
 
-      render :: State -> H.ParentHTML Query (ChildQuery (Effects eff)) ChildSlot m
+      render :: State -> H.ParentHTML Query ChildQuery ChildSlot m
       render parentState =
         HH.div_
         [ HH.h1_
@@ -714,7 +631,7 @@ If you'd like to use this component as a starting point from which to build your
         , HH.slot unit Select.component selectInput (HE.input HandleSelect)
         ]
         where
-          selectInput :: Select.Input Query String (Effects eff)
+          selectInput :: Select.Input Query String
           selectInput =
             { inputType: Select.Toggle
             , items: parentState.availableItems
@@ -724,8 +641,8 @@ If you'd like to use this component as a starting point from which to build your
             }
 
           dropdown
-            :: Select.State String (Effects eff)
-            -> Select.ComponentHTML Query String (Effects eff)
+            :: Select.State String
+            -> Select.ComponentHTML Query String
           dropdown childState =
             HH.div_
             [ HH.button
@@ -747,7 +664,7 @@ If you'd like to use this component as a starting point from which to build your
                     childState.items
             ]
 
-      eval :: Query ~> H.ParentDSL State Query (ChildQuery (Effects eff)) ChildSlot Message m
+      eval :: Query ~> H.ParentDSL State Query ChildQuery ChildSlot Message m
       eval = case _ of
         HandleSelect message next -> case message of
           Select.Searched string ->
