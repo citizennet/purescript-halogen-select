@@ -13,28 +13,28 @@ jobs:
 
       - restore_cache:
           keys:
-            - v1.4.0-bower-cache-{{ .Branch }}-{{ checksum "bower.json" }}
-            - v1.4.0-bower-cache-{{ .Branch }}
-            - v1.4.0-bower-cache
+            - v1.5.0-bower-cache-{{ .Branch }}-{{ checksum "bower.json" }}
+            - v1.5.0-bower-cache-{{ .Branch }}
+            - v1.5.0-bower-cache
 
       - restore_cache:
           keys:
-            - v1.4.0-yarn-cache-{{ .Branch }}-{{ checksum "package.json" }}
-            - v1.4.0-yarn-cache-{{ .Branch }}
-            - v1.4.0-yarn-cache
+            - v1.5.0-yarn-cache-{{ .Branch }}-{{ checksum "package.json" }}
+            - v1.5.0-yarn-cache-{{ .Branch }}
+            - v1.5.0-yarn-cache
 
       - run:
           name: Install dependencies from Yarn and Bower
           command: yarn
 
       - save_cache:
-          key: v1.4.0-bower-cache-{{ .Branch }}-{{ checksum "bower.json" }}
+          key: v1.5.0-bower-cache-{{ .Branch }}-{{ checksum "bower.json" }}
           paths:
             - ~/select/bower_components
             - ~/select/output
 
       - save_cache:
-          key: v1.4.0-yarn-cache-{{ .Branch }}-{{ checksum "package.json" }}
+          key: v1.5.0-yarn-cache-{{ .Branch }}-{{ checksum "package.json" }}
           paths:
             - ~/select/node_modules
 

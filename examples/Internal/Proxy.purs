@@ -32,7 +32,7 @@ proxyEval
   -> H.Component HH.HTML (ProxyS g i) i Void m
 proxyEval evalQuery component =
   H.parentComponent
-    { initialState: id
+    { initialState: identity
     , render
     , eval
     , receiver: const Nothing

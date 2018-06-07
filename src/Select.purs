@@ -9,26 +9,21 @@ import Prelude
 
 import Control.Comonad (extract)
 import Control.Comonad.Store (Store, seeks, store)
-import Control.Monad.Aff (Fiber, delay, error, forkAff, killFiber)
-import Control.Monad.Aff.AVar (AVar, makeEmptyVar, putVar, takeVar, AVAR)
-import Control.Monad.Aff.Class (class MonadAff)
-import Control.Monad.Except (runExcept)
+import Effect.Aff (Fiber, delay, error, forkAff, killFiber)
+import Effect.Aff.Class (class MonadAff)
+import Effect.Aff.AVar (AVar)
+import Effect.Aff.AVar as AVar
 import Control.Monad.Free (Free, foldFree, liftF)
-import DOM (DOM)
-import DOM.Event.Event (preventDefault, currentTarget)
-import DOM.Event.KeyboardEvent as KE
-import DOM.Event.MouseEvent as ME
-import DOM.Event.Types as ET
-import DOM.HTML.HTMLElement (blur, focus)
-import DOM.HTML.Types (HTMLElement, readHTMLElement)
+import Web.Event.Event (preventDefault, currentTarget, Event)
+import Web.UIEvent.KeyboardEvent as KE
+import Web.UIEvent.MouseEvent as ME
+import Web.HTML.HTMLElement (HTMLElement, blur, focus, fromEventTarget)
 import Data.Array (length, (!!))
-import Data.Either (hush)
-import Data.Foreign (toForeign)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (for_, traverse_)
 import Data.Tuple (Tuple(..))
-import Halogen (Component, ComponentDSL, ComponentHTML, component, liftAff, liftEff, modify) as H
+import Halogen (Component, ComponentDSL, ComponentHTML, component, liftAff, liftEffect, modify_) as H
 import Halogen.HTML as HH
 import Halogen.Query.HalogenM (fork, raise) as H
 import Select.Internal.State (updateStore, getState)
@@ -37,26 +32,22 @@ import Select.Internal.State (updateStore, getState)
 -- Component Types
 
 -- | A useful shorthand for the Halogen component type
-type Component o item eff m
-  = H.Component HH.HTML (Query o item eff) (Input o item eff) (Message o item) m
+type Component o item m
+  = H.Component HH.HTML (Query o item) (Input o item) (Message o item) m
 
 -- | A useful shorthand for the Halogen component HTML type
-type ComponentHTML o item eff
-  = H.ComponentHTML (Query o item eff)
+type ComponentHTML o item
+  = H.ComponentHTML (Query o item)
 
 -- | A useful shorthand for the Halogen component DSL type
-type ComponentDSL o item eff m
-  = H.ComponentDSL (StateStore o item eff) (Query o item eff) (Message o item) m
+type ComponentDSL o item m
+  = H.ComponentDSL (StateStore o item) (Query o item) (Message o item) m
 
 -- | The component's state type, wrapped in `Store`. The state and result of the
 -- | render function are stored so that `extract` from `Control.Comonad` can be
 -- | used to pull out the render function.
-type StateStore o item eff
-  = Store (State item eff) (ComponentHTML o item eff)
-
--- | The effects necessary for this component to run. Your component will need to
--- | also support these effects.
-type Effects eff = ( avar :: AVAR, dom :: DOM | eff )
+type StateStore o item
+  = Store (State item) (ComponentHTML o item)
 
 ----------
 -- Core Constructors
@@ -68,16 +59,15 @@ type Effects eff = ( avar :: AVAR, dom :: DOM | eff )
 -- |        This allows you to embed your own queries into the `Select` component.
 -- | - `item`: Your custom item type. It can be a simple type like `String`, or something
 -- |           complex like `CalendarItem StartDate EndDate (Maybe Disabled)`.
--- | - `eff`: The component's effects.
 -- |
 -- | See the below functions for documentation for the individual constructors.
 -- | The README details how to use them in Halogen code, since the patterns
 -- | are a little different.
-data QueryF o item eff a
+data QueryF o item a
   = Search String a
   | Highlight Target a
   | Select Int a
-  | CaptureRef ET.Event a
+  | CaptureRef Event a
   | Focus Boolean a
   | Key KE.KeyboardEvent a
   | PreventClick ME.MouseEvent a
@@ -85,76 +75,76 @@ data QueryF o item eff a
   | GetVisibility (Visibility -> a)
   | ReplaceItems (Array item) a
   | Raise (o Unit) a
-  | Receive (Input o item eff) a
+  | Receive (Input o item) a
 
-type Query o item eff = Free (QueryF o item eff)
+type Query o item = Free (QueryF o item)
 
 -- | Trigger the relevant action with the event each time it occurs
 always :: ∀ a b. a -> b -> Maybe a
 always = const <<< Just
 
 -- | Perform a new search with the included string.
-search :: ∀ o item eff. String -> Query o item eff Unit
+search :: ∀ o item. String -> Query o item Unit
 search s = liftF (Search s unit)
 
 -- | Change the highlighted index to the next item, previous item, or a
 -- | specific index.
-highlight :: ∀ o item eff. Target -> Query o item eff Unit
+highlight :: ∀ o item. Target -> Query o item Unit
 highlight t = liftF (Highlight t unit)
 
 -- | Triggers the "Selected" message for the item at the specified index.
-select :: ∀ o item eff. Int -> Query o item eff Unit
+select :: ∀ o item. Int -> Query o item Unit
 select i = liftF (Select i unit)
 
 -- | From an event, captures a reference to the element that triggered the
 -- | event. Used to manage focus / blur for elements without requiring a
 -- | particular identifier.
-captureRef :: ∀ o item eff. ET.Event -> Query o item eff Unit
+captureRef :: ∀ o item. Event -> Query o item Unit
 captureRef r = liftF (CaptureRef r unit)
 
 -- | Trigger the DOM focus event for the element we have a reference to.
-triggerFocus :: ∀ o item eff. Query o item eff Unit
+triggerFocus :: ∀ o item . Query o item Unit
 triggerFocus = liftF (Focus true unit)
 
 -- | Trigger the DOM blur event for the element we have a reference to
-triggerBlur :: ∀ o item eff. Query o item eff Unit
+triggerBlur :: ∀ o item . Query o item Unit
 triggerBlur = liftF (Focus false unit)
 
 -- | Register a key event. `TextInput`-driven components use these only for
 -- | navigation, whereas `Toggle`-driven components also use the key stream for
 -- | highlighting.
-key :: ∀ o item eff. KE.KeyboardEvent -> Query o item eff Unit
+key :: ∀ o item . KE.KeyboardEvent -> Query o item Unit
 key e = liftF (Key e unit)
 
 -- | A helper query to prevent click events from bubbling up.
-preventClick :: ∀ o item eff. ME.MouseEvent -> Query o item eff Unit
+preventClick :: ∀ o item . ME.MouseEvent -> Query o item Unit
 preventClick i = liftF (PreventClick i unit)
 
 -- | Set the container visibility (`On` or `Off`)
-setVisibility :: ∀ o item eff. Visibility -> Query o item eff Unit
+setVisibility :: ∀ o item . Visibility -> Query o item Unit
 setVisibility v = liftF (SetVisibility v unit)
 
 -- | Get the container visibility (`On` or `Off`). Most useful when sequenced
 -- | with other actions.
-getVisibility :: ∀ o item eff. Query o item eff Visibility
-getVisibility = liftF (GetVisibility id)
+getVisibility :: ∀ o item . Query o item Visibility
+getVisibility = liftF (GetVisibility identity)
 
 -- | Toggles the container visibility.
-toggleVisibility :: ∀ o item eff. Query o item eff Unit
+toggleVisibility :: ∀ o item . Query o item Unit
 toggleVisibility = getVisibility >>= not >>> setVisibility
 
 -- | Replaces all items in state with the new array of items.
-replaceItems :: ∀ o item eff. Array item -> Query o item eff Unit
+replaceItems :: ∀ o item . Array item -> Query o item Unit
 replaceItems items = liftF (ReplaceItems items unit)
 
 -- | A helper query that the component that mounts `Select` can use to embed its
 -- | own queries. Triggers an `Emit` message containing the query when triggered.
 -- | This can be used to easily extend `Select` with more behaviors.
-raise :: ∀ o item eff. o Unit -> Query o item eff Unit
+raise :: ∀ o item . o Unit -> Query o item Unit
 raise o = liftF (Raise o unit)
 
 -- | Sets the component with new input.
-receive :: ∀ o item eff. Input o item eff -> Query o item eff Unit
+receive :: ∀ o item . Input o item -> Query o item Unit
 receive i = liftF (Receive i unit)
 
 -- | Represents a way to navigate on `Highlight` events: to the previous
@@ -211,11 +201,11 @@ data InputType
 -- | - `highlightedIndex`: What item in the array of items should be considered
 -- |                       highlighted. Useful for rendering.
 -- | - `lastIndex`: The length of the array of items.
-type State item eff =
+type State item =
   { inputType        :: InputType
   , search           :: String
   , debounceTime     :: Milliseconds
-  , debouncer        :: Maybe (Debouncer eff)
+  , debouncer        :: Maybe Debouncer
   , inputElement     :: Maybe HTMLElement
   , items            :: Array item
   , visibility       :: Visibility
@@ -224,20 +214,20 @@ type State item eff =
   }
 
 -- | Represents a running computation that, when it completes, will trigger debounced
--- | effects.
-type Debouncer eff =
+-- | .cts.
+type Debouncer =
   { var   :: AVar Unit
-  , fiber :: Fiber eff Unit }
+  , fiber :: Fiber Unit }
 
 -- | The component's input type, which includes the component's render function. This
 -- | render function can also be used to share data with the parent component, as every
 -- | time the parent re-renders, the render function will refresh in `Select`.
-type Input o item eff =
+type Input o item =
   { inputType     :: InputType
   , items         :: Array item
   , initialSearch :: Maybe String
   , debounceTime  :: Maybe Milliseconds
-  , render        :: State item eff -> ComponentHTML o item eff
+  , render        :: State item -> ComponentHTML o item
   }
 
 -- | The parent is only notified for a few important events, but `Emit` makes it
@@ -254,9 +244,9 @@ data Message o item
   | VisibilityChanged Visibility
   | Emit (o Unit)
 
-component :: ∀ o item eff m
-  . MonadAff (Effects eff) m
- => Component o item (Effects eff) m
+component :: ∀ o item m
+  . MonadAff m
+ => Component o item m
 component =
   H.component
     { initialState
@@ -278,7 +268,7 @@ component =
       }
 
     -- Construct the fold over the free monad based on the stepwise eval
-    eval' :: Query o item (Effects eff) ~> ComponentDSL o item (Effects eff) m
+    eval' :: Query o item ~> ComponentDSL o item m
     eval' a = foldFree eval a
 
     -- Helper for setting visibility inside `eval`. Eta-expanded bc strict
@@ -286,49 +276,47 @@ component =
     setVis v = eval' (setVisibility v)
 
     -- Just the normal Halogen eval
-    eval :: (QueryF o item (Effects eff)) ~> ComponentDSL o item (Effects eff) m
+    eval :: QueryF o item ~> ComponentDSL o item m
     eval = case _ of
       Search str a -> a <$ do
         (Tuple _ st) <- getState
-        H.modify $ seeks _ { search = str }
+        H.modify_ $ seeks _ { search = str }
         setVis On
 
         case st.inputType, st.debouncer of
           TextInput, Nothing -> unit <$ do
-            var   <- H.liftAff makeEmptyVar
+            var   <- H.liftAff AVar.empty
             fiber <- H.liftAff $ forkAff do
               delay st.debounceTime
-              putVar unit var
+              AVar.put unit var
 
             -- This compututation will fork and run in the background. When the
-            -- var is finally filled, the effect will run (raise a new search)
+            -- var is finally filled, the .ct will run (raise a new search)
             _ <- H.fork do
-              _ <- H.liftAff $ takeVar var
-              H.modify $ seeks _ { debouncer = Nothing, highlightedIndex = Just 0 }
+              _ <- H.liftAff $ AVar.take var
+              H.modify_ $ seeks _ { debouncer = Nothing, highlightedIndex = Just 0 }
               (Tuple _ newState) <- getState
               H.raise $ Searched newState.search
 
-            H.modify $ seeks _ { debouncer = Just { var, fiber } }
+            H.modify_ $ seeks _ { debouncer = Just { var, fiber } }
 
           TextInput, Just debouncer -> do
             let var = debouncer.var
             _ <- H.liftAff $ killFiber (error "Time's up!") debouncer.fiber
             fiber <- H.liftAff $ forkAff do
               delay st.debounceTime
-              putVar unit var
+              AVar.put unit var
 
-            H.modify $ seeks _ { debouncer = Just { var, fiber } }
+            H.modify_ $ seeks _ { debouncer = Just { var, fiber } }
 
           -- Key stream is not yet implemented. However, this should capture user
           -- key events and expire their search after a set number of milliseconds.
           _, _ -> pure unit
 
       Highlight target a -> a <$ do
-        Tuple _ st <- getState
-        when (st.visibility /= Off) do
-          let
-            hi =
-              case target of
+        (Tuple _ st) <- getState
+        when (st.visibility /= Off) $ do
+          let highlightedIndex = case target of
                 Prev  -> case st.highlightedIndex of
                   Just i | i /= 0 ->
                     Just (i - 1)
@@ -341,7 +329,8 @@ component =
                     Just 0
                 Index i ->
                   Just i
-          H.modify $ seeks _ { highlightedIndex = hi }
+          H.modify_ $ seeks _ { highlightedIndex = highlightedIndex }
+        pure unit
 
       Select index a -> a <$ do
         (Tuple _ st) <- getState
@@ -351,29 +340,23 @@ component =
 
       CaptureRef event a -> a <$ do
         (Tuple _ st) <- getState
-        let elementFromEvent
-              = hush
-              <<< runExcept
-              <<< readHTMLElement
-              <<< toForeign
-              <<< currentTarget
-        H.modify $ seeks _ { inputElement = elementFromEvent event }
+        H.modify_ $ seeks _ { inputElement = fromEventTarget =<< currentTarget event }
         pure a
 
       Focus focusOrBlur a -> a <$ do
         (Tuple _ st) <- getState
-        traverse_ (H.liftEff <<< if focusOrBlur then focus else blur) st.inputElement
+        traverse_ (H.liftEffect <<< if focusOrBlur then focus else blur) st.inputElement
 
       Key ev a -> a <$ do
         setVis On
-        let preventIt = H.liftEff $ preventDefault $ KE.keyboardEventToEvent ev
+        let preventIt = H.liftEffect $ preventDefault $ KE.toEvent ev
         case KE.code ev of
           "ArrowUp"   -> preventIt *> eval' (highlight Prev)
           "ArrowDown" -> preventIt *> eval' (highlight Next)
           "Escape"    -> do
             (Tuple _ st) <- getState
             preventIt
-            for_ st.inputElement (H.liftEff <<< blur)
+            for_ st.inputElement (H.liftEffect <<< blur)
           "Enter"     -> do
             (Tuple _ st) <- getState
             preventIt
@@ -381,12 +364,12 @@ component =
           otherKey    -> pure unit
 
       PreventClick ev a -> a <$ do
-        H.liftEff <<< preventDefault <<< ME.mouseEventToEvent $ ev
+        H.liftEffect <<< preventDefault <<< ME.toEvent $ ev
 
       SetVisibility v a -> a <$ do
         (Tuple _ st) <- getState
         when (st.visibility /= v) do
-          H.modify $ seeks _ { visibility = v, highlightedIndex = Just 0 }
+          H.modify_ $ seeks _ { visibility = v, highlightedIndex = Just 0 }
           H.raise $ VisibilityChanged v
 
       GetVisibility f -> do
@@ -394,7 +377,7 @@ component =
         pure (f st.visibility)
 
       ReplaceItems items a -> a <$ do
-        H.modify $ seeks _
+        H.modify_ $ seeks _
           { items = items
           , lastIndex = length items - 1
           , highlightedIndex = Nothing }
@@ -403,4 +386,4 @@ component =
         H.raise (Emit parentQuery)
 
       Receive input a -> a <$ do
-        H.modify (updateStore input.render id)
+        H.modify_ (updateStore input.render identity)

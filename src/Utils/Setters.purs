@@ -6,9 +6,10 @@ module Select.Utils.Setters where
 
 import Prelude
 
-import DOM.Event.FocusEvent as FE
-import DOM.Event.MouseEvent as ME
-import DOM.Event.Types as ET
+import Web.UIEvent.FocusEvent as FE
+import Web.UIEvent.MouseEvent as ME
+import Web.UIEvent.KeyboardEvent as KE
+import Web.Event.Event (Event)
 import Data.Maybe (Maybe(..))
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
@@ -18,11 +19,11 @@ import Select as Select
 -- | The properties that must be supported by the HTML element that serves
 -- | as a menu toggle. This should be used with toggle-driven `Select` components.
 type ToggleProps p =
-  ( onFocus :: ET.FocusEvent
-  , onKeyDown :: ET.KeyboardEvent
-  , onMouseDown :: ET.MouseEvent
-  , onClick :: ET.MouseEvent
-  , onBlur :: ET.FocusEvent
+  ( onFocus :: FE.FocusEvent
+  , onKeyDown :: KE.KeyboardEvent
+  , onMouseDown :: ME.MouseEvent
+  , onClick :: ME.MouseEvent
+  , onBlur :: FE.FocusEvent
   , tabIndex :: Int
   | p
   )
@@ -36,15 +37,15 @@ type ToggleProps p =
 -- | renderToggle = div (setToggleProps [ class "btn-class" ]) [ ...html ]
 -- | ```
 setToggleProps
-  :: ∀ o item eff p
-   . Array (HP.IProp (ToggleProps p) (Query o item eff Unit))
-  -> Array (HP.IProp (ToggleProps p) (Query o item eff Unit))
+  :: ∀ o item p
+   . Array (HP.IProp (ToggleProps p) (Query o item Unit))
+  -> Array (HP.IProp (ToggleProps p) (Query o item Unit))
 setToggleProps = flip (<>)
   [ HE.onFocus \ev -> Just do
-      Select.captureRef $ FE.focusEventToEvent ev
+      Select.captureRef $ FE.toEvent ev
       Select.setVisibility On
   , HE.onMouseDown \ev -> Just do
-      Select.captureRef $ ME.mouseEventToEvent ev
+      Select.captureRef $ ME.toEvent ev
       Select.preventClick ev
       Select.getVisibility >>= case _ of
         Select.On -> do
@@ -61,12 +62,12 @@ setToggleProps = flip (<>)
 -- | The properties that must be supported by the HTML element that serves
 -- | as a text input. This should be used with input-driven `Select` components.
 type InputProps p =
-  ( onFocus :: ET.FocusEvent
-  , onKeyDown :: ET.KeyboardEvent
-  , onInput :: ET.Event
+  ( onFocus :: FE.FocusEvent
+  , onKeyDown :: KE.KeyboardEvent
+  , onInput :: Event
   , value :: String
-  , onMouseDown :: ET.MouseEvent
-  , onBlur :: ET.FocusEvent
+  , onMouseDown :: ME.MouseEvent
+  , onBlur :: FE.FocusEvent
   , tabIndex :: Int
   | p
   )
@@ -80,12 +81,12 @@ type InputProps p =
 -- | renderInput = input_ (setInputProps [ class "my-class" ])
 -- | ```
 setInputProps
-  :: ∀ o item eff p
-   . Array (HP.IProp (InputProps p) (Query o item eff Unit))
-  -> Array (HP.IProp (InputProps p) (Query o item eff Unit))
+  :: ∀ o item p
+   . Array (HP.IProp (InputProps p) (Query o item Unit))
+  -> Array (HP.IProp (InputProps p) (Query o item Unit))
 setInputProps = flip (<>)
   [ HE.onFocus \ev -> Just do
-      Select.captureRef $ FE.focusEventToEvent ev
+      Select.captureRef $ FE.toEvent ev
       Select.setVisibility On
   , HE.onKeyDown $ Just <<< Select.key
   , HE.onValueInput $ Just <<< Select.search
@@ -98,8 +99,8 @@ setInputProps = flip (<>)
 -- | selectable "item" in your UI. This should be attached to every item that
 -- | can be selected.
 type ItemProps p =
-  ( onMouseDown :: ET.MouseEvent
-  , onMouseOver :: ET.MouseEvent
+  ( onMouseDown :: ME.MouseEvent
+  , onMouseOver :: ME.MouseEvent
   | p
   )
 
@@ -115,10 +116,10 @@ type ItemProps p =
 -- | render = renderItem `mapWithIndex` itemsArray
 -- | ```
 setItemProps
-  :: ∀ o item eff p
+  :: ∀ o item p
    . Int
-  -> Array (HP.IProp (ItemProps p) (Query o item eff Unit))
-  -> Array (HP.IProp (ItemProps p) (Query o item eff Unit))
+  -> Array (HP.IProp (ItemProps p) (Query o item Unit))
+  -> Array (HP.IProp (ItemProps p) (Query o item Unit))
 setItemProps index = flip (<>)
   [ HE.onMouseDown \ev -> Just do
       Select.preventClick ev
@@ -131,8 +132,8 @@ setItemProps index = flip (<>)
 -- | will not bubble up a blur event to the DOM. This should be used on the parent
 -- | element that contains your items.
 setContainerProps
-  :: ∀ o item eff p
-   . Array (HP.IProp (onMouseDown :: ET.MouseEvent | p) (Query o item eff Unit))
-  -> Array (HP.IProp (onMouseDown :: ET.MouseEvent | p) (Query o item eff Unit))
+  :: ∀ o item p
+   . Array (HP.IProp (onMouseDown :: ME.MouseEvent | p) (Query o item Unit))
+  -> Array (HP.IProp (onMouseDown :: ME.MouseEvent | p) (Query o item Unit))
 setContainerProps = flip (<>)
   [ HE.onMouseDown $ Just <<< Select.preventClick ]
