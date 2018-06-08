@@ -31,14 +31,7 @@
     "generated-docs"
   ],
   "dependencies": {
-    "purescript-halogen": "^4.0.0",
-    "purescript-web-html": "^1.0.0",
-    "purescript-aff": "^5.0.0",
-    "purescript-transformers": "^4.1.0",
-    "purescript-control": "^4.0.0",
-    "purescript-web-uievents": "^1.0.0",
-    "purescript-avar": "^3.0.0",
-    "purescript-web-events": "^1.0.0"
+    "purescript-halogen": "^4.0.0"
   },
   "devDependencies": {
     "purescript-debug": "^4.0.0"
