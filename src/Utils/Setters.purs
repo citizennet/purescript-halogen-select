@@ -84,7 +84,12 @@ setInputProps
   :: ∀ o item p
    . Array (HP.IProp (InputProps p) (Query o item Unit))
   -> Array (HP.IProp (InputProps p) (Query o item Unit))
-setInputProps = flip (<>)
+setInputProps = flip (<>) inputProps
+
+inputProps
+  :: ∀ o item p
+   . Array (HP.IProp (InputProps p) (Query o item Unit))
+inputProps =
   [ HE.onFocus \ev -> Just do
       Select.captureRef $ FE.toEvent ev
       Select.setVisibility On
@@ -120,7 +125,13 @@ setItemProps
    . Int
   -> Array (HP.IProp (ItemProps p) (Query o item Unit))
   -> Array (HP.IProp (ItemProps p) (Query o item Unit))
-setItemProps index = flip (<>)
+setItemProps = flip (<>) <<< itemProps
+
+itemProps
+  :: ∀ o item p
+   . Int
+  -> Array (HP.IProp (ItemProps p) (Query o item Unit))
+itemProps index =
   [ HE.onMouseDown \ev -> Just do
       Select.preventClick ev
       Select.select index
@@ -135,5 +146,10 @@ setContainerProps
   :: ∀ o item p
    . Array (HP.IProp (onMouseDown :: ME.MouseEvent | p) (Query o item Unit))
   -> Array (HP.IProp (onMouseDown :: ME.MouseEvent | p) (Query o item Unit))
-setContainerProps = flip (<>)
+setContainerProps = flip (<>) containerProps
+
+containerProps
+  :: ∀ o item p
+   . Array (HP.IProp (onMouseDown :: ME.MouseEvent | p) (Query o item Unit))
+containerProps =
   [ HE.onMouseDown $ Just <<< Select.preventClick ]
