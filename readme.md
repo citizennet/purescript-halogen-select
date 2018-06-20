@@ -46,7 +46,7 @@ The primary design decision made in this project vs. other typeaheads is offload
 
 In practice, you are responsible for providing render functions for each HTML element involved in the component. Your render function should be augmented using one of our provided functions, which will extend your CSS & events with our behaviors.
 
-For example, you can make your container compatible with the component with the `getContainerProps` function, which you would apply to the array of iprops present on your button element:
+For example, you can make your container compatible with the component with the `setContainerProps` function, which you would apply to the array of iprops present on your button element:
 
 ```purescript
 [ ... your HTML ...
@@ -57,7 +57,8 @@ For example, you can make your container compatible with the component with the 
 ]
 ```
 
-> Warning: If your events are duplicated by ours, they will be overwritten and fail to trigger.
+
+> Warning: If you provide any of the same events that we use for our behaviors, only yours will trigger, preventing that behavior from being applied. E.g., if you provide your own `HE.onValueInput` event on the element you're applying `setInputProps` to, you will end up overriding our search functionality for that input.
 
 
 ## Inspiration & Thanks

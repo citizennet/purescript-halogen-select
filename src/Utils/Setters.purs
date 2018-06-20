@@ -29,8 +29,8 @@ type ToggleProps p =
   )
 
 -- | A helper function that augments an array of `IProps` with `ToggleProps`. It
--- | ensures the toggle element can register key events for navigation or highlighting,
--- | record open and close events based on focus and blur, and can be focused with the
+-- | allows the toggle element to register key events for navigation or highlighting,
+-- | record open and close events based on focus and blur, and to be focused with
 -- | the tab key.
 -- |
 -- | ```purescript
@@ -73,8 +73,8 @@ type InputProps p =
   )
 
 -- | A helper function that augments an array of `IProps` with `InputProps`. It
--- | ensures the input element can capture string values, register key events for
--- | navigation, record open and close events based on focus and blur, and can be
+-- | allows the input element to capture string values, register key events for
+-- | navigation, record open and close events based on focus and blur, and to be
 -- | focused with the tab key.
 -- |
 -- | ```purescript
@@ -105,7 +105,7 @@ type ItemProps p =
   )
 
 -- | A helper function that augments an array of `IProps` with `ItemProps`. It
--- | ensures items can be highlighted and selected.
+-- | allows items to be highlighted and selected.
 -- |
 -- | This expects an index for use in highlighting. It's useful in combination
 -- | with `mapWithIndex`:
@@ -128,8 +128,8 @@ setItemProps index = flip (<>)
   ]
 
 -- | A helper function that augments an array of `IProps` with a `MouseDown`
--- | handler. It ensures that clicking on an item within an enclosing HTML element
--- | will not bubble up a blur event to the DOM. This should be used on the parent
+-- | handler. It prevents clicking on an item within an enclosing HTML element
+-- | from bubbling up a blur event to the DOM. This should be used on the parent
 -- | element that contains your items.
 setContainerProps
   :: ∀ o item p
