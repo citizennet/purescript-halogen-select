@@ -10,7 +10,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Select as Select
-import Select.Utils.Setters as Setters
+import Select.Setters as Setters
 import Docs.CSS as CSS
 
 type State =

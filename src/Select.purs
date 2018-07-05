@@ -8,7 +8,7 @@ module Select where
 import Prelude
 
 import Control.Comonad (extract)
-import Control.Comonad.Store (Store, seeks, store)
+import Control.Comonad.Store (Store, store)
 import Effect.Aff (Fiber, delay, error, forkAff, killFiber)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Aff.AVar (AVar)
@@ -22,11 +22,10 @@ import Data.Array (length, (!!))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (for_, traverse_)
-import Data.Tuple (Tuple(..))
-import Halogen (Component, ComponentDSL, ComponentHTML, component, liftAff, liftEffect, modify_) as H
+import Halogen (Component, ComponentDSL, ComponentHTML, component, liftAff, liftEffect) as H
 import Halogen.HTML as HH
 import Halogen.Query.HalogenM (fork, raise) as H
-import Select.Internal.State (updateStore, getState)
+import Renderless.State (getState, modifyState_, modifyStore)
 
 ----------
 -- Component Types
@@ -279,8 +278,8 @@ component =
     eval :: QueryF o item ~> ComponentDSL o item m
     eval = case _ of
       Search str a -> a <$ do
-        (Tuple _ st) <- getState
-        H.modify_ $ seeks _ { search = str }
+        st <- getState
+        modifyState_ _ { search = str }
         setVis On
 
         case st.inputType, st.debouncer of
@@ -294,11 +293,11 @@ component =
             -- var is finally filled, the .ct will run (raise a new search)
             _ <- H.fork do
               _ <- H.liftAff $ AVar.take var
-              H.modify_ $ seeks _ { debouncer = Nothing, highlightedIndex = Just 0 }
-              (Tuple _ newState) <- getState
+              modifyState_ _ { debouncer = Nothing, highlightedIndex = Just 0 }
+              newState <- getState
               H.raise $ Searched newState.search
 
-            H.modify_ $ seeks _ { debouncer = Just { var, fiber } }
+            modifyState_ _ { debouncer = Just { var, fiber } }
 
           TextInput, Just debouncer -> do
             let var = debouncer.var
@@ -307,14 +306,14 @@ component =
               delay st.debounceTime
               AVar.put unit var
 
-            H.modify_ $ seeks _ { debouncer = Just { var, fiber } }
+            modifyState_ _ { debouncer = Just { var, fiber } }
 
           -- Key stream is not yet implemented. However, this should capture user
           -- key events and expire their search after a set number of milliseconds.
           _, _ -> pure unit
 
       Highlight target a -> a <$ do
-        (Tuple _ st) <- getState
+        st <- getState
         when (st.visibility /= Off) $ do
           let highlightedIndex = case target of
                 Prev  -> case st.highlightedIndex of
@@ -329,22 +328,22 @@ component =
                     Just 0
                 Index i ->
                   Just i
-          H.modify_ $ seeks _ { highlightedIndex = highlightedIndex }
+          modifyState_ _ { highlightedIndex = highlightedIndex }
         pure unit
 
       Select index a -> a <$ do
-        (Tuple _ st) <- getState
+        st <- getState
         when (st.visibility == On) $
           for_ (st.items !! index)
             \item -> H.raise (Selected item)
 
       CaptureRef event a -> a <$ do
-        (Tuple _ st) <- getState
-        H.modify_ $ seeks _ { inputElement = fromEventTarget =<< currentTarget event }
+        st <- getState
+        modifyState_ _ { inputElement = fromEventTarget =<< currentTarget event }
         pure a
 
       Focus focusOrBlur a -> a <$ do
-        (Tuple _ st) <- getState
+        st <- getState
         traverse_ (H.liftEffect <<< if focusOrBlur then focus else blur) st.inputElement
 
       Key ev a -> a <$ do
@@ -354,11 +353,11 @@ component =
           "ArrowUp"   -> preventIt *> eval' (highlight Prev)
           "ArrowDown" -> preventIt *> eval' (highlight Next)
           "Escape"    -> do
-            (Tuple _ st) <- getState
+            st <- getState
             preventIt
             for_ st.inputElement (H.liftEffect <<< blur)
           "Enter"     -> do
-            (Tuple _ st) <- getState
+            st <- getState
             preventIt
             for_ st.highlightedIndex (eval' <<< select)
           otherKey    -> pure unit
@@ -367,17 +366,17 @@ component =
         H.liftEffect <<< preventDefault <<< ME.toEvent $ ev
 
       SetVisibility v a -> a <$ do
-        (Tuple _ st) <- getState
+        st <- getState
         when (st.visibility /= v) do
-          H.modify_ $ seeks _ { visibility = v, highlightedIndex = Just 0 }
+          modifyState_ _ { visibility = v, highlightedIndex = Just 0 }
           H.raise $ VisibilityChanged v
 
       GetVisibility f -> do
-        (Tuple _ st) <- getState
+        st <- getState
         pure (f st.visibility)
 
       ReplaceItems items a -> a <$ do
-        H.modify_ $ seeks _
+        modifyState_ _
           { items = items
           , lastIndex = length items - 1
           , highlightedIndex = Nothing }
@@ -386,4 +385,4 @@ component =
         H.raise (Emit parentQuery)
 
       Receive input a -> a <$ do
-        H.modify_ (updateStore input.render identity)
+        modifyStore input.render identity

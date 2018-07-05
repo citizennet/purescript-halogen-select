@@ -2,7 +2,7 @@
 -- | to your render functions. These allow you to write a render function for your
 -- | `Select` UI and then augment it at relevant points with the properties defined
 -- | below.
-module Select.Utils.Setters where
+module Select.Setters where
 
 import Prelude
 
