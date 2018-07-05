@@ -4,6 +4,7 @@
 
 - [Official Documentation / Tutorials / Getting Started](https://citizennet.github.io/purescript-halogen-select)
 - [Module Documentation on Pursuit](https://pursuit.purescript.org/packages/purescript-halogen-select)
+- [Learn About & Build Your Own Renderless Components](https://github.com/thomashoneyman/purescript-halogen-renderless)
 
 # Get Started / Learn More
 
