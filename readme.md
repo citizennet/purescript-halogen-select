@@ -1,4 +1,7 @@
-# Select ![CircleCI](https://img.shields.io/circleci/project/github/citizennet/purescript-halogen-select.svg) [![Maintainer: thomashoneyman](https://img.shields.io/badge/maintainer-thomashoneyman-lightgrey.svg)](http://github.com/thomashoneyman)
+# Select 
+
+[![CircleCI](https://circleci.com/gh/citizennet/purescript-halogen-select/tree/master.svg?style=shield)](https://circleci.com/gh/citizennet/purescript-halogen-select/tree/master)
+[![Maintainer: thomashoneyman](https://img.shields.io/badge/maintainer-thomashoneyman-lightgrey.svg)](http://github.com/thomashoneyman)
 
 `Select` provides flexible building blocks for selection interfaces in Halogen. If you need a dropdown menu, typeahead, autocomplete, multi-select, calendar, image picker, or other selection interface, and you want it to be accessible, and you also want complete visual control over the component, then you're in the right place.
 
