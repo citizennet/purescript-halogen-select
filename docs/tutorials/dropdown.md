@@ -132,7 +132,7 @@ The first thing we'll do is bring in the `Select` library in the first place.
 
 ```hs
 import Select as Select
-import Select.Utils.Setters as Setters
+import Select.Setters as Setters
 ```
 
 !!! tip
@@ -349,7 +349,7 @@ It's now time to turn your static HTML into a fully-functioning dropdown.
 - An element that contains those items
 - A focusable element that can be used to toggle visibility and capture keystrokes
 
-Accordingly, you'll need to use three helper functions, each exported by the `Select.Utils.Setters` module:
+Accordingly, you'll need to use three helper functions, each exported by the `Select.Setters` module:
 
 - `setItemProps`
 - `setContainerProps`
@@ -584,7 +584,7 @@ If you'd like to use this component as a starting point from which to build your
     import Halogen.HTML.Events as HE
     import Halogen.HTML.Properties as HP
     import Select as Select
-    import Select.Utils.Setters as Setters
+    import Select.Setters as Setters
 
     data Query a
       = HandleSelect (Select.Message Query String) a
