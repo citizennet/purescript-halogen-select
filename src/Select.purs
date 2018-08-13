@@ -1,6 +1,6 @@
 -- | This module exposes a component that can be used to build accessible selection
 -- | user interfaces. You are responsible for providing all rendering, with the help
--- | of the `Select.Utils.Setters` module, but this component provides the relevant
+-- | of the `Select.Setters` module, but this component provides the relevant
 -- | behaviors for dropdowns, autocompletes, typeaheads, keyboard-navigable calendars,
 -- | and other selection UIs.
 module Select where

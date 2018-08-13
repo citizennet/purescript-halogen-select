@@ -92,7 +92,7 @@ Now let's make sure we have `Select` ready to go in our component. Import the li
 
 ```hs
 import Select as Select
-import Select.Utils.Setters as Setters
+import Select.Setters as Setters
 ```
 
 Next, since `Select` is going to be a child component, we'll need to update several types and functions. We will:
@@ -589,7 +589,7 @@ renderInput = HH.input ( Setters.setInputProps [] )
 That's it! Now we have all the key events wired up for you. You could embed your own queries here, or add CSS, or whatever you want and the behavior will still work just fine.
 
 !!! warning
-    `Select` will append the properties it needs to the input field, including `#!hs onMouseDown`, `#! onValueInput`, and so on. Unfortunately there can only be one of these handlers in the list of properties, so if you already placed an `#!hs onValueInput` handler it will be overwritten by `Select`. If you need to trigger some new functionality from the same handler that `Select` is using, then you can always write a custom `#!hs setInputProps` function for yourself that routes the event to your own query *and* the relevant `Select` query. Take a look at the module documentation for `Select.Utils.Setters` to see how.
+    `Select` will append the properties it needs to the input field, including `#!hs onMouseDown`, `#! onValueInput`, and so on. Unfortunately there can only be one of these handlers in the list of properties, so if you already placed an `#!hs onValueInput` handler it will be overwritten by `Select`. If you need to trigger some new functionality from the same handler that `Select` is using, then you can always write a custom `#!hs setInputProps` function for yourself that routes the event to your own query *and* the relevant `Select` query. Take a look at the module documentation for `Select.Setters` to see how.
 
 Next, let's render the actual items. Remember that we need to use `#!hs setContainerProps` on the containing element (in this case `#!hs HH.ul`) and `#!hs setItemProps` on each item.
 
@@ -681,7 +681,7 @@ If you'd like to use this component as a starting point from which to build your
     import Network.HTTP.Affjax.Respondable as Respondable
     import Network.RemoteData (RemoteData(..), fromEither, withDefault)
     import Select as Select
-    import Select.Utils.Setters as Setters
+    import Select.Setters as Setters
 
     data Query a
       = HandleSelect (Select.Message Query String) a
