@@ -418,7 +418,7 @@ fetchItems :: String -> Aff (Either String (Array String))
 fetchItems str = do
   res <- _.response <$>
     ( AX.get
-    $ Respondable.json
+    $ Response.json
     $ "https://swapi.co/api/people/?search=" <> str
     )
 
@@ -678,7 +678,7 @@ If you'd like to use this component as a starting point from which to build your
     import Halogen.HTML.Events as HE
     import Halogen.HTML.Properties (attr) as HP
     import Network.HTTP.Affjax as AX
-    import Network.HTTP.Affjax.Respondable as Respondable
+    import Network.HTTP.Affjax.Response as Response
     import Network.RemoteData (RemoteData(..), fromEither, withDefault)
     import Select as Select
     import Select.Setters as Setters
@@ -721,7 +721,7 @@ If you'd like to use this component as a starting point from which to build your
       fetchItems str = do
          res <- _.response <$>
            ( AX.get
-           $ Respondable.json
+           $ Response.json
            $ "https://swapi.co/api/people/?search=" <> str
            )
 
