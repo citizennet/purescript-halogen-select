@@ -21,7 +21,7 @@ $ bower install --save purescript-halogen-select
 If this is your first time using `Select`, start with the [tutorials](https://citizennet.github.io/purescript-halogen-select/tutorials/getting-started). I'd recommend starting with the simplest example where you'll learn to make a keyboard-navigable dropdown component:
 
 !!! tip
-    Don't want to build your own UI components? Check out the [Ocelot component library](https://citizennet.github.io/purescript-ocelot)!
+    Building a form? Check out [Formless](https://thomashoneyman.github.io/purescript-halogen-formless), a library for painless forms in Halogen. Don't want to build your own UI components? Check out the [Ocelot component library](https://citizennet.github.io/purescript-ocelot) for examples and resources.
 
 If this isn't your first time, you'll find value in these resources:
 
