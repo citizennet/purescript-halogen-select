@@ -38,7 +38,7 @@
         <meta name="lang:search.tokenizer" content="[\s\-]+">
       
       <link rel="shortcut icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-0.17.5, mkdocs-material-2.9.2">
+      <meta name="generator" content="mkdocs-1.0.2, mkdocs-material-3.0.3">
     
     
       
@@ -46,9 +46,9 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/application.ba0fd1a6.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/application.451f80e5.css">
       
-        <link rel="stylesheet" href="../../assets/stylesheets/application-palette.6079476c.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/application-palette.22915126.css">
       
       
         
@@ -67,8 +67,6 @@
       
     
     <link rel="stylesheet" href="../../assets/fonts/material-icons.css">
-    
-      <link rel="stylesheet" href="../../css/cn-tailwind.scoped.css">
     
     
   </head>
@@ -106,7 +104,7 @@
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
     <label class="md-overlay" data-md-component="overlay" for="__drawer"></label>
     
-      <a href="#introduction" tabindex="1" class="md-skip">
+      <a href="../../#introduction" tabindex="1" class="md-skip">
         Skip to content
       </a>
     
@@ -211,11 +209,11 @@
                   <div class="md-sidebar__inner">
                     <nav class="md-nav md-nav--primary" data-md-level="0">
   <label class="md-nav__title md-nav__title--site" for="__drawer">
-    <span class="md-nav__button md-logo">
+    <a href="https://citizennet.github.io/purescript-halogen-select" title="Select Documentation" class="md-nav__button md-logo">
       
         <i class="md-icon">school</i>
       
-    </span>
+    </a>
     Select Documentation
   </label>
   
@@ -714,7 +712,7 @@
 <h3 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h3>
 <p>First, clone the Halogen template project from CitizenNet, install dependencies, and make sure things build properly. If they don’t, please reach out on the <a href="https://purescript-users.ml">Purescript user forum</a> so we can fix it!</p>
 <p>Next, make sure to install <code>Select</code>:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span>bower i --save purescript-halogen-select
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span>bower i --save purescript-halogen-select
 </pre></div>
 </td></tr></table>
 
@@ -723,7 +721,7 @@
 <p>The PureScript compiler recently updated to version <code>0.12</code> and many core libraries updated at the same time. If you run into version conflicts, please reach out on the <a href="https://purescript-users.ml">Purescript user forum</a>.</p>
 </div>
 <p>And that's it! You now have everything you need to complete the tutorials. This is the full set of steps you can follow to get all set up:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span> 1
  2
  3
  4
@@ -763,7 +761,7 @@ open dist/index.html
 <li>Open a new tab in your browser pointed to <code>dist/index.html</code> so you can see the app</li>
 </ol>
 <p>To test everything is working, try editing <code>src/Component.purs</code> to change the title of the page. The project should automatically rebuild on save. Then, when you refresh the browser, you should see your new text rendered.</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="c1"># Watch for changes and rebuild (remember to refresh the page after builds)</span>
 yarn watch
 </pre></div>
@@ -779,7 +777,7 @@ yarn watch
 <p>How does a component know what to do?</p>
 <p>In Halogen, we give names to each computation we'd like a component to run. Computations that can have side effects but don't return anything are colloquially called <em>actions</em>; those that can have side effects and also return something are called <em>requests</em>. The type that lists out the possible actions and requests for a component is called the component's <em>query algebra</em>. The Halogen guide has a relevant <a href="https://github.com/slamdata/purescript-halogen/blob/master/docs/2%20-%20Defining%20a%20component.md#query-algebra">section about query algebras</a> if you'd like to know more.</p>
 <p>What actions and requests can our starter component perform? By looking at the query algebra, we see just one constructor:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">data</span> <span class="kt">Query</span> <span class="n">a</span>
   <span class="ow">=</span> <span class="kt">NoOp</span> <span class="n">a</span>
 </pre></div>
@@ -788,13 +786,13 @@ yarn watch
 <p>All we know so far is that this component can do one thing: evaluate a query called <code>NoOp</code>. We'll see what it does later on when we look at the <code class="codehilite"><span class="nf">eval</span></code> function.</p>
 <h3 id="state">State<a class="headerlink" href="#state" title="Permanent link">&para;</a></h3>
 <p>Every component encapsulates some state, described by its <code class="codehilite"><span class="kt">State</span></code> type. You will usually see Halogen components use records to hold state, like this:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">type</span> <span class="kt">State</span> <span class="ow">=</span> <span class="p">{</span> <span class="n">on</span> <span class="ow">::</span> <span class="kt">Boolean</span><span class="p">,</span> <span class="n">name</span> <span class="ow">::</span> <span class="kt">String</span> <span class="p">}</span>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">type</span> <span class="kt">State</span> <span class="ow">=</span> <span class="p">{</span> <span class="n">on</span> <span class="ow">::</span> <span class="kt">Boolean</span><span class="p">,</span> <span class="n">name</span> <span class="ow">::</span> <span class="kt">String</span> <span class="p">}</span>
 </pre></div>
 </td></tr></table>
 
 <p>State is the core of your component. Most of the queries you see in Halogen components modify state in some way, and the render function that produces HTML for the component has only the <code class="codehilite"><span class="kt">State</span></code> type as its argument.</p>
 <p>For our starter component, we don't need any state just yet, so we've simply assigned it the <code class="codehilite"><span class="kt">Unit</span></code> type. When we start building selection components, however, we'll soon create a record to hold our state.</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">type</span> <span class="kt">State</span> <span class="ow">=</span> <span class="kt">Unit</span>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">type</span> <span class="kt">State</span> <span class="ow">=</span> <span class="kt">Unit</span>
 </pre></div>
 </td></tr></table>
 
@@ -803,14 +801,14 @@ yarn watch
 <p>Once a Halogen component has been mounted to the DOM, there is only one way to continue sending it new information: its <code class="codehilite"><span class="kt">Input</span></code> type paired with its <code class="codehilite"><span class="nf">receiver</span></code> function. Every time the parent component re-renders, it will send a new <code class="codehilite"><span class="kt">Input</span></code> to the child component.</p>
 <p>For more information on the <code class="codehilite"><span class="kt">Input</span></code> type, see the <a href="https://github.com/slamdata/purescript-halogen/blob/master/docs/5%20-%20Parent%20and%20child%20components.md#input-values">Parent and Child Components</a> section of the Halogen guide.</p>
 <p>Our starter component doesn't need any input, so we'll assign it the <code class="codehilite"><span class="kt">Unit</span></code> type. However, once we build a dropdown or typeahead, we'll probably want to receive the list of items that can be selected as input.</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">type</span> <span class="kt">Input</span> <span class="ow">=</span> <span class="kt">Unit</span>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">type</span> <span class="kt">Input</span> <span class="ow">=</span> <span class="kt">Unit</span>
 </pre></div>
 </td></tr></table>
 
 <h3 id="message">Message<a class="headerlink" href="#message" title="Permanent link">&para;</a></h3>
 <p>How does a component tell its parent when something important has happened? In Halogen, this is accomplished with a <code class="codehilite"><span class="kt">Message</span></code> type. Like the query algebra, this is just a type describing messages that can be raised, containing some information. To actually trigger sending a particular message, you can use the <code class="codehilite"><span class="nf">raise</span></code> function provided by Halogen.</p>
 <p>When we start building selection components, we'll use messages to notify parent components when items have been selected or removed. Our starter component doesn't need to raise any messages, however, so we've given it the <code class="codehilite"><span class="kt">Void</span></code> type.</p>
-<details class="note"><summary>Why are we using <code>Void</code> when we have no messages?</summary><p>Why use <code>Void</code> instead of <code>Unit</code> for the <code>Message</code> type when it has no constructors? This is common practice in Halogen because of how messages are used by parent components. When your component raises a message, it gets handled by the parent using a function like this:</p><p><code class="codehilite"><span class="kt">Child</span><span class="o">.</span><span class="kt">Message</span> <span class="ow">-&gt;</span> <span class="kt">Maybe</span> <span class="p">(</span><span class="kt">ParentQuery</span> <span class="kt">Unit</span><span class="p">)</span></code></p><p>If you want to ignore all messages from the child, you could write an implementation like this:</p><p><code class="codehilite"><span class="kt">Halogen</span><span class="o">.</span><span class="kt">HTML</span><span class="o">.</span><span class="kt">Events</span><span class="o">.</span><span class="n">input</span> <span class="o">&lt;&lt;&lt;</span> <span class="n">const</span> <span class="kt">Nothing</span></code></p><p>However, if the child's message type is <code>Void</code>, then you can use the <code>absurd</code> function from <code>Data.Void</code>:</p><p><code class="codehilite"><span class="nf">absurd</span> <span class="ow">::</span> <span class="kt">Void</span> <span class="ow">-&gt;</span> <span class="n">a</span></code></p><p>This saves you a bit of typing when you mount a child component in a slot and makes it absolutely unambiguous that there are no messages to handle. It also ensures that if you add a message to the child component later on you'll get a compiler error -- this is a good thing!</p><p>Compare mounting a child component that uses <code>Unit</code> to represent "no messages" vs. using <code>Void</code>:</p><table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<details class="note"><summary>Why are we using <code>Void</code> when we have no messages?</summary><p>Why use <code>Void</code> instead of <code>Unit</code> for the <code>Message</code> type when it has no constructors? This is common practice in Halogen because of how messages are used by parent components. When your component raises a message, it gets handled by the parent using a function like this:</p><p><code class="codehilite"><span class="kt">Child</span><span class="o">.</span><span class="kt">Message</span> <span class="ow">-&gt;</span> <span class="kt">Maybe</span> <span class="p">(</span><span class="kt">ParentQuery</span> <span class="kt">Unit</span><span class="p">)</span></code></p><p>If you want to ignore all messages from the child, you could write an implementation like this:</p><p><code class="codehilite"><span class="kt">Halogen</span><span class="o">.</span><span class="kt">HTML</span><span class="o">.</span><span class="kt">Events</span><span class="o">.</span><span class="n">input</span> <span class="o">&lt;&lt;&lt;</span> <span class="n">const</span> <span class="kt">Nothing</span></code></p><p>However, if the child's message type is <code>Void</code>, then you can use the <code>absurd</code> function from <code>Data.Void</code>:</p><p><code class="codehilite"><span class="nf">absurd</span> <span class="ow">::</span> <span class="kt">Void</span> <span class="ow">-&gt;</span> <span class="n">a</span></code></p><p>This saves you a bit of typing when you mount a child component in a slot and makes it absolutely unambiguous that there are no messages to handle. It also ensures that if you add a message to the child component later on you'll get a compiler error -- this is a good thing!</p><p>Compare mounting a child component that uses <code>Unit</code> to represent "no messages" vs. using <code>Void</code>:</p><table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2
 3
 4
@@ -826,7 +824,7 @@ yarn watch
 </pre></div>
 </td></tr></table>
 </details><p>For more information on messages, see the <a href="https://github.com/slamdata/purescript-halogen/blob/master/docs/5%20-%20Parent%20and%20child%20components.md">Parent and Child Components</a> section in the Halogen guide.</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">type</span> <span class="kt">Message</span> <span class="ow">=</span> <span class="kt">Void</span>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">type</span> <span class="kt">Message</span> <span class="ow">=</span> <span class="kt">Void</span>
 </pre></div>
 </td></tr></table>
 
@@ -842,7 +840,7 @@ yarn watch
 </ul>
 <p>See the <a href="https://github.com/slamdata/purescript-halogen/blob/master/docs/5%20-%20Parent%20and%20child%20components.md#multiple-types-of-child-component">Multiple Types of Child Component</a> section of the Halogen guide for more details.</p>
 <p>For now, our component has no children. Once we bring in the <code>Select</code> component we'll update these types.</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">type</span> <span class="kt">ChildQuery</span> <span class="ow">=</span> <span class="kt">Const</span> <span class="kt">Void</span>
 <span class="kr">type</span> <span class="kt">ChildSlot</span> <span class="ow">=</span> <span class="kt">Unit</span>
 </pre></div>
@@ -850,7 +848,7 @@ yarn watch
 
 <h3 id="component">Component<a class="headerlink" href="#component" title="Permanent link">&para;</a></h3>
 <p>Ah! We can finally create our component. The actual component definition is simple: we call the <code class="codehilite"><span class="nf">parentComponent</span></code> function from Halogen to assert we're creating a component that can have further child components and provide it with the four functions it needs to operate. More on those in a moment!</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span> 1
  2
  3
  4
@@ -875,7 +873,7 @@ yarn watch
 <p>Next, lets look at those function definitions, defined in the <code>where</code> clause:</p>
 <h4 id="initialstate">initialState<a class="headerlink" href="#initialstate" title="Permanent link">&para;</a></h4>
 <p>The <code class="codehilite"><span class="nf">initialState</span></code> function describes how to go from the component's <code class="codehilite"><span class="kt">Input</span></code> type to its <code class="codehilite"><span class="kt">State</span></code> type. In this case, our <code class="codehilite"><span class="kt">State</span></code> type is just <code class="codehilite"><span class="kt">Unit</span></code>, so we'll throw away the input and return <code class="codehilite"><span class="nf">unit</span></code>.</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2
 3
 4
@@ -889,7 +887,7 @@ yarn watch
 
 <h4 id="render">render<a class="headerlink" href="#render" title="Permanent link">&para;</a></h4>
 <p>The <code class="codehilite"><span class="nf">render</span></code> function describes how to go from the component's <code class="codehilite"><span class="kt">State</span></code> type to some HTML, where that HTML can include any of the components listed in the <code class="codehilite"><span class="kt">ChildQuery</span></code> type. You'll use plenty of code from these modules when writing render functions:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2
 3</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">import</span> <span class="nn">Halogen.HTML</span> <span class="k">as</span> <span class="n">HH</span>
 <span class="kr">import</span> <span class="nn">Halogen.HTML.Events</span> <span class="k">as</span> <span class="n">HE</span>
@@ -899,7 +897,7 @@ yarn watch
 
 <p>We're going to spend a lot of time writing render functions in the following tutorials. You can refer to the Halogen guide's <a href="https://github.com/slamdata/purescript-halogen/tree/master/docs">section on rendering</a> for more information.</p>
 <p>For now we won't render anything to the page, represented by an empty div.</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">render</span> <span class="ow">::</span> <span class="kt">State</span> <span class="ow">-&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">ParentHTML</span> <span class="kt">Query</span> <span class="kt">ChildQuery</span> <span class="kt">ChildSlot</span> <span class="n">m</span>
 <span class="nf">render</span> <span class="n">st</span> <span class="ow">=</span> <span class="kt">HH</span><span class="o">.</span><span class="n">div_</span> <span class="kt">[]</span>
 </pre></div>
@@ -914,7 +912,7 @@ yarn watch
 </ul>
 <p>The <code>eval</code> function is where you get to actually define what all your queries <em>do</em>. Unlike the render function, you can actually perform all kinds of side effects here, like make API calls, update state, trigger queries in child components, raise messages, and more.</p>
 <p>As usual, our starter component won't do much in its <code class="codehilite"><span class="nf">eval</span></code>. When it receives the <code class="codehilite"><span class="kt">NoOp</span></code> constructor, it will do nothing and return the contents of the query, which in this case will always be <code>unit</code>.</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2
 3</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">eval</span> <span class="ow">::</span> <span class="kt">Query</span> <span class="o">~&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">ParentDSL</span> <span class="kt">State</span> <span class="kt">Query</span> <span class="kt">ChildQuery</span> <span class="kt">ChildSlot</span> <span class="kt">Message</span> <span class="n">m</span>
 <span class="nf">eval</span> <span class="ow">=</span> <span class="kr">case</span> <span class="kr">_</span> <span class="kr">of</span>
@@ -924,14 +922,14 @@ yarn watch
 
 <h4 id="receiver">receiver<a class="headerlink" href="#receiver" title="Permanent link">&para;</a></h4>
 <p>The <code class="codehilite"><span class="nf">receiver</span></code> function describes what to do when a parent component sends in new <code class="codehilite"><span class="kt">Input</span></code>. Its type signature looks like this:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">receiver</span> <span class="ow">::</span> <span class="kt">Input</span> <span class="ow">-&gt;</span> <span class="kt">Maybe</span> <span class="p">(</span><span class="kt">Query</span> <span class="kt">Unit</span><span class="p">)</span>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">receiver</span> <span class="ow">::</span> <span class="kt">Input</span> <span class="ow">-&gt;</span> <span class="kt">Maybe</span> <span class="p">(</span><span class="kt">Query</span> <span class="kt">Unit</span><span class="p">)</span>
 </pre></div>
 </td></tr></table>
 
 <p>Once a Halogen component has been mounted, the only way to send it new input is via its <code class="codehilite"><span class="nf">receiver</span></code> function. When its parent re-renders, it will automatically send the child component's input type again, and it's up to the <code class="codehilite"><span class="nf">receiver</span></code> function to decide what to do with it.</p>
 <p>This function can either provide a query to call, or <code class="codehilite"><span class="kt">Nothing</span></code> if you'd like to ignore new input. If you elect to provide a query then you unlock all the power available in the <code>eval</code> function and can describe all sorts of things to do on new input, like making API calls or updating state.</p>
 <p>In our case, we don't care about new input, so we'll ignore the input and return <code class="codehilite"><span class="kt">Nothing</span></code>.</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2
 3</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="p">{</span> <span class="o">...</span>
 <span class="p">,</span> <span class="n">receiver</span><span class="kt">:</span> <span class="n">const</span> <span class="kt">Nothing</span>
@@ -1013,9 +1011,9 @@ yarn watch
       
     </div>
     
-      <script src="../../assets/javascripts/application.a59e2a89.js"></script>
+      <script src="../../assets/javascripts/application.583bbe55.js"></script>
       
-      <script>app.initialize({version:"0.17.5",url:{base:"../.."}})</script>
+      <script>app.initialize({version:"1.0.2",url:{base:"../.."}})</script>
       
         <script src="../../js/app.js"></script>
       

@@ -38,7 +38,7 @@
         <meta name="lang:search.tokenizer" content="[\s\-]+">
       
       <link rel="shortcut icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-0.17.5, mkdocs-material-2.9.2">
+      <meta name="generator" content="mkdocs-1.0.2, mkdocs-material-3.0.3">
     
     
       
@@ -46,9 +46,9 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/application.ba0fd1a6.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/application.451f80e5.css">
       
-        <link rel="stylesheet" href="../../assets/stylesheets/application-palette.6079476c.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/application-palette.22915126.css">
       
       
         
@@ -67,8 +67,6 @@
       
     
     <link rel="stylesheet" href="../../assets/fonts/material-icons.css">
-    
-      <link rel="stylesheet" href="../../css/cn-tailwind.scoped.css">
     
     
   </head>
@@ -106,7 +104,7 @@
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
     <label class="md-overlay" data-md-component="overlay" for="__drawer"></label>
     
-      <a href="#lets-build-a-dropdown-in-purescript" tabindex="1" class="md-skip">
+      <a href="../../#lets-build-a-dropdown-in-purescript" tabindex="1" class="md-skip">
         Skip to content
       </a>
     
@@ -211,11 +209,11 @@
                   <div class="md-sidebar__inner">
                     <nav class="md-nav md-nav--primary" data-md-level="0">
   <label class="md-nav__title md-nav__title--site" for="__drawer">
-    <span class="md-nav__button md-logo">
+    <a href="https://citizennet.github.io/purescript-halogen-select" title="Select Documentation" class="md-nav__button md-logo">
       
         <i class="md-icon">school</i>
       
-    </span>
+    </a>
     Select Documentation
   </label>
   
@@ -735,7 +733,7 @@
 <p>The simplest sort of dropdown has a button that can toggle a menu open or closed, a list of items that can be selected from that menu, and zero, one, or more selected items. For our dropdown we'll assume that you can select at most one item, and that selecting an item will replace the text on the button with that item.</p>
 <h3 id="rendering-a-button-and-items">Rendering a button and items<a class="headerlink" href="#rendering-a-button-and-items" title="Permanent link">&para;</a></h3>
 <p>We'll start by rendering the button and the items. At this point our render function contains only an empty div, so let's fill in the rest of the HTML we need:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span> 1
  2
  3
  4
@@ -776,7 +774,7 @@
 <li>The list of items available for selection</li>
 </ul>
 <p>We can represent each of these with simple types in our state:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2
 3
 4
@@ -789,7 +787,7 @@
 </td></tr></table>
 
 <p>Now that our state contains these three fields, we need to update our <code class="codehilite"><span class="nf">initialState</span></code> function to produce the right type of values:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span> 1
  2
  3
  4
@@ -813,7 +811,7 @@
 
 <p>Finally, lets update our render function to leverage the information now contained in <code class="codehilite"><span class="kt">State</span></code>. If there's a selected item, that will be the button's text; if not, we'll fall back to a default message. If the menu is open, we'll list out the available items for selection.</p>
 <p>For code clarity, we'll also break out the dropdown into its own helper function.</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span> 1
  2
  3
  4
@@ -867,9 +865,9 @@
 <p>We just wrote the rendering we need for an (admittedly ugly) dropdown. The render function we just wrote can actually serve almost as-is as the render function for <code>Select</code>! All we have to do is mount the <code>Select</code> component, make a few tweaks to our render code, and then pass in a little configuration information. Let's do that next.</p>
 <h3 id="importing-the-select-component">Importing the Select component<a class="headerlink" href="#importing-the-select-component" title="Permanent link">&para;</a></h3>
 <p>The first thing we'll do is bring in the <code>Select</code> library in the first place.</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">import</span> <span class="nn">Select</span> <span class="k">as</span> <span class="n">Select</span>
-<span class="kr">import</span> <span class="nn">Select.Utils.Setters</span> <span class="k">as</span> <span class="n">Setters</span>
+<span class="kr">import</span> <span class="nn">Select.Setters</span> <span class="k">as</span> <span class="n">Setters</span>
 </pre></div>
 </td></tr></table>
 
@@ -879,7 +877,7 @@
 </div>
 <p>Next, we need to update our <code class="codehilite"><span class="kt">ChildSlot</span></code> and <code class="codehilite"><span class="kt">ChildQuery</span></code> types. We're only going to have one dropdown so we can leave the child slot as <code class="codehilite"><span class="kt">Unit</span></code>; we do need to add the <code>Select</code> component's query type to our <code class="codehilite"><span class="kt">ChildQuery</span></code> synonym, however.</p>
 <p>This code, unfortunately, won't work:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2
 3
 4
@@ -896,12 +894,12 @@
 </td></tr></table>
 
 <p>The compiler has noticed that <code class="codehilite"><span class="kt">ChildQuery</span></code>, a type synonym, is partially applied. That's because <code class="codehilite"><span class="kt">Select</span><span class="o">.</span><span class="kt">Query</span></code>, itself a type synonym, takes several arguments as described in the <a href="https://pursuit.purescript.org/packages/purescript-halogen-select/2.0.0/docs/Select#t:Query">module documentation on Pursuit</a>. Let's walk through each one:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">type</span> <span class="kt">ChildQuery</span> <span class="n">o</span> <span class="n">item</span> <span class="ow">=</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">Query</span> <span class="n">o</span> <span class="n">item</span>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">type</span> <span class="kt">ChildQuery</span> <span class="n">o</span> <span class="n">item</span> <span class="ow">=</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">Query</span> <span class="n">o</span> <span class="n">item</span>
 </pre></div>
 </td></tr></table>
 
 <p><code>o</code> is <em>your</em> query type. Remember how you can embed your own queries into <code>Select</code>, and in that way extend the component's functionality? This is how. So we can fill in the first argument:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">type</span> <span class="kt">ChildQuery</span> <span class="n">item</span> <span class="ow">=</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">Query</span> <span class="kt">Query</span> <span class="n">item</span>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">type</span> <span class="kt">ChildQuery</span> <span class="n">item</span> <span class="ow">=</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">Query</span> <span class="kt">Query</span> <span class="n">item</span>
 </pre></div>
 </td></tr></table>
 
@@ -910,7 +908,7 @@
 <h3 id="mounting-the-component">Mounting the component<a class="headerlink" href="#mounting-the-component" title="Permanent link">&para;</a></h3>
 <p>We're finally ready to mount the <code>Select</code> component. Mounting any component in Halogen requires supplying a slot value, the component itself, the component's input, and the component's handler. We can put together all of these except for the input, which we haven't prepared yet.</p>
 <p>Let's stub out our render function in preparation:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2
 3
 4
@@ -931,7 +929,7 @@
 </td></tr></table>
 
 <p>With that out of the way, we can turn to filling in our component's input type. We can either look at the module documentation for <code>Select.Input</code> or look at the type error that resulted from our typed hole, <code>?input</code>. Both will tell us that we need to provide a value of this type:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2
 3
 4
@@ -948,7 +946,7 @@
 </td></tr></table>
 
 <p>Let's build this up, step by step. First, we see we have to provide an <code class="codehilite"><span class="kt">InputType</span></code>. This is described in the module documentation:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2
 3
 4
@@ -963,7 +961,7 @@
 </td></tr></table>
 
 <p>We don't have any text input for our dropdown -- its a button -- so we'll go with the <code class="codehilite"><span class="kt">Toggle</span></code> constructor.</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2
 3
 4
@@ -976,7 +974,7 @@
 </td></tr></table>
 
 <p>Next, we're expected to provide an array of items. Fortunately we already have those in our <code class="codehilite"><span class="kt">State</span></code>. We can just send those items directly into the input.</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2
 3
 4</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">selectInput</span> <span class="ow">=</span>
@@ -987,7 +985,7 @@
 </td></tr></table>
 
 <p>Next, we're expected to provide an initial search. This would be more useful if we had a text input, but for our dropdown, we'll start off with no initial search.</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2
 3
 4</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">selectInput</span> <span class="ow">=</span>
@@ -998,7 +996,7 @@
 </td></tr></table>
 
 <p>What about a debounce time? For toggle-driven components, this is how long to aggregate key presses before the user's typing should affect the list of items. For search-driven components, this is how long to delay before raising a message with the new search. For our dropdown, we don't care:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2
 3
 4</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="nf">selectInput</span> <span class="ow">=</span>
@@ -1011,7 +1009,7 @@
 <p>Finally, we're expected to provide a render function to the component. Ah ha! We've actually already written a render function for a dropdown -- it's just that the type is wrong.</p>
 <h3 id="adapting-the-render-function-for-select">Adapting the render function for <code>Select</code><a class="headerlink" href="#adapting-the-render-function-for-select" title="Permanent link">&para;</a></h3>
 <p>Let's look at the types side-by-side:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span> 1
  2
  3
  4
@@ -1036,7 +1034,7 @@
 </td></tr></table>
 
 <p>From this, we can see that we need to use the state type from <code>Select</code> to drive our render function, not the state from our parent component. Will our function still work? Let's look at <a href="https://pursuit.purescript.org/packages/purescript-halogen-select/2.0.0/docs/Select#t:State"><code>Select</code>'s state type in the module documentation</a> to see what we have available:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span> 1
  2
  3
  4
@@ -1064,7 +1062,7 @@
 <p>As a general rule, <code>Select</code> does not manage selections on your behalf. You are expected to decide what you want to happen when an item is selected and to store the selections yourself.</p>
 <p>What can we do? We don't have all the information we need to write this function. Or do we?</p>
 <p>In fact, <em>so long as we write the <code>Select</code> render function within the <code>where</code> clause of the parent component's render function</em>, we have access to the parent's state! Let's give it a shot.</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span> 1
  2
  3
  4
@@ -1103,7 +1101,7 @@
 </td></tr></table>
 
 <p>It works! Even better, we no longer have to manage things like <code class="codehilite"><span class="nf">openState</span></code> in the parent anymore. Finally, now that we have the render function we need, we can finally finish our component's input type:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span> 1
  2
  3
  4
@@ -1151,7 +1149,7 @@
 <li>An element that contains those items</li>
 <li>A focusable element that can be used to toggle visibility and capture keystrokes</li>
 </ul>
-<p>Accordingly, you'll need to use three helper functions, each exported by the <code>Select.Utils.Setters</code> module:</p>
+<p>Accordingly, you'll need to use three helper functions, each exported by the <code>Select.Setters</code> module:</p>
 <ul>
 <li><code>setItemProps</code></li>
 <li><code>setContainerProps</code></li>
@@ -1160,7 +1158,7 @@
 </ul>
 <p>Each of these functions should be used on the property array for the relevant element in your HTML. Let's walk through each one using our built render function.</p>
 <p>First, let's augment our individual items. <code class="codehilite"><span class="nf">setItemProps</span></code> takes an index and some properties and outputs some new properties, which include all sorts of event handlers necessary for keyboard events and click events to work. In order to provide it with the index it needs, we'll use the <code class="codehilite"><span class="nf">mapWithIndex</span></code> function from <code class="codehilite"><span class="kt">Data</span><span class="o">.</span><span class="kt">Array</span></code>.</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span> 1
  2
  3
  4
@@ -1191,7 +1189,7 @@
 </td></tr></table>
 
 <p>Next, we'll move to the element that contains the items. The <code class="codehilite"><span class="nf">setContainerProps</span></code> function takes and returns some properties, attaching all the behavior the library needs. We'll use this on the parent element, <code>ul</code>:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span> 1
  2
  3
  4
@@ -1218,7 +1216,7 @@
 </td></tr></table>
 
 <p>Finally, we can make sure that our button toggles the menu on and off, captures keyboard events, can be tabbed to, and all sorts of other stuff with the <code class="codehilite"><span class="nf">setToggleProps</span></code> function.</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span> 1
  2
  3
  4
@@ -1248,7 +1246,7 @@
 
 <p>Whew! Your rendering code now contains everything it needs to provide a keyboard-accessible dropdown. If you open this up in the browser and click around, you'll notice it's properly toggling and can be tabbed to.</p>
 <p>Let's make one last improvement. When you use your arrow keys on the dropdown, the highlighted index is changing, but since we didn't provide any CSS we can't see it. Let's add some bare-bones styling so we can watch the highlights:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span> 1
  2
  3
  4
@@ -1280,7 +1278,7 @@
 <p>...almost. Alas, we aren't doing anything when the user makes a selection. <code>Select</code> is attempting to notify us that a selection occurred, but we never provided a handler. Let's fix that now.</p>
 <h3 id="handling-messages-from-select">Handling messages from Select<a class="headerlink" href="#handling-messages-from-select" title="Permanent link">&para;</a></h3>
 <p>When you add a new child component you invariably need to add a handler for its <code class="codehilite"><span class="kt">Message</span></code> type. What should the parent do when something important has occurred in the child? To handle messages, add a new constructor to your query algebra that takes the child's <code class="codehilite"><span class="kt">Message</span></code> type as an argument:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2
 3</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">data</span> <span class="kt">Query</span> <span class="n">a</span>
   <span class="ow">=</span> <span class="kt">NoOp</span> <span class="n">a</span>
@@ -1289,7 +1287,7 @@
 </td></tr></table>
 
 <p>Ah -- this won't compile!</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2
 3
 4
@@ -1310,12 +1308,12 @@
 </td></tr></table>
 
 <p>This looks similar to the type error we got when we tried to just use <code>Select.Query</code> in a type synonym. We need to provide a <code class="codehilite"><span class="kt">Type</span></code> to <code class="codehilite"><span class="kt">HandleSelect</span></code>, but <code class="codehilite"><span class="kt">Select</span><span class="o">.</span><span class="kt">Message</span></code> is still awaiting 2 arguments, the first of which is <em>itself</em> awaiting an argument! Let's go look at the <a href="https://pursuit.purescript.org/packages/purescript-halogen-select/2.0.0/docs/Select#t:Message">module documentation for <code>Select.Message</code></a>.</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">data</span> <span class="kt">Message</span> <span class="n">o</span> <span class="n">item</span>
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">data</span> <span class="kt">Message</span> <span class="n">o</span> <span class="n">item</span>
 </pre></div>
 </td></tr></table>
 
 <p>We've seen both of these arguments before in the component's query type, so we should fill them in with the same values. <code>o</code> is our parent component query type, and <code>item</code> is a <code class="codehilite"><span class="kt">String</span></code>:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2
 3</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">data</span> <span class="kt">Query</span> <span class="n">a</span>
   <span class="ow">=</span> <span class="kt">NoOp</span> <span class="n">a</span>
@@ -1324,7 +1322,7 @@
 </td></tr></table>
 
 <p>As soon as you save and rebuild you'll see another compiler error!</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2
 3
 4
@@ -1348,7 +1346,7 @@
 <p>You'll often see type errors that end in "... value declaration component." when the error occurred in any of the functions in the <code>where</code> clause for the component. It can be annoying to track down where the error actually is in your code. One way to help track these down is to move your code out of the <code>where</code> block and into the module level temporarily so the compiler can identify which particular function is causing the issue.</p>
 </div>
 <p>There are four possible sub-cases that we need to handle, each described in the module documentation:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2
 3
 4
@@ -1361,7 +1359,7 @@
 </td></tr></table>
 
 <p>Let's stub out each of these cases and then decide what to do with them:</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span> 1
  2
  3
  4
@@ -1399,7 +1397,7 @@
 <p>What should we do when the user has searched something on our dropdown? This is just a simple list of items, so we'll simply ignore their search. We can leave this as <code class="codehilite"><span class="nf">pure</span> <span class="n">next</span></code>.</p>
 <p>What should we do when the user has selected an item? Ah! This is more interesting. We want to set their item as the currently-selected one, and then we want to remove it from the available items list. Once we've removed it from the available items, we'll update <code>Select</code> with its new items to display and we'll toggle it off.</p>
 <p>We can use <code class="codehilite"><span class="nf">difference</span></code> from <code class="codehilite"><span class="kt">Data</span><span class="o">.</span><span class="kt">Array</span></code> to filter out the selected item from the overall list of items. This is a common pattern in <code>Select</code>: the parent holds the immutable list of all possible items, and <code>Select</code> receives some subset of those items at each render. You might use the user's search to filter out items in a typeahead, for example, or only load 50 results at a time into a dropdown.</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2
 3
 4
@@ -1418,7 +1416,7 @@
 <p>What should we do when the dropdown's visibility has changed? This can often be useful to run validation, but for our dropdown, we don't care what its visibility is. We can leave this as <code class="codehilite"><span class="nf">pure</span> <span class="n">next</span></code>.</p>
 <p>Finally, what should we do when the child component raises its <code>Emit</code> message? What does this even mean? <code>Emit</code> exists so you can embed your own queries into <code>Select</code> and extend its behavior. Since the message contains one of your own queries, all you have to do is evaluate it: you can call <code>eval</code> recursively to run your query.</p>
 <p>You can think of <code>Emit</code> as notifying you that the query you embedded is ready to run.</p>
-<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+<table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
 2
 3</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kt">Select</span><span class="o">.</span><span class="kt">Emit</span> <span class="n">query</span> <span class="ow">-&gt;</span> <span class="kr">do</span>
   <span class="n">eval</span> <span class="n">query</span>
@@ -1437,7 +1435,7 @@
 <p>This tutorial was a slow, thorough introduction to the <code>Select</code> library. But we've only scratched the surface of what you can do with it. I'd recommend continuing on to the faster-paced and more advanced <a href="https://citizennet.github.io/purescript-halogen-select/tutorials/typeahead">typeahead tutorial</a>.</p>
 <h3 id="source-code">Source Code<a class="headerlink" href="#source-code" title="Permanent link">&para;</a></h3>
 <p>If you'd like to use this component as a starting point from which to build your own, feel free to copy/paste the source code below.</p>
-<details class="article"><summary>Full source code for the tutorial</summary><table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre>  1
+<details class="article"><summary>Full source code for the tutorial</summary><table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>  1
   2
   3
   4
@@ -1559,7 +1557,7 @@
 <span class="kr">import</span> <span class="nn">Halogen.HTML.Events</span> <span class="k">as</span> <span class="n">HE</span>
 <span class="kr">import</span> <span class="nn">Halogen.HTML.Properties</span> <span class="k">as</span> <span class="n">HP</span>
 <span class="kr">import</span> <span class="nn">Select</span> <span class="k">as</span> <span class="n">Select</span>
-<span class="kr">import</span> <span class="nn">Select.Utils.Setters</span> <span class="k">as</span> <span class="n">Setters</span>
+<span class="kr">import</span> <span class="nn">Select.Setters</span> <span class="k">as</span> <span class="n">Setters</span>
 
 <span class="kr">data</span> <span class="kt">Query</span> <span class="n">a</span>
   <span class="ow">=</span> <span class="kt">HandleSelect</span> <span class="p">(</span><span class="kt">Select</span><span class="o">.</span><span class="kt">Message</span> <span class="kt">Query</span> <span class="kt">String</span><span class="p">)</span> <span class="n">a</span>
@@ -1736,9 +1734,9 @@
       
     </div>
     
-      <script src="../../assets/javascripts/application.a59e2a89.js"></script>
+      <script src="../../assets/javascripts/application.583bbe55.js"></script>
       
-      <script>app.initialize({version:"0.17.5",url:{base:"../.."}})</script>
+      <script>app.initialize({version:"1.0.2",url:{base:"../.."}})</script>
       
         <script src="../../js/app.js"></script>
       
