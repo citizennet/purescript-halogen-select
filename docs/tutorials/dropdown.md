@@ -14,7 +14,7 @@ This tutorial is intended as a beginner-friendly, thorough introduction to `Sele
     !!! warning ""
         **If you are already an intermediate or advanced PureScript developer, then this tutorial will read slowly for you. Feel free to skim, get the gist of how the library works, and then move on to the [faster-paced and more advanced typeahead tutorial](https://citizennet.github.io/purescript-halogen-select/tutorials/typeahead).**
 
-    Your code should work at the end of every step. If you run into issues or your code doesn't compile, please come visit us on the [PureScript user forum](https://purescript-users.ml) or the [#fpchat Slack channel](https://functionalprogramming.slack.com).
+    Your code should work at the end of every step. If you run into issues or your code doesn't compile, please come visit us on the [PureScript user forum](https://discourse.purescript.org) or the [#fpchat Slack channel](https://functionalprogramming.slack.com).
 
 We're going to build a dropdown that is functionally equivalent this one:
 
@@ -560,7 +560,7 @@ Nice and simple! While you may write all kinds of logic for the other messages r
 Congratulations! You have successfully built a keyboard-navigable dropdown using `Select`. You integrated the library, wrote your own render function, and then augmented it with helper functions from the library. Then, you handled the output messages and sent queries to update the component's state. You've done quite a lot of work!
 
 !!! tip
-    Did you notice anything you would improve about this tutorial or the `Select` library? I'd love to hear about it! Feel free to reach out on the [functional programming Slack](https://functionalprogramming.slack.com/) or on the [PureScript user forum](https://purescript-users.ml). If you found a bug or would like to make an improvement, please open an issue or pull request on the library.
+    Did you notice anything you would improve about this tutorial or the `Select` library? I'd love to hear about it! Feel free to reach out on the [functional programming Slack](https://functionalprogramming.slack.com/) or on the [PureScript user forum](https://discourse.purescript.org). If you found a bug or would like to make an improvement, please open an issue or pull request on the library.
 
 ### Next Steps
 

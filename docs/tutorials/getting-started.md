@@ -11,7 +11,7 @@ Instead of creating a new Halogen project from scratch, we’ll start with a min
 
 ### Installation
 
-First, clone the Halogen template project from CitizenNet, install dependencies, and make sure things build properly. If they don’t, please reach out on the [Purescript user forum](https://purescript-users.ml) so we can fix it!
+First, clone the Halogen template project from CitizenNet, install dependencies, and make sure things build properly. If they don’t, please reach out on the [Purescript user forum](https://discourse.purescript.org) so we can fix it!
 
 Next, make sure to install `Select`:
 
@@ -20,7 +20,7 @@ bower i --save purescript-halogen-select
 ```
 
 !!! warning
-    The PureScript compiler recently updated to version `0.12` and many core libraries updated at the same time. If you run into version conflicts, please reach out on the [Purescript user forum](https://purescript-users.ml).
+    The PureScript compiler recently updated to version `0.12` and many core libraries updated at the same time. If you run into version conflicts, please reach out on the [Purescript user forum](https://discourse.purescript.org).
 
 And that's it! You now have everything you need to complete the tutorials. This is the full set of steps you can follow to get all set up:
 
