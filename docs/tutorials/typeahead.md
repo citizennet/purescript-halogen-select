@@ -18,7 +18,7 @@ Along the way, we'll see how to extend `Select`'s features by embedding parent q
 
     It also assumes familiarity with Halogen and intermediate PureScript experience or that you have already completed the [more thorough, beginner-friendly dropdown tutorial](https://citizennet.github.io/purescript-halogen-select/tutorials/dropdown). If you need a Halogen refresher, try the official [Halogen guide](https://github.com/slamdata/purescript-halogen/tree/master/docs) or the [whirlwind tour](https://citizennet.github.io/purescript-halogen-select/tutorials/getting-started/#a-whirlwind-tour-of-our-starter-component) of our starter component.
 
-    Your code should work at the end of every step. If you run into issues or your code doesn't compile, please come visit us on the [PureScript user forum](https://purescript-users.ml) or the [#fpchat Slack channel](https://functionalprogramming.slack.com).
+    Your code should work at the end of every step. If you run into issues or your code doesn't compile, please come visit us on the [PureScript user forum](https://discourse.purescript.org) or the [#fpchat Slack channel](https://functionalprogramming.slack.com).
 
 
 ## Basic Setup
@@ -652,7 +652,7 @@ That's it! We now have a fully-functioning typeahead that will fetch data remote
 Now that you're able to build a typeahead with `Select` you know everything you need to build more complex components like date pickers and image pickers. The next tutorial in the series, *Let's build a date picker*, is currently a work in progress.
 
 !!! tip
-    Did you notice anything you would improve about this tutorial or the `Select` library? I'd love to hear about it! Feel free to reach out on the [functional programming Slack](https://functionalprogramming.slack.com/) or on the [PureScript user forum](https://purescript-users.ml). If you found a bug or would like to make an improvement, please open an issue or pull request on the library.
+    Did you notice anything you would improve about this tutorial or the `Select` library? I'd love to hear about it! Feel free to reach out on the [functional programming Slack](https://functionalprogramming.slack.com/) or on the [PureScript user forum](https://discourse.purescript.org). If you found a bug or would like to make an improvement, please open an issue or pull request on the library.
 
 ### Source Code
 
