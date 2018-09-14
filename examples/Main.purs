@@ -48,7 +48,9 @@ type Components m
 routes :: ∀ m. MonadAff m => Components m
 routes = Map.fromFoldable
   [ Tuple "typeahead" $ proxy Component.typeahead
-  , Tuple "dropdown" $ proxy Component.dropdown ]
+  , Tuple "dropdown" $ proxy Component.dropdown
+  , Tuple "tiered" $ proxy Component.tiered
+  ]
 
 data Query a = NoOp a
 

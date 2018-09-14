@@ -11,6 +11,7 @@ import Halogen.HTML as HH
 
 import Docs.Components.Typeahead as Typeahead
 import Docs.Components.Dropdown as Dropdown
+import Docs.Components.Tiered as Tiered
 
 ----------
 -- Component Types
@@ -77,3 +78,18 @@ dropdown =
       , "Hannibal Buress"
       , "Rico Suave"
       ]
+
+tiered :: ∀ m. MonadAff m => Component m
+tiered =
+  H.parentComponent
+    { initialState: const unit
+    , render
+    , eval
+    , receiver: const Nothing
+    }
+  where
+    eval :: Query ~> DSL Tiered.Query m
+    eval (NoOp a) = pure a
+
+    render :: Unit -> HTML Tiered.Query m
+    render _ = HH.slot unit Tiered.component unit (const Nothing)
