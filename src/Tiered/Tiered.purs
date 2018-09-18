@@ -2,8 +2,11 @@ module Select.Tiered where
 
 import Prelude
 
-import Data.Array (drop, length, (!!), (:))
+import Data.Array (drop, length, mapWithIndex, (!!), (:))
+import Data.Bifunctor (lmap)
 import Data.Maybe (Maybe(..), isNothing)
+import Data.Newtype (class Newtype, unwrap)
+import Data.Tuple (Tuple(..), snd)
 import Effect.Aff.Class (class MonadAff)
 import Halogen as H
 import Halogen.HTML as HH
@@ -47,53 +50,56 @@ mkParentMenu highlightedIndex items = { highlightedIndex, items }
 
 -- | The stack consists of an active menu (head) that key actions will
 -- | operate on, plus one or more parent menus.
-type Stack item =
-  { head :: ActiveMenu item
-  , tail :: Array (ParentMenu item)
-  }
+type Stack item = Tuple (ActiveMenu item) (Array (ParentMenu item))
 
 -- | Make the initial stack from a list of items
 initStack :: ∀ item. Array (Item item) -> Stack item
-initStack items = { head: mkActiveMenu items, tail: [] }
+initStack items = Tuple (mkActiveMenu items) []
 
 -- | Push the current highlight onto the stack with a maybe highlighted index
 pushStack :: ∀ item. Maybe Int -> Stack item -> Maybe (Stack item)
-pushStack hix { head, tail } = do
+pushStack hix (Tuple head tail) = do
   phix <- head.highlightedIndex
-  activeItems <- case head.items !! phix of
+  items <- case head.items !! phix of
     Just (Items _ items) -> pure items
     _ -> Nothing
-  pure
-    { head:
-      { items: activeItems
-      , highlightedIndex: join (flip verifyIndex activeItems <$> hix)
-      }
-    , tail: { items: head.items, highlightedIndex: phix } : tail
-    }
+  let head' = { items, highlightedIndex: join (flip verifyIndex items <$> hix) }
+  pure $ Tuple head' ({ items: head.items, highlightedIndex: phix } : tail)
 
 -- |
-trimStack :: ∀ item. Int -> Stack item -> Maybe (Stack item)
-trimStack n s@{ tail }
+trimStack :: ∀ item. StackIndex -> Stack item -> Maybe (Stack item)
+trimStack (StackIndex n) s@(Tuple _ tail)
   | n <= 0 = Just s
   | otherwise =
       let update x = x { highlightedIndex = Just x.highlightedIndex }
        in case tail !! 0 of
         Nothing -> Nothing
-        Just menu -> trimStack (n - 1) { head: update menu, tail: drop 1 tail }
-
+        Just menu -> trimStack (StackIndex $ n - 1) (Tuple (update menu) (drop 1 tail))
 
 -- |
 data HighlightTarget
-  = Preview Int
-  | Active Int
-  | Parent Int Int
+  = InPreview ItemIndex
+  | InActive ItemIndex
+  | InParent StackIndex ItemIndex
+
+newtype StackIndex = StackIndex Int
+derive instance newtypeStackIndex :: Newtype StackIndex _
+derive instance eqStackIndex :: Eq StackIndex
+
+newtype ItemIndex = ItemIndex Int
+derive instance newtypeItemIndex :: Newtype ItemIndex _
+derive instance eqItemIndex :: Eq ItemIndex
+
+-- |
+data MenuTier
+  = Preview
+  | Stack StackIndex
 
 -- | Verify the provided integer is in bounds for the array
 verifyIndex :: ∀ a. Int -> Array a -> Maybe Int
 verifyIndex n arr
   | n >= 0 && n < length arr = Just n
   | otherwise = Nothing
-
 
 -- | The component state maintains information about the overall
 -- | component; collections maintain additional information.
@@ -147,7 +153,9 @@ component =
     HH.div
       [ css "container mx-auto p-8" ]
       [ renderToggle
-      --  , renderMenu ((length st.stack) - 1)
+      , case st.stack of
+          Nothing -> HH.text "nothing in the stack"
+          Just x -> renderMenu (Stack $ StackIndex $ length $ snd x)
       ]
 
     where
@@ -160,44 +168,59 @@ component =
         ]
         [ HH.text "Toggle Me Bro" ]
 
-    --  renderMenu :: Either PreviewIndex StackIndex -> H.ComponentHTML (Query item)
-    --  renderMenu x@(Left (Preview (Stack pix) iix)) = case st.stack !! pix of
-    --    Just parentMenu -> case parentMenu !! iix of
-    --      Just (Items _ items) -> do
-    --        let menu = mkMenu items
-    --        HH.ul_ $ mapWithIndex (renderItem x menu.highlightedIndex) menu.items
-    --      _ -> HH.text ""
-    --    _ -> HH.text ""
-    --  renderMenu x@(Right (Stack mix)) = case st.stack !! mix of
-    --    Just menu -> HH.ul_ $ mapWithIndex (renderItem x menu.highlightedIndex) menu.items
-    --    _ -> HH.text ""
+    renderMenu :: MenuTier -> H.ComponentHTML (Query item)
+    renderMenu tier = case tier, st.stack of
+      _, Nothing -> HH.text "there is no stack"
 
-    --  renderItem
-    --    :: Either PreviewIndex StackIndex
-    --    -> Maybe Int
-    --    -> Int
-    --    -> Item item
-    --    -> H.ComponentHTML (Query item)
-    --  renderItem mix hix iix (Item item) =
-    --    HH.li
-    --      [ if (hix == Just iix) then css "bg-grey-lighter" else css ""
-    --      , HE.onMouseOver $ HE.input_ $ Highlight mix iix
-    --      ]
-    --      [ HH.text item ]
-    --  renderItem mix hix iix i@(Items item items) =
-    --    HH.li_
-    --      [ HH.div
-    --        [ if (hix == Just iix) then css "bg-grey-lightest" else css ""
-    --        , HE.onMouseOver $ HE.input_ $ Highlight mix iix
-    --        ]
-    --        [ HH.text $ item <> " >>>" ]
-    --      , case mix of
-    --          Left (PreviewIndex _ _) -> HH.text ""
-    --          Right s | hix == Just iix ->
-    --            case nextStackIndex s st.stack of
-    --              Just six -> renderMenu (Right six)
-    --              Nothing -> HH.text ""
-    --      ]
+      i@(Stack (StackIndex 0)), Just (Tuple menu _) ->
+        HH.ul_
+          $ flip mapWithIndex menu.items
+          $ (\ix -> renderItem i menu.highlightedIndex (ItemIndex ix))
+
+      i@(Stack (StackIndex n)), Just (Tuple _ tail)
+        | n > 0 -> case tail !! (n - 1) of
+          Nothing -> HH.text ""
+          Just menu ->
+            HH.ul_
+              $ flip mapWithIndex menu.items
+              $ (\ix -> renderItem i (Just menu.highlightedIndex) (ItemIndex ix))
+        | otherwise -> HH.text ""
+
+      Preview, Just (Tuple head _) -> case head.highlightedIndex >>= (!!) head.items of
+        Just (Items _ items) ->
+          HH.ul_
+            $ flip mapWithIndex items
+            $ (\ix -> renderItem Preview Nothing (ItemIndex ix))
+        _ -> HH.text ""
+
+
+    renderItem
+      :: MenuTier -> Maybe Int -> ItemIndex -> Item item -> H.ComponentHTML (Query item)
+    renderItem tier hix iix i@(Item item) =
+      HH.li
+        [ if hix == Just (unwrap iix) then css "bg-grey-lighter" else css ""
+        , HE.onMouseOver $ HE.input_ $ Highlight $ case tier of
+            Preview -> InPreview iix
+            Stack (StackIndex 0) -> InActive iix
+            Stack six -> InParent six iix
+        ]
+        [ HH.text item ]
+    renderItem tier hix iix i@(Items item items) =
+      HH.li_
+        [ HH.div
+          [ if hix == Just (unwrap iix) then css "bg-grey-lighter" else css ""
+          , HE.onMouseOver $ HE.input_ $ Highlight $ case tier of
+              Preview -> InPreview iix
+              Stack (StackIndex 0) -> InActive iix
+              Stack six -> InParent six iix
+          ]
+          [ HH.text $ item <> " >>>" ]
+        , case hix == Just (unwrap iix), tier of
+            true, Stack (StackIndex n)
+              | n == 0 -> renderMenu Preview
+              | n >= 0 -> renderMenu (Stack (StackIndex $ n - 1))
+            _, _ -> HH.text ""
+        ]
 
   eval :: Query item ~> H.ComponentDSL (State item) (Query item) (Message item) m
   eval = case _ of
@@ -214,13 +237,13 @@ component =
       st <- H.get
       case st.stack of
         Nothing -> pure unit
-        Just stack -> case target of
-          Preview iix ->
+        Just stack@(Tuple head tail) -> case target of
+          InPreview (ItemIndex iix) ->
             H.modify_ _ { stack = pushStack (Just iix) stack }
-          Active iix -> do
-            let head = stack.head { highlightedIndex = verifyIndex iix stack.head.items }
-            H.modify_ _ { stack = Just $ stack { head = head } }
-          Parent six iix -> do
-            let ns = _ { head { highlightedIndex = Just iix } } <$> trimStack six stack
+          InActive (ItemIndex iix) -> do
+            let head' = head { highlightedIndex = verifyIndex iix head.items }
+            H.modify_ _ { stack = Just $ lmap (const head') stack }
+          InParent six (ItemIndex iix) -> do
+            let ns = lmap (_ { highlightedIndex = Just iix }) <$> trimStack six stack
             H.modify_ _ { stack = ns }
 
