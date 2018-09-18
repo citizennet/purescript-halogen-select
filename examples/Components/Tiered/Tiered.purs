@@ -41,7 +41,6 @@ component =
     items =
       [ Item "Companies"
       , Item "Accounts"
-      , Item "Social Identities"
       , Items "Sub Menu"
           [ Item "Facebook"
           , Item "Twitter"
@@ -53,6 +52,12 @@ component =
               , Item "Ello"
               , Item "Discourse"
               ]
+          ]
+      , Item "Social Identities"
+      , Items "Other Sub"
+          [ Item "Jon"
+          , Item "Tom"
+          , Item "Mon+"
           ]
       ]
 

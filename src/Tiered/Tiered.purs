@@ -2,10 +2,8 @@ module Select.Tiered where
 
 import Prelude
 
-import Data.Array (mapWithIndex)
-import Data.Foldable (elem, null)
-import Data.List (List, elemIndex, findIndex, updateAt, (:))
-import Data.Maybe (Maybe(..), isJust)
+import Data.Array (drop, length, (!!), (:))
+import Data.Maybe (Maybe(..), isNothing)
 import Effect.Aff.Class (class MonadAff)
 import Halogen as H
 import Halogen.HTML as HH
@@ -29,20 +27,80 @@ derive instance ordItems :: Ord item => Ord (Item item)
 
 -- | A data type representing a collection of items, which may
 -- | contain further collections
-type Menu item =
+type ActiveMenu item =
   { items :: Array (Item item)
   , highlightedIndex :: Maybe Int
   }
 
-mkMenu :: ∀ item. Array (Item item) -> Menu item
-mkMenu items = { items, highlightedIndex: Nothing }
+mkActiveMenu :: ∀ item. Array (Item item) -> ActiveMenu item
+mkActiveMenu items = { items, highlightedIndex: Nothing }
+
+-- | A data type representing a collection of items, which may
+-- | contain further collections
+type ParentMenu item =
+  { items :: Array (Item item)
+  , highlightedIndex :: Int
+  }
+
+mkParentMenu :: ∀ item. Int -> Array (Item item) -> ParentMenu item
+mkParentMenu highlightedIndex items = { highlightedIndex, items }
+
+-- | The stack consists of an active menu (head) that key actions will
+-- | operate on, plus one or more parent menus.
+type Stack item =
+  { head :: ActiveMenu item
+  , tail :: Array (ParentMenu item)
+  }
+
+-- | Make the initial stack from a list of items
+initStack :: ∀ item. Array (Item item) -> Stack item
+initStack items = { head: mkActiveMenu items, tail: [] }
+
+-- | Push the current highlight onto the stack with a maybe highlighted index
+pushStack :: ∀ item. Maybe Int -> Stack item -> Maybe (Stack item)
+pushStack hix { head, tail } = do
+  phix <- head.highlightedIndex
+  activeItems <- case head.items !! phix of
+    Just (Items _ items) -> pure items
+    _ -> Nothing
+  pure
+    { head:
+      { items: activeItems
+      , highlightedIndex: join (flip verifyIndex activeItems <$> hix)
+      }
+    , tail: { items: head.items, highlightedIndex: phix } : tail
+    }
+
+-- |
+trimStack :: ∀ item. Int -> Stack item -> Maybe (Stack item)
+trimStack n s@{ tail }
+  | n <= 0 = Just s
+  | otherwise =
+      let update x = x { highlightedIndex = Just x.highlightedIndex }
+       in case tail !! 0 of
+        Nothing -> Nothing
+        Just menu -> trimStack (n - 1) { head: update menu, tail: drop 1 tail }
+
+
+-- |
+data HighlightTarget
+  = Preview Int
+  | Active Int
+  | Parent Int Int
+
+-- | Verify the provided integer is in bounds for the array
+verifyIndex :: ∀ a. Int -> Array a -> Maybe Int
+verifyIndex n arr
+  | n >= 0 && n < length arr = Just n
+  | otherwise = Nothing
+
 
 -- | The component state maintains information about the overall
 -- | component; collections maintain additional information.
 type State item =
   { inputElement :: Maybe HTMLElement
-  , stack :: Stack item
   , items :: Array (Item item)
+  , stack :: Maybe (Stack item)
   }
 
 -- | Can provide an optional input element for simplicity, otherwise
@@ -60,7 +118,7 @@ data Message item
 data Query item a
   = CaptureRef Event a
   | SelectItem (Item item) a
-  | Highlight (Menu item) Int a
+  | Highlight HighlightTarget a
 
 -- | The component
 component
@@ -79,7 +137,7 @@ component =
   where
 
   initialState :: Input item -> State item
-  initialState { inputElement, items } = { inputElement, stack: mempty, items }
+  initialState { inputElement, items } = { inputElement, stack: Nothing, items }
 
   css :: ∀ i r. String -> HH.IProp ("class" :: String | r) i
   css = HP.class_ <<< HH.ClassName
@@ -89,7 +147,7 @@ component =
     HH.div
       [ css "container mx-auto p-8" ]
       [ renderToggle
-      , renderMenu (mkMenu st.items)
+      --  , renderMenu ((length st.stack) - 1)
       ]
 
     where
@@ -102,78 +160,67 @@ component =
         ]
         [ HH.text "Toggle Me Bro" ]
 
-    renderMenu :: Menu item -> H.ComponentHTML (Query item)
-    renderMenu menu = if elem menu st.stack
-      then HH.ul_ $ mapWithIndex (renderItem menu menu.highlightedIndex) menu.items
-      else HH.text ""
+    --  renderMenu :: Either PreviewIndex StackIndex -> H.ComponentHTML (Query item)
+    --  renderMenu x@(Left (Preview (Stack pix) iix)) = case st.stack !! pix of
+    --    Just parentMenu -> case parentMenu !! iix of
+    --      Just (Items _ items) -> do
+    --        let menu = mkMenu items
+    --        HH.ul_ $ mapWithIndex (renderItem x menu.highlightedIndex) menu.items
+    --      _ -> HH.text ""
+    --    _ -> HH.text ""
+    --  renderMenu x@(Right (Stack mix)) = case st.stack !! mix of
+    --    Just menu -> HH.ul_ $ mapWithIndex (renderItem x menu.highlightedIndex) menu.items
+    --    _ -> HH.text ""
 
-    renderItem :: Menu item -> Maybe Int -> Int -> Item item -> H.ComponentHTML (Query item)
-    renderItem menu hi ix (Item item) =
-      HH.li
-        [ if (hi == Just ix) then css "bg-grey-lightest" else css ""
-        , HE.onMouseOver $ HE.input_ $ Highlight menu ix
-        ]
-        [ HH.text item ]
-    renderItem menu hi ix i@(Items item items) =
-      HH.li
-        [ if (hi == Just ix) then css "bg-grey-lightest" else css ""
-        , HE.onMouseOver $ HE.input_ $ Highlight menu ix
-        ]
-        [ HH.div
-          [ HE.onMouseDown $ HE.input_ $ SelectItem i ]
-          [ HH.text $ item <> " >>>" ]
-        , renderMenu (mkMenu items)
-        ]
-
-  isMenu :: Item item -> Boolean
-  isMenu (Item _) = false
-  isMenu (Items _ _) = true
+    --  renderItem
+    --    :: Either PreviewIndex StackIndex
+    --    -> Maybe Int
+    --    -> Int
+    --    -> Item item
+    --    -> H.ComponentHTML (Query item)
+    --  renderItem mix hix iix (Item item) =
+    --    HH.li
+    --      [ if (hix == Just iix) then css "bg-grey-lighter" else css ""
+    --      , HE.onMouseOver $ HE.input_ $ Highlight mix iix
+    --      ]
+    --      [ HH.text item ]
+    --  renderItem mix hix iix i@(Items item items) =
+    --    HH.li_
+    --      [ HH.div
+    --        [ if (hix == Just iix) then css "bg-grey-lightest" else css ""
+    --        , HE.onMouseOver $ HE.input_ $ Highlight mix iix
+    --        ]
+    --        [ HH.text $ item <> " >>>" ]
+    --      , case mix of
+    --          Left (PreviewIndex _ _) -> HH.text ""
+    --          Right s | hix == Just iix ->
+    --            case nextStackIndex s st.stack of
+    --              Just six -> renderMenu (Right six)
+    --              Nothing -> HH.text ""
+    --      ]
 
   eval :: Query item ~> H.ComponentDSL (State item) (Query item) (Message item) m
   eval = case _ of
     CaptureRef ev a -> a <$ do
       st <- H.get
       H.modify_ _ { inputElement = fromEventTarget =<< currentTarget ev }
-      when (null st.stack) (H.modify_ _ { stack = mkMenu st.items : st.stack })
+      when (isNothing st.stack) (H.modify_ _ { stack = Just $ initStack st.items })
 
-    SelectItem i a -> a <$ case i of
-      Item _ -> H.raise $ Selected i
-      Items _ items -> do
-        st <- H.get
-        let inStack = isJust $ findIndex (\x -> x.items == items) st.stack
-        when (not inStack) (H.modify_ _ { stack = mkMenu items : st.stack })
-        H.raise $ Selected i
+    SelectItem item a -> do
+      H.raise $ Selected item
+      pure a
 
-    Highlight menu ix a -> a <$ do
-      { stack } <- H.get
-      let newMenu = menu { highlightedIndex = Just ix }
-      case elemIndex menu stack of
-        Nothing -> H.modify_ _ { stack = newMenu : stack }
-        Just mix -> case updateAt mix newMenu stack of
-          Nothing -> pure unit
-          Just newStack -> H.modify_ _ { stack = newStack }
+    Highlight target a -> a <$ do
+      st <- H.get
+      case st.stack of
+        Nothing -> pure unit
+        Just stack -> case target of
+          Preview iix ->
+            H.modify_ _ { stack = pushStack (Just iix) stack }
+          Active iix -> do
+            let head = stack.head { highlightedIndex = verifyIndex iix stack.head.items }
+            H.modify_ _ { stack = Just $ stack { head = head } }
+          Parent six iix -> do
+            let ns = _ { head { highlightedIndex = Just iix } } <$> trimStack six stack
+            H.modify_ _ { stack = ns }
 
-
-----------
--- Stack Manipulation
-
-type Stack item = List (Menu item)
-
-
-----------
--- Scratch
-
-{-
-
-1. Maintain focus on some trigger element, but also maintain 'highlight' or 'selected'
-   focus either ephemerally (hover) or pinned (click) on menus
-
-2. On items, set handlers for left & right arrows. If this item is an Items, then right
-   arrow should open the sub menu, left arrow should do nothing if anything is highlighted
-   in the sub menu, left arrow should close the submenu if nothing is highlighted in it.
-   If it is an Item, then right arrow should do nothing, left arrow should do nothing.
-
-3. Maintain a stack of "active" menus, where the topmost stack is the one which should
-   handle events registered on the focus element
-
--}
