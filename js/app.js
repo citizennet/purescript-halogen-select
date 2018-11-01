@@ -390,8 +390,11 @@ var PS = {};
   var Data_Ordering = PS["Data.Ordering"];
   var Data_Ring = PS["Data.Ring"];
   var Data_Semiring = PS["Data.Semiring"];
+  var Data_Symbol = PS["Data.Symbol"];
   var Data_Unit = PS["Data.Unit"];
-  var Data_Void = PS["Data.Void"];                 
+  var Data_Void = PS["Data.Void"];
+  var Record_Unsafe = PS["Record.Unsafe"];
+  var Type_Data_RowList = PS["Type.Data.RowList"];                 
   var Ord = function (Eq0, compare) {
       this.Eq0 = Eq0;
       this.compare = compare;
@@ -1845,8 +1848,8 @@ var PS = {};
   var foldableList = new Data_Foldable.Foldable(function (dictMonoid) {
       return function (f) {
           return Data_Foldable.foldl(foldableList)(function (acc) {
-              return function ($155) {
-                  return Data_Semigroup.append(dictMonoid.Semigroup0())(acc)(f($155));
+              return function ($174) {
+                  return Data_Semigroup.append(dictMonoid.Semigroup0())(acc)(f($174));
               };
           })(Data_Monoid.mempty(dictMonoid));
       };
@@ -1878,8 +1881,8 @@ var PS = {};
   }, function (f) {
       return function (b) {
           var rev = Data_Foldable.foldl(foldableList)(Data_Function.flip(Cons.create))(Nil.value);
-          return function ($156) {
-              return Data_Foldable.foldl(foldableList)(Data_Function.flip(f))(b)(rev($156));
+          return function ($175) {
+              return Data_Foldable.foldl(foldableList)(Data_Function.flip(f))(b)(rev($175));
           };
       };
   });
@@ -2015,6 +2018,7 @@ var PS = {};
   var Data_Foldable = PS["Data.Foldable"];
   var Data_Function = PS["Data.Function"];
   var Data_Functor = PS["Data.Functor"];
+  var Data_FunctorWithIndex = PS["Data.FunctorWithIndex"];
   var Data_List = PS["Data.List"];
   var Data_List_Types = PS["Data.List.Types"];
   var Data_Maybe = PS["Data.Maybe"];
@@ -2030,8 +2034,8 @@ var PS = {};
   var Data_Unfoldable = PS["Data.Unfoldable"];
   var Partial_Unsafe = PS["Partial.Unsafe"];
   var Prelude = PS["Prelude"];
-  var singleton = function ($160) {
-      return Data_List_Types.NonEmptyList(Data_NonEmpty.singleton(Data_List_Types.plusList)($160));
+  var singleton = function ($165) {
+      return Data_List_Types.NonEmptyList(Data_NonEmpty.singleton(Data_List_Types.plusList)($165));
   };
   var cons = function (y) {
       return function (v) {
@@ -3435,12 +3439,11 @@ var PS = {};
       // the provided callback in `makeAff` more than once, but it may also be an
       // async effect resuming after the fiber was already cancelled.
       function run(localRunTick) {
-        var tmp, result, attempt, canceler;
+        var tmp, result, attempt;
         while (true) {
           tmp       = null;
           result    = null;
           attempt   = null;
-          canceler  = null;
 
           switch (status) {
           case STEP_BIND:
@@ -3502,6 +3505,12 @@ var PS = {};
                   }
                   runTick++;
                   Scheduler.enqueue(function () {
+                    // It's possible to interrupt the fiber between enqueuing and
+                    // resuming, so we need to check that the runTick is still
+                    // valid.
+                    if (runTick !== localRunTick + 1) {
+                      return;
+                    }
                     status = STEP_RESULT;
                     step   = result;
                     run(runTick);
@@ -3634,7 +3643,7 @@ var PS = {};
               // because it should not be cancelled.
               case RELEASE:
                 bracketCount++;
-                attempts = new Aff(CONS, new Aff(FINALIZED, step), attempts, interrupt);
+                attempts = new Aff(CONS, new Aff(FINALIZED, step, fail), attempts, interrupt);
                 status   = CONTINUE;
                 // It has only been killed if the interrupt status has changed
                 // since we enqueued the item.
@@ -3645,11 +3654,12 @@ var PS = {};
                 } else {
                   step = attempt._1.completed(util.fromRight(step))(attempt._2);
                 }
+                fail = null;
                 break;
 
               case FINALIZER:
                 bracketCount++;
-                attempts = new Aff(CONS, new Aff(FINALIZED, step), attempts, interrupt);
+                attempts = new Aff(CONS, new Aff(FINALIZED, step, fail), attempts, interrupt);
                 status   = CONTINUE;
                 step     = attempt._1;
                 break;
@@ -3658,6 +3668,7 @@ var PS = {};
                 bracketCount--;
                 status = RETURN;
                 step   = attempt._1;
+                fail   = attempt._2;
                 break;
               }
             }
@@ -3949,9 +3960,9 @@ var PS = {};
                   if (tmp) {
                     tmp = false;
                   } else if (tail === null) {
-                    join(step, null, null);
+                    join(fail, null, null);
                   } else {
-                    join(step, tail._1, tail._2);
+                    join(fail, tail._1, tail._2);
                   }
                 };
               });
