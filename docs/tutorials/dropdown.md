@@ -166,6 +166,10 @@ type ChildQuery item = Select.Query Query item
 
 `item` is the type of whatever items you want to be selectable. Commonly these are strings, but can also be custom data types. Later on, in the [typeahead tutorial](https://citizennet.github.io/purescript-halogen-select/tutorials/typeahead), we'll see how powerful custom data types can be for rendering purposes. For our simple dropdown we'll simply specialize this to `#!hs String`:
 
+```hs
+type ChildQuery = Select.Query Query String
+```
+
 Now that `Select` has been imported and we've updated our `ChildQuery` and `ChildSlot` types to support it, we can worry about what to do when we receive a message from the component.
 
 
