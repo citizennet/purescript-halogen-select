@@ -98,7 +98,7 @@ render st =
   ]
 
 dropdown :: State -> H.ParentHTML Query ChildQuery ChildSlot m
-dropdown =
+dropdown st =
   HH.div_
   [ HH.button_
     [ HH.text $ fromMaybe "Click me to view some items" st.selectedItem ]
