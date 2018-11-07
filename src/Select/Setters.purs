@@ -38,14 +38,13 @@ type ToggleProps p =
 -- | ```
 setToggleProps
   :: ∀ o item p
-   . Array (HP.IProp (ToggleProps p) (Query o item Unit))
+   . Select.State item
   -> Array (HP.IProp (ToggleProps p) (Query o item Unit))
-setToggleProps = flip (<>)
+  -> Array (HP.IProp (ToggleProps p) (Query o item Unit))
+setToggleProps st = flip (<>)
   [ HE.onFocus \ev -> Just do
-      Select.captureRef $ FE.toEvent ev
       Select.setVisibility On
   , HE.onMouseDown \ev -> Just do
-      Select.captureRef $ ME.toEvent ev
       Select.preventClick ev
       Select.getVisibility >>= case _ of
         Select.On -> do
@@ -57,6 +56,7 @@ setToggleProps = flip (<>)
   , HE.onKeyDown $ Just <<< Select.key
   , HE.onBlur $ Select.always $ Select.setVisibility Off
   , HP.tabIndex 0
+  , HP.ref st.inputRef
   ]
 
 -- | The properties that must be supported by the HTML element that serves
@@ -82,17 +82,18 @@ type InputProps p =
 -- | ```
 setInputProps
   :: ∀ o item p
-   . Array (HP.IProp (InputProps p) (Query o item Unit))
+   . Select.State item
   -> Array (HP.IProp (InputProps p) (Query o item Unit))
-setInputProps = flip (<>)
+  -> Array (HP.IProp (InputProps p) (Query o item Unit))
+setInputProps st = flip (<>)
   [ HE.onFocus \ev -> Just do
-      Select.captureRef $ FE.toEvent ev
       Select.setVisibility On
   , HE.onKeyDown $ Just <<< Select.key
   , HE.onValueInput $ Just <<< Select.search
   , HE.onMouseDown $ Select.always $ Select.setVisibility On
   , HE.onBlur $ Select.always $ Select.setVisibility Off
   , HP.tabIndex 0
+  , HP.ref st.inputRef
   ]
 
 -- | The properties that must be supported by the HTML element that acts as a

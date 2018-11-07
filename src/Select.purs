@@ -9,23 +9,32 @@ import Prelude
 
 import Control.Comonad (extract)
 import Control.Comonad.Store (Store, store)
-import Effect.Aff (Fiber, delay, error, forkAff, killFiber)
-import Effect.Aff.Class (class MonadAff)
-import Effect.Aff.AVar (AVar)
-import Effect.Aff.AVar as AVar
 import Control.Monad.Free (Free, foldFree, liftF)
-import Web.Event.Event (preventDefault, currentTarget, Event)
-import Web.UIEvent.KeyboardEvent as KE
-import Web.UIEvent.MouseEvent as ME
-import Web.HTML.HTMLElement (HTMLElement, blur, focus, fromEventTarget)
 import Data.Array (length, (!!))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (for_, traverse_)
-import Halogen (Component, ComponentDSL, ComponentHTML, component, liftAff, liftEffect) as H
+import Effect.Aff (Fiber, delay, error, forkAff, killFiber)
+import Effect.Aff.AVar (AVar)
+import Effect.Aff.AVar as AVar
+import Effect.Aff.Class (class MonadAff)
+import Effect.Random (random)
+import Halogen
+  ( Component
+  , ComponentDSL
+  , ComponentHTML
+  , RefLabel(..)
+  , getHTMLElementRef
+  , lifecycleComponent
+  , liftAff
+  , liftEffect) as H
 import Halogen.HTML as HH
 import Halogen.Query.HalogenM (fork, raise) as H
 import Renderless.State (getState, modifyState_, modifyStore)
+import Web.Event.Event (preventDefault)
+import Web.HTML.HTMLElement (blur, focus)
+import Web.UIEvent.KeyboardEvent as KE
+import Web.UIEvent.MouseEvent as ME
 
 ----------
 -- Component Types
@@ -66,7 +75,6 @@ data QueryF o item a
   = Search String a
   | Highlight Target a
   | Select Int a
-  | CaptureRef Event a
   | Focus Boolean a
   | Key KE.KeyboardEvent a
   | PreventClick ME.MouseEvent a
@@ -74,6 +82,7 @@ data QueryF o item a
   | GetVisibility (Visibility -> a)
   | ReplaceItems (Array item) a
   | Raise (o Unit) a
+  | Initialize a
   | Receive (Input o item) a
 
 type Query o item = Free (QueryF o item)
@@ -94,12 +103,6 @@ highlight t = liftF (Highlight t unit)
 -- | Triggers the "Selected" message for the item at the specified index.
 select :: ∀ o item. Int -> Query o item Unit
 select i = liftF (Select i unit)
-
--- | From an event, captures a reference to the element that triggered the
--- | event. Used to manage focus / blur for elements without requiring a
--- | particular identifier.
-captureRef :: ∀ o item. Event -> Query o item Unit
-captureRef r = liftF (CaptureRef r unit)
 
 -- | Trigger the DOM focus event for the element we have a reference to.
 triggerFocus :: ∀ o item . Query o item Unit
@@ -145,6 +148,10 @@ raise o = liftF (Raise o unit)
 -- | Sets the component with new input.
 receive :: ∀ o item . Input o item -> Query o item Unit
 receive i = liftF (Receive i unit)
+
+-- | Initializes the component by generating a random RefLabel for the input
+initialize :: ∀ o item . Query o item Unit
+initialize = liftF (Initialize unit)
 
 -- | Represents a way to navigate on `Highlight` events: to the previous
 -- | item, next item, or the item at a particular index.
@@ -205,7 +212,7 @@ type State item =
   , search           :: String
   , debounceTime     :: Milliseconds
   , debouncer        :: Maybe Debouncer
-  , inputElement     :: Maybe HTMLElement
+  , inputRef         :: H.RefLabel
   , items            :: Array item
   , visibility       :: Visibility
   , highlightedIndex :: Maybe Int
@@ -247,11 +254,13 @@ component :: ∀ o item m
   . MonadAff m
  => Component o item m
 component =
-  H.component
+  H.lifecycleComponent
     { initialState
     , render: extract
     , eval: eval'
     , receiver: Just <<< receive
+    , initializer: Just initialize
+    , finalizer: Nothing
     }
   where
     initialState i = store i.render
@@ -259,7 +268,7 @@ component =
       , search: fromMaybe "" i.initialSearch
       , debounceTime: fromMaybe (Milliseconds 0.0) i.debounceTime
       , debouncer: Nothing
-      , inputElement: Nothing
+      , inputRef: H.RefLabel "999z"
       , items: i.items
       , highlightedIndex: Nothing
       , visibility: Off
@@ -277,6 +286,10 @@ component =
     -- Just the normal Halogen eval
     eval :: QueryF o item ~> ComponentDSL o item m
     eval = case _ of
+      Initialize a -> a <$ do
+        ref <- H.liftEffect random
+        modifyState_ _ { inputRef = H.RefLabel (show ref) }
+
       Search str a -> a <$ do
         st <- getState
         modifyState_ _ { search = str }
@@ -337,14 +350,10 @@ component =
           for_ (st.items !! index)
             \item -> H.raise (Selected item)
 
-      CaptureRef event a -> a <$ do
-        st <- getState
-        modifyState_ _ { inputElement = fromEventTarget =<< currentTarget event }
-        pure a
-
       Focus focusOrBlur a -> a <$ do
         st <- getState
-        traverse_ (H.liftEffect <<< if focusOrBlur then focus else blur) st.inputElement
+        inputElement <- H.getHTMLElementRef st.inputRef
+        traverse_ (H.liftEffect <<< if focusOrBlur then focus else blur) inputElement
 
       Key ev a -> a <$ do
         setVis On
@@ -354,8 +363,9 @@ component =
           "ArrowDown" -> preventIt *> eval' (highlight Next)
           "Escape"    -> do
             st <- getState
+            inputElement <- H.getHTMLElementRef st.inputRef
             preventIt
-            for_ st.inputElement (H.liftEffect <<< blur)
+            for_ inputElement (H.liftEffect <<< blur)
           "Enter"     -> do
             st <- getState
             preventIt
