@@ -18,14 +18,13 @@ import Effect.Aff (Fiber, delay, error, forkAff, killFiber)
 import Effect.Aff.AVar (AVar)
 import Effect.Aff.AVar as AVar
 import Effect.Aff.Class (class MonadAff)
-import Effect.Random (random)
 import Halogen
   ( Component
   , ComponentDSL
   , ComponentHTML
   , RefLabel(..)
+  , component
   , getHTMLElementRef
-  , lifecycleComponent
   , liftAff
   , liftEffect ) as H
 import Halogen.HTML as HH
@@ -82,7 +81,6 @@ data QueryF o item a
   | GetVisibility (Visibility -> a)
   | ReplaceItems (Array item) a
   | Raise (o Unit) a
-  | Initialize a
   | Receive (Input o item) a
 
 type Query o item = Free (QueryF o item)
@@ -148,10 +146,6 @@ raise o = liftF (Raise o unit)
 -- | Sets the component with new input.
 receive :: ∀ o item . Input o item -> Query o item Unit
 receive i = liftF (Receive i unit)
-
--- | Initializes the component by generating a random RefLabel for the input
-initialize :: ∀ o item . Query o item Unit
-initialize = liftF (Initialize unit)
 
 -- | Represents a way to navigate on `Highlight` events: to the previous
 -- | item, next item, or the item at a particular index.
@@ -254,13 +248,11 @@ component :: ∀ o item m
   . MonadAff m
  => Component o item m
 component =
-  H.lifecycleComponent
+  H.component
     { initialState
     , render: extract
     , eval: eval'
     , receiver: Just <<< receive
-    , initializer: Just initialize
-    , finalizer: Nothing
     }
   where
     initialState i = store i.render
@@ -286,10 +278,6 @@ component =
     -- Just the normal Halogen eval
     eval :: QueryF o item ~> ComponentDSL o item m
     eval = case _ of
-      Initialize a -> a <$ do
-        ref <- H.liftEffect random
-        modifyState_ _ { inputRef = H.RefLabel (show ref) }
-
       Search str a -> a <$ do
         st <- getState
         modifyState_ _ { search = str }
