@@ -27,7 +27,7 @@ import Halogen
   , getHTMLElementRef
   , lifecycleComponent
   , liftAff
-  , liftEffect) as H
+  , liftEffect ) as H
 import Halogen.HTML as HH
 import Halogen.Query.HalogenM (fork, raise) as H
 import Renderless.State (getState, modifyState_, modifyStore)
