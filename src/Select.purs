@@ -328,7 +328,6 @@ component =
             \item -> H.raise (Selected item)
 
       Focus focusOrBlur a -> a <$ do
-        st <- getState
         inputElement <- H.getHTMLElementRef $ H.RefLabel "select-input"
         traverse_ (H.liftEffect <<< if focusOrBlur then focus else blur) inputElement
 
@@ -339,7 +338,6 @@ component =
           "ArrowUp"   -> preventIt *> eval' (highlight Prev)
           "ArrowDown" -> preventIt *> eval' (highlight Next)
           "Escape"    -> do
-            st <- getState
             inputElement <- H.getHTMLElementRef $ H.RefLabel "select-input"
             preventIt
             for_ inputElement (H.liftEffect <<< blur)
