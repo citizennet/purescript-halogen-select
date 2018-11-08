@@ -117,6 +117,7 @@ data QueryF o item a
   = Search String a
   | Highlight Target a
   | Select Int a
+  | CaptureRef ET.Event a
   | Focus Boolean a
   | Key KE.KeyboardEvent a
   | PreventClick ME.MouseEvent a
@@ -182,7 +183,7 @@ render st =
 	[ HH.slot unit Select.component ?input (HE.input HandleSelect) ]
 ```
 
-With that out of the way, we can turn to the component's input type. Here's what we're required to fill in, as per the [`Select` module documentation](https://pursuit.purescript.org/packages/purescript-halogen-select/3.0.0/docs/Select#t:Input):
+With that out of the way, we can turn to the component's input type. Here's what we're required to fill in, as per the [`Select` module documentation](https://pursuit.purescript.org/packages/purescript-halogen-select/2.0.0/docs/Select#t:Input):
 
 ```hs
 -- | Text-driven inputs will operate like a normal search-driven selection component.
@@ -272,7 +273,7 @@ type State item =
   , search           :: String
   , debounceTime     :: Milliseconds
   , debouncer        :: Maybe Debouncer
-  , inputRef         :: RefLabel
+  , inputElement     :: Maybe HTMLElement
   , items            :: Array item
   , visibility       :: Visibility
   , highlightedIndex :: Maybe Int
@@ -332,7 +333,7 @@ initialState = const
 
 Now that we've got a usable `#!hs State` type, let's turn to our queries. Queries are the computations available to the component, so they're the place where we ought to think about what the typeahead should *do*, rather than just how it should render.
 
-Just like `#!hs State`, when we write our own `#!hs Query` type on top of `Select`, we should consider what is already available in the component. As usual, we'll turn to the [module documentation](https://pursuit.purescript.org/packages/purescript-halogen-select/3.0.0/docs/Select#t:QueryF) to look at our available queries. I'd recommend scrolling through the available functions to get a glimpse of what `Select` offers, but we'll skip to the main points here.
+Just like `#!hs State`, when we write our own `#!hs Query` type on top of `Select`, we should consider what is already available in the component. As usual, we'll turn to the [module documentation](https://pursuit.purescript.org/packages/purescript-halogen-select/2.0.0/docs/Select#t:QueryF) to look at our available queries. I'd recommend scrolling through the available functions to get a glimpse of what `Select` offers, but we'll skip to the main points here.
 
 `Select` is going to manage all the keyboard events, text input, debouncing, moving the highlighted index, and so on. On top of that, we'll need to add some extra functionality: the ability to remove items that have already been selected, and the ability to fetch new items when the user performs a search. We'll at least need two queries to handle these two features.
 
@@ -582,7 +583,7 @@ Let's move on to the input field. This field needs to be controlled by `Select` 
 
 ```hs
 -- The text input field that will capture key events
-renderInput = HH.input ( Setters.setInputProps childState [] )
+renderInput = HH.input ( Setters.setInputProps [] )
 ```
 
 That's it! Now we have all the key events wired up for you. You could embed your own queries here, or add CSS, or whatever you want and the behavior will still work just fine.
@@ -766,7 +767,7 @@ If you'd like to use this component as a starting point from which to build your
               )
 
             -- The text input field that will capture key events
-            renderInput = HH.input ( Setters.setInputProps childState [] )
+            renderInput = HH.input ( Setters.setInputProps [] )
 
             -- The parent element holding the items  container
             renderContainer = case childState.visibility of

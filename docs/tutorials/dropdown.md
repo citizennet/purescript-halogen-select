@@ -152,7 +152,7 @@ Error found:
 in type synonym ChildQuery
 ```
 
-The compiler has noticed that `#!hs ChildQuery`, a type synonym, is partially applied. That's because `#!hs Select.Query`, itself a type synonym, takes several arguments as described in the [module documentation on Pursuit](https://pursuit.purescript.org/packages/purescript-halogen-select/3.0.0/docs/Select#t:Query). Let's walk through each one:
+The compiler has noticed that `#!hs ChildQuery`, a type synonym, is partially applied. That's because `#!hs Select.Query`, itself a type synonym, takes several arguments as described in the [module documentation on Pursuit](https://pursuit.purescript.org/packages/purescript-halogen-select/2.0.0/docs/Select#t:Query). Let's walk through each one:
 
 ```hs
 type ChildQuery o item = Select.Query o item
@@ -271,7 +271,7 @@ dropdown st =
   ]
 ```
 
-From this, we can see that we need to use the state type from `Select` to drive our render function, not the state from our parent component. Will our function still work? Let's look at [`Select`'s state type in the module documentation](https://pursuit.purescript.org/packages/purescript-halogen-select/3.0.0/docs/Select#t:State) to see what we have available:
+From this, we can see that we need to use the state type from `Select` to drive our render function, not the state from our parent component. Will our function still work? Let's look at [`Select`'s state type in the module documentation](https://pursuit.purescript.org/packages/purescript-halogen-select/2.0.0/docs/Select#t:State) to see what we have available:
 
 ```hs
 type State item =
@@ -279,7 +279,7 @@ type State item =
   , search           :: String
   , debounceTime     :: Milliseconds
   , debouncer        :: Maybe Debouncer
-  , inputRef         :: RefLabel
+  , inputElement     :: Maybe HTMLElement
   , items            :: Array item
   , visibility       :: Visibility
   , highlightedIndex :: Maybe Int
@@ -398,13 +398,13 @@ dropdown childState =
   ]
 ```
 
-Finally, we can make sure that our button toggles the menu on and off, captures keyboard events, can be tabbed to, and all sorts of other stuff with the `#!hs setToggleProps` function. Note that this function takes the Select component's state as its first argument, which is necessary for Select to maintain a reference to the toggling element.
+Finally, we can make sure that our button toggles the menu on and off, captures keyboard events, can be tabbed to, and all sorts of other stuff with the `#!hs setToggleProps` function.
 
 ```hs
 dropdown childState =
   HH.div_
   [ HH.button
-    (Setters.setToggleProps childState [])
+    (Setters.setToggleProps [])
     [ HH.text $ fromMaybe "Click me to view some items" parentState.selectedItem ]
   , case childState.visibility of
       Select.Off -> HH.text ""
@@ -464,7 +464,7 @@ Error found in module Component:
 in type constructor Query
 ```
 
-This looks similar to the type error we got when we tried to just use `Select.Query` in a type synonym. We need to provide a `#!hs Type` to `#!hs HandleSelect`, but `#!hs Select.Message` is still awaiting 2 arguments, the first of which is *itself* awaiting an argument! Let's go look at the [module documentation for `Select.Message`](https://pursuit.purescript.org/packages/purescript-halogen-select/3.0.0/docs/Select#t:Message).
+This looks similar to the type error we got when we tried to just use `Select.Query` in a type synonym. We need to provide a `#!hs Type` to `#!hs HandleSelect`, but `#!hs Select.Message` is still awaiting 2 arguments, the first of which is *itself* awaiting an argument! Let's go look at the [module documentation for `Select.Message`](https://pursuit.purescript.org/packages/purescript-halogen-select/2.0.0/docs/Select#t:Message).
 
 ```hs
 data Message o item
@@ -650,7 +650,7 @@ If you'd like to use this component as a starting point from which to build your
           dropdown childState =
             HH.div_
             [ HH.button
-              (Setters.setToggleProps childState [])
+              (Setters.setToggleProps [])
               [ HH.text $ fromMaybe "Click me to view some items" parentState.selectedItem ]
             , case childState.visibility of
                 Select.Off -> HH.text ""
