@@ -331,7 +331,8 @@ initialState = const
 ### Query
 
 Now that we've got a usable `#!hs State` type, let's turn to our queries. Queries are the computations available to the component, so they're the place where we ought to think about what the typeahead should *do*, rather than just how it should render.
-3
+
+Just like `#!hs State`, when we write our own `#!hs Query` type on top of `Select`, we should consider what is already available in the component. As usual, we'll turn to the [module documentation](https://pursuit.purescript.org/packages/purescript-halogen-select/3.0.0/docs/Select#t:QueryF) to look at our available queries. I'd recommend scrolling through the available functions to get a glimpse of what `Select` offers, but we'll skip to the main points here.
 
 `Select` is going to manage all the keyboard events, text input, debouncing, moving the highlighted index, and so on. On top of that, we'll need to add some extra functionality: the ability to remove items that have already been selected, and the ability to fetch new items when the user performs a search. We'll at least need two queries to handle these two features.
 
