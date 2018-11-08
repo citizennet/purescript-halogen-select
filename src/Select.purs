@@ -197,7 +197,6 @@ type State item =
   , search           :: String
   , debounceTime     :: Milliseconds
   , debouncer        :: Maybe Debouncer
-  , inputRef         :: H.RefLabel
   , items            :: Array item
   , visibility       :: Visibility
   , highlightedIndex :: Maybe Int
@@ -251,7 +250,6 @@ component =
       , search: fromMaybe "" i.initialSearch
       , debounceTime: fromMaybe (Milliseconds 0.0) i.debounceTime
       , debouncer: Nothing
-      , inputRef: H.RefLabel "select-input"
       , items: i.items
       , highlightedIndex: Nothing
       , visibility: Off
@@ -331,7 +329,7 @@ component =
 
       Focus focusOrBlur a -> a <$ do
         st <- getState
-        inputElement <- H.getHTMLElementRef st.inputRef
+        inputElement <- H.getHTMLElementRef $ H.RefLabel "select-input"
         traverse_ (H.liftEffect <<< if focusOrBlur then focus else blur) inputElement
 
       Key ev a -> a <$ do
@@ -342,7 +340,7 @@ component =
           "ArrowDown" -> preventIt *> eval' (highlight Next)
           "Escape"    -> do
             st <- getState
-            inputElement <- H.getHTMLElementRef st.inputRef
+            inputElement <- H.getHTMLElementRef $ H.RefLabel "select-input"
             preventIt
             for_ inputElement (H.liftEffect <<< blur)
           "Enter"     -> do
