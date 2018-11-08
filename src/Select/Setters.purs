@@ -42,8 +42,7 @@ setToggleProps
    . Array (HP.IProp (ToggleProps p) (Query o item Unit))
   -> Array (HP.IProp (ToggleProps p) (Query o item Unit))
 setToggleProps = flip (<>)
-  [ HE.onFocus \ev -> Just do
-      Select.setVisibility On
+  [ HE.onFocus $ Select.always $ Select.setVisibility On
   , HE.onMouseDown \ev -> Just do
       Select.preventClick ev
       Select.getVisibility >>= case _ of
@@ -85,8 +84,7 @@ setInputProps
    . Array (HP.IProp (InputProps p) (Query o item Unit))
   -> Array (HP.IProp (InputProps p) (Query o item Unit))
 setInputProps = flip (<>)
-  [ HE.onFocus \ev -> Just do
-      Select.setVisibility On
+  [ HE.onFocus $ Select.always $ Select.setVisibility On
   , HE.onKeyDown $ Just <<< Select.key
   , HE.onValueInput $ Just <<< Select.search
   , HE.onMouseDown $ Select.always $ Select.setVisibility On
