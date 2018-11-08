@@ -18,17 +18,8 @@ import Effect.Aff (Fiber, delay, error, forkAff, killFiber)
 import Effect.Aff.AVar (AVar)
 import Effect.Aff.AVar as AVar
 import Effect.Aff.Class (class MonadAff)
-import Halogen
-  ( Component
-  , ComponentDSL
-  , ComponentHTML
-  , RefLabel(..)
-  , component
-  , getHTMLElementRef
-  , liftAff
-  , liftEffect ) as H
+import Halogen as H
 import Halogen.HTML as HH
-import Halogen.Query.HalogenM (fork, raise) as H
 import Renderless.State (getState, modifyState_, modifyStore)
 import Web.Event.Event (preventDefault)
 import Web.HTML.HTMLElement (blur, focus)
@@ -260,7 +251,7 @@ component =
       , search: fromMaybe "" i.initialSearch
       , debounceTime: fromMaybe (Milliseconds 0.0) i.debounceTime
       , debouncer: Nothing
-      , inputRef: H.RefLabel "999z"
+      , inputRef: H.RefLabel "select-input"
       , items: i.items
       , highlightedIndex: Nothing
       , visibility: Off
