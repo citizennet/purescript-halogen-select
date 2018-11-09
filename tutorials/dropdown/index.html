@@ -840,7 +840,7 @@
   <span class="p">]</span>
 
 <span class="nf">dropdown</span> <span class="ow">::</span> <span class="kt">State</span> <span class="ow">-&gt;</span> <span class="kt">H</span><span class="o">.</span><span class="kt">ParentHTML</span> <span class="kt">Query</span> <span class="kt">ChildQuery</span> <span class="kt">ChildSlot</span> <span class="n">m</span>
-<span class="nf">dropdown</span> <span class="ow">=</span>
+<span class="nf">dropdown</span> <span class="n">st</span> <span class="ow">=</span>
   <span class="kt">HH</span><span class="o">.</span><span class="n">div_</span>
   <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">button_</span>
     <span class="p">[</span> <span class="kt">HH</span><span class="o">.</span><span class="n">text</span> <span class="o">$</span> <span class="n">fromMaybe</span> <span class="s">&quot;Click me to view some items&quot;</span> <span class="n">st</span><span class="o">.</span><span class="n">selectedItem</span> <span class="p">]</span>
@@ -893,7 +893,7 @@
 </pre></div>
 </td></tr></table>
 
-<p>The compiler has noticed that <code class="codehilite"><span class="kt">ChildQuery</span></code>, a type synonym, is partially applied. That's because <code class="codehilite"><span class="kt">Select</span><span class="o">.</span><span class="kt">Query</span></code>, itself a type synonym, takes several arguments as described in the <a href="https://pursuit.purescript.org/packages/purescript-halogen-select/2.0.0/docs/Select#t:Query">module documentation on Pursuit</a>. Let's walk through each one:</p>
+<p>The compiler has noticed that <code class="codehilite"><span class="kt">ChildQuery</span></code>, a type synonym, is partially applied. That's because <code class="codehilite"><span class="kt">Select</span><span class="o">.</span><span class="kt">Query</span></code>, itself a type synonym, takes several arguments as described in the <a href="https://pursuit.purescript.org/packages/purescript-halogen-select/3.0.0/docs/Select#t:Query">module documentation on Pursuit</a>. Let's walk through each one:</p>
 <table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">type</span> <span class="kt">ChildQuery</span> <span class="n">o</span> <span class="n">item</span> <span class="ow">=</span> <span class="kt">Select</span><span class="o">.</span><span class="kt">Query</span> <span class="n">o</span> <span class="n">item</span>
 </pre></div>
 </td></tr></table>
@@ -1037,7 +1037,7 @@
 </pre></div>
 </td></tr></table>
 
-<p>From this, we can see that we need to use the state type from <code>Select</code> to drive our render function, not the state from our parent component. Will our function still work? Let's look at <a href="https://pursuit.purescript.org/packages/purescript-halogen-select/2.0.0/docs/Select#t:State"><code>Select</code>'s state type in the module documentation</a> to see what we have available:</p>
+<p>From this, we can see that we need to use the state type from <code>Select</code> to drive our render function, not the state from our parent component. Will our function still work? Let's look at <a href="https://pursuit.purescript.org/packages/purescript-halogen-select/3.0.0/docs/Select#t:State"><code>Select</code>'s state type in the module documentation</a> to see what we have available:</p>
 <table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span> 1
  2
  3
@@ -1311,7 +1311,7 @@
 </pre></div>
 </td></tr></table>
 
-<p>This looks similar to the type error we got when we tried to just use <code>Select.Query</code> in a type synonym. We need to provide a <code class="codehilite"><span class="kt">Type</span></code> to <code class="codehilite"><span class="kt">HandleSelect</span></code>, but <code class="codehilite"><span class="kt">Select</span><span class="o">.</span><span class="kt">Message</span></code> is still awaiting 2 arguments, the first of which is <em>itself</em> awaiting an argument! Let's go look at the <a href="https://pursuit.purescript.org/packages/purescript-halogen-select/2.0.0/docs/Select#t:Message">module documentation for <code>Select.Message</code></a>.</p>
+<p>This looks similar to the type error we got when we tried to just use <code>Select.Query</code> in a type synonym. We need to provide a <code class="codehilite"><span class="kt">Type</span></code> to <code class="codehilite"><span class="kt">HandleSelect</span></code>, but <code class="codehilite"><span class="kt">Select</span><span class="o">.</span><span class="kt">Message</span></code> is still awaiting 2 arguments, the first of which is <em>itself</em> awaiting an argument! Let's go look at the <a href="https://pursuit.purescript.org/packages/purescript-halogen-select/3.0.0/docs/Select#t:Message">module documentation for <code>Select.Message</code></a>.</p>
 <table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="kr">data</span> <span class="kt">Message</span> <span class="n">o</span> <span class="n">item</span>
 </pre></div>
 </td></tr></table>

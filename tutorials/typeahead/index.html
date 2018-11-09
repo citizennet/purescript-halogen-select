@@ -885,8 +885,7 @@ yarn build
 13
 14
 15
-16
-17</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="c1">-- | - `o`: The query type of the component that will mount this component in a child slot.</span>
+16</pre></div></td><td class="code"><div class="codehilite"><pre><span></span><span class="c1">-- | - `o`: The query type of the component that will mount this component in a child slot.</span>
 <span class="c1">-- |        This allows you to embed your own queries into the `Select` component.</span>
 <span class="c1">-- | - `item`: Your custom item type. It can be a simple type like `String`, or something</span>
 <span class="c1">-- |           complex like `CalendarItem StartDate EndDate (Maybe Disabled)`.</span>
@@ -894,7 +893,6 @@ yarn build
   <span class="ow">=</span> <span class="kt">Search</span> <span class="kt">String</span> <span class="n">a</span>
   <span class="o">|</span> <span class="kt">Highlight</span> <span class="kt">Target</span> <span class="n">a</span>
   <span class="o">|</span> <span class="kt">Select</span> <span class="kt">Int</span> <span class="n">a</span>
-  <span class="o">|</span> <span class="kt">CaptureRef</span> <span class="kt">ET</span><span class="o">.</span><span class="kt">Event</span> <span class="n">a</span>
   <span class="o">|</span> <span class="kt">Focus</span> <span class="kt">Boolean</span> <span class="n">a</span>
   <span class="o">|</span> <span class="kt">Key</span> <span class="kt">KE</span><span class="o">.</span><span class="kt">KeyboardEvent</span> <span class="n">a</span>
   <span class="o">|</span> <span class="kt">PreventClick</span> <span class="kt">ME</span><span class="o">.</span><span class="kt">MouseEvent</span> <span class="n">a</span>
@@ -980,7 +978,7 @@ yarn build
 </pre></div>
 </td></tr></table>
 
-<p>With that out of the way, we can turn to the component's input type. Here's what we're required to fill in, as per the <a href="https://pursuit.purescript.org/packages/purescript-halogen-select/2.0.0/docs/Select#t:Input"><code>Select</code> module documentation</a>:</p>
+<p>With that out of the way, we can turn to the component's input type. Here's what we're required to fill in, as per the <a href="https://pursuit.purescript.org/packages/purescript-halogen-select/3.0.0/docs/Select#t:Input"><code>Select</code> module documentation</a>:</p>
 <table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span> 1
  2
  3
@@ -1171,7 +1169,7 @@ yarn build
 
 <h3 id="query">Query<a class="headerlink" href="#query" title="Permanent link">&para;</a></h3>
 <p>Now that we've got a usable <code class="codehilite"><span class="kt">State</span></code> type, let's turn to our queries. Queries are the computations available to the component, so they're the place where we ought to think about what the typeahead should <em>do</em>, rather than just how it should render.</p>
-<p>Just like <code class="codehilite"><span class="kt">State</span></code>, when we write our own <code class="codehilite"><span class="kt">Query</span></code> type on top of <code>Select</code>, we should consider what is already available in the component. As usual, we'll turn to the <a href="https://pursuit.purescript.org/packages/purescript-halogen-select/2.0.0/docs/Select#t:QueryF">module documentation</a> to look at our available queries. I'd recommend scrolling through the available functions to get a glimpse of what <code>Select</code> offers, but we'll skip to the main points here.</p>
+<p>Just like <code class="codehilite"><span class="kt">State</span></code>, when we write our own <code class="codehilite"><span class="kt">Query</span></code> type on top of <code>Select</code>, we should consider what is already available in the component. As usual, we'll turn to the <a href="https://pursuit.purescript.org/packages/purescript-halogen-select/3.0.0/docs/Select#t:QueryF">module documentation</a> to look at our available queries. I'd recommend scrolling through the available functions to get a glimpse of what <code>Select</code> offers, but we'll skip to the main points here.</p>
 <p><code>Select</code> is going to manage all the keyboard events, text input, debouncing, moving the highlighted index, and so on. On top of that, we'll need to add some extra functionality: the ability to remove items that have already been selected, and the ability to fetch new items when the user performs a search. We'll at least need two queries to handle these two features.</p>
 <p>Luckily, though, we already <em>have</em> a query available for when a new search has been performed: our <code class="codehilite"><span class="kt">HandleSelect</span></code> query tied to the <code class="codehilite"><span class="kt">Select</span><span class="o">.</span><span class="kt">Searched</span></code> message! That means we really only need one new query:</p>
 <table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span> 1
