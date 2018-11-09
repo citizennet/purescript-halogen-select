@@ -6,15 +6,16 @@ module Select.Setters where
 
 import Prelude
 
-import Web.UIEvent.FocusEvent as FE
-import Web.UIEvent.MouseEvent as ME
-import Web.UIEvent.KeyboardEvent as KE
-import Web.Event.Event (Event)
 import Data.Maybe (Maybe(..))
+import Halogen (RefLabel(..)) as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Select (Query, Target(..), Visibility(..))
 import Select as Select
+import Web.Event.Event (Event)
+import Web.UIEvent.FocusEvent as FE
+import Web.UIEvent.KeyboardEvent as KE
+import Web.UIEvent.MouseEvent as ME
 
 -- | The properties that must be supported by the HTML element that serves
 -- | as a menu toggle. This should be used with toggle-driven `Select` components.
@@ -41,11 +42,8 @@ setToggleProps
    . Array (HP.IProp (ToggleProps p) (Query o item Unit))
   -> Array (HP.IProp (ToggleProps p) (Query o item Unit))
 setToggleProps = flip (<>)
-  [ HE.onFocus \ev -> Just do
-      Select.captureRef $ FE.toEvent ev
-      Select.setVisibility On
+  [ HE.onFocus $ Select.always $ Select.setVisibility On
   , HE.onMouseDown \ev -> Just do
-      Select.captureRef $ ME.toEvent ev
       Select.preventClick ev
       Select.getVisibility >>= case _ of
         Select.On -> do
@@ -57,6 +55,7 @@ setToggleProps = flip (<>)
   , HE.onKeyDown $ Just <<< Select.key
   , HE.onBlur $ Select.always $ Select.setVisibility Off
   , HP.tabIndex 0
+  , HP.ref (H.RefLabel "select-input")
   ]
 
 -- | The properties that must be supported by the HTML element that serves
@@ -85,14 +84,13 @@ setInputProps
    . Array (HP.IProp (InputProps p) (Query o item Unit))
   -> Array (HP.IProp (InputProps p) (Query o item Unit))
 setInputProps = flip (<>)
-  [ HE.onFocus \ev -> Just do
-      Select.captureRef $ FE.toEvent ev
-      Select.setVisibility On
+  [ HE.onFocus $ Select.always $ Select.setVisibility On
   , HE.onKeyDown $ Just <<< Select.key
   , HE.onValueInput $ Just <<< Select.search
   , HE.onMouseDown $ Select.always $ Select.setVisibility On
   , HE.onBlur $ Select.always $ Select.setVisibility Off
   , HP.tabIndex 0
+  , HP.ref (H.RefLabel "select-input")
   ]
 
 -- | The properties that must be supported by the HTML element that acts as a

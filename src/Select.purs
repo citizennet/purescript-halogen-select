@@ -9,23 +9,22 @@ import Prelude
 
 import Control.Comonad (extract)
 import Control.Comonad.Store (Store, store)
-import Effect.Aff (Fiber, delay, error, forkAff, killFiber)
-import Effect.Aff.Class (class MonadAff)
-import Effect.Aff.AVar (AVar)
-import Effect.Aff.AVar as AVar
 import Control.Monad.Free (Free, foldFree, liftF)
-import Web.Event.Event (preventDefault, currentTarget, Event)
-import Web.UIEvent.KeyboardEvent as KE
-import Web.UIEvent.MouseEvent as ME
-import Web.HTML.HTMLElement (HTMLElement, blur, focus, fromEventTarget)
 import Data.Array (length, (!!))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (for_, traverse_)
-import Halogen (Component, ComponentDSL, ComponentHTML, component, liftAff, liftEffect) as H
+import Effect.Aff (Fiber, delay, error, forkAff, killFiber)
+import Effect.Aff.AVar (AVar)
+import Effect.Aff.AVar as AVar
+import Effect.Aff.Class (class MonadAff)
+import Halogen as H
 import Halogen.HTML as HH
-import Halogen.Query.HalogenM (fork, raise) as H
 import Renderless.State (getState, modifyState_, modifyStore)
+import Web.Event.Event (preventDefault)
+import Web.HTML.HTMLElement (blur, focus)
+import Web.UIEvent.KeyboardEvent as KE
+import Web.UIEvent.MouseEvent as ME
 
 ----------
 -- Component Types
@@ -66,7 +65,6 @@ data QueryF o item a
   = Search String a
   | Highlight Target a
   | Select Int a
-  | CaptureRef Event a
   | Focus Boolean a
   | Key KE.KeyboardEvent a
   | PreventClick ME.MouseEvent a
@@ -94,12 +92,6 @@ highlight t = liftF (Highlight t unit)
 -- | Triggers the "Selected" message for the item at the specified index.
 select :: ∀ o item. Int -> Query o item Unit
 select i = liftF (Select i unit)
-
--- | From an event, captures a reference to the element that triggered the
--- | event. Used to manage focus / blur for elements without requiring a
--- | particular identifier.
-captureRef :: ∀ o item. Event -> Query o item Unit
-captureRef r = liftF (CaptureRef r unit)
 
 -- | Trigger the DOM focus event for the element we have a reference to.
 triggerFocus :: ∀ o item . Query o item Unit
@@ -205,7 +197,6 @@ type State item =
   , search           :: String
   , debounceTime     :: Milliseconds
   , debouncer        :: Maybe Debouncer
-  , inputElement     :: Maybe HTMLElement
   , items            :: Array item
   , visibility       :: Visibility
   , highlightedIndex :: Maybe Int
@@ -259,7 +250,6 @@ component =
       , search: fromMaybe "" i.initialSearch
       , debounceTime: fromMaybe (Milliseconds 0.0) i.debounceTime
       , debouncer: Nothing
-      , inputElement: Nothing
       , items: i.items
       , highlightedIndex: Nothing
       , visibility: Off
@@ -337,14 +327,9 @@ component =
           for_ (st.items !! index)
             \item -> H.raise (Selected item)
 
-      CaptureRef event a -> a <$ do
-        st <- getState
-        modifyState_ _ { inputElement = fromEventTarget =<< currentTarget event }
-        pure a
-
       Focus focusOrBlur a -> a <$ do
-        st <- getState
-        traverse_ (H.liftEffect <<< if focusOrBlur then focus else blur) st.inputElement
+        inputElement <- H.getHTMLElementRef $ H.RefLabel "select-input"
+        traverse_ (H.liftEffect <<< if focusOrBlur then focus else blur) inputElement
 
       Key ev a -> a <$ do
         setVis On
@@ -353,9 +338,9 @@ component =
           "ArrowUp"   -> preventIt *> eval' (highlight Prev)
           "ArrowDown" -> preventIt *> eval' (highlight Next)
           "Escape"    -> do
-            st <- getState
+            inputElement <- H.getHTMLElementRef $ H.RefLabel "select-input"
             preventIt
-            for_ st.inputElement (H.liftEffect <<< blur)
+            for_ inputElement (H.liftEffect <<< blur)
           "Enter"     -> do
             st <- getState
             preventIt
