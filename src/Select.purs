@@ -13,11 +13,13 @@ import Control.Monad.Free (Free, foldFree, liftF)
 import Data.Array (length, (!!))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Time.Duration (Milliseconds(..))
-import Data.Traversable (for_, traverse_)
+import Data.Traversable (for_, traverse, traverse_)
 import Effect.Aff (Fiber, delay, error, forkAff, killFiber)
 import Effect.Aff.AVar (AVar)
 import Effect.Aff.AVar as AVar
 import Effect.Aff.Class (class MonadAff)
+import Effect.Ref (Ref)
+import Effect.Ref as Ref
 import Halogen as H
 import Halogen.HTML as HH
 import Renderless.State (getState, modifyState_, modifyStore)
@@ -30,22 +32,18 @@ import Web.UIEvent.MouseEvent as ME
 -- Component Types
 
 -- | A useful shorthand for the Halogen component type
-type Component o item m
-  = H.Component HH.HTML (Query o item) (Input o item) (Message o item) m
+type Component o item m = H.Component HH.HTML (Query o item) (Input o item) (Message o item) m
 
 -- | A useful shorthand for the Halogen component HTML type
-type ComponentHTML o item
-  = H.ComponentHTML (Query o item)
+type ComponentHTML o item = H.ComponentHTML (Query o item)
 
 -- | A useful shorthand for the Halogen component DSL type
-type ComponentDSL o item m
-  = H.ComponentDSL (StateStore o item) (Query o item) (Message o item) m
+type ComponentDSL o item m = H.ComponentDSL (StateStore o item) (Query o item) (Message o item) m
 
 -- | The component's state type, wrapped in `Store`. The state and result of the
 -- | render function are stored so that `extract` from `Control.Comonad` can be
 -- | used to pull out the render function.
-type StateStore o item
-  = Store (State item) (ComponentHTML o item)
+type StateStore o item = Store (State item) (ComponentHTML o item)
 
 ----------
 -- Core Constructors
@@ -72,6 +70,7 @@ data QueryF o item a
   | GetVisibility (Visibility -> a)
   | ReplaceItems (Array item) a
   | Raise (o Unit) a
+  | Initialize a
   | Receive (Input o item) a
 
 type Query o item = Free (QueryF o item)
@@ -138,6 +137,10 @@ raise o = liftF (Raise o unit)
 receive :: ∀ o item . Input o item -> Query o item Unit
 receive i = liftF (Receive i unit)
 
+-- | Initializes the component on mount.
+initialize :: ∀ o item. Query o item Unit
+initialize = liftF (Initialize unit)
+
 -- | Represents a way to navigate on `Highlight` events: to the previous
 -- | item, next item, or the item at a particular index.
 data Target = Prev | Next | Index Int
@@ -183,8 +186,8 @@ data InputType
 -- |             they have typed on the toggle.
 -- | - `debounceTime`: How long, in milliseconds, before events should occur based
 -- |                   on user searches.
--- | - `debouncer`: A representation of a running timer that, when it expires, will
--- |                trigger debounced events.
+-- | - `debounceRef`: A representation of a running timer that, when it expires, will
+-- |                  trigger debounced events.
 -- | - `inputElement`: A reference to the toggle or input element.
 -- | - `items`: An array of user-provided `item`s.
 -- | - `visibility`: Whether the array of items should be considered visible or not.
@@ -196,7 +199,7 @@ type State item =
   { inputType        :: InputType
   , search           :: String
   , debounceTime     :: Milliseconds
-  , debouncer        :: Maybe Debouncer
+  , debounceRef      :: Maybe (Ref (Maybe Debouncer))
   , items            :: Array item
   , visibility       :: Visibility
   , highlightedIndex :: Maybe Int
@@ -207,7 +210,8 @@ type State item =
 -- | .cts.
 type Debouncer =
   { var   :: AVar Unit
-  , fiber :: Fiber Unit }
+  , fiber :: Fiber Unit 
+  }
 
 -- | The component's input type, which includes the component's render function. This
 -- | render function can also be used to share data with the parent component, as every
@@ -234,22 +238,22 @@ data Message o item
   | VisibilityChanged Visibility
   | Emit (o Unit)
 
-component :: ∀ o item m
-  . MonadAff m
- => Component o item m
+component :: ∀ o item m. MonadAff m => Component o item m
 component =
-  H.component
+  H.lifecycleComponent
     { initialState
     , render: extract
     , eval: eval'
     , receiver: Just <<< receive
+    , initializer: Just initialize
+    , finalizer: Nothing
     }
   where
     initialState i = store i.render
       { inputType: i.inputType
       , search: fromMaybe "" i.initialSearch
       , debounceTime: fromMaybe (Milliseconds 0.0) i.debounceTime
-      , debouncer: Nothing
+      , debounceRef: Nothing
       , items: i.items
       , highlightedIndex: Nothing
       , visibility: Off
@@ -267,12 +271,17 @@ component =
     -- Just the normal Halogen eval
     eval :: QueryF o item ~> ComponentDSL o item m
     eval = case _ of
+      Initialize a -> a <$ do
+        ref <- H.liftEffect $ Ref.new Nothing
+        modifyState_ _ { debounceRef = Just ref }
+
       Search str a -> a <$ do
         st <- getState
+        ref :: Maybe Debouncer <- H.liftEffect $ map join $ traverse Ref.read st.debounceRef
         modifyState_ _ { search = str }
         setVis On
 
-        case st.inputType, st.debouncer of
+        case st.inputType, ref of
           TextInput, Nothing -> unit <$ do
             var   <- H.liftAff AVar.empty
             fiber <- H.liftAff $ forkAff do
@@ -280,14 +289,15 @@ component =
               AVar.put unit var
 
             -- This compututation will fork and run in the background. When the
-            -- var is finally filled, the .ct will run (raise a new search)
+            -- var is finally filled, the action will run (raise a new search)
             _ <- H.fork do
               _ <- H.liftAff $ AVar.take var
-              modifyState_ _ { debouncer = Nothing, highlightedIndex = Just 0 }
+              void $ H.liftEffect $ traverse_ (Ref.write Nothing) st.debounceRef
+              modifyState_ _ { highlightedIndex = Just 0 }
               newState <- getState
               H.raise $ Searched newState.search
 
-            modifyState_ _ { debouncer = Just { var, fiber } }
+            void $ H.liftEffect $ traverse_ (Ref.write $ Just { var, fiber }) st.debounceRef
 
           TextInput, Just debouncer -> do
             let var = debouncer.var
@@ -296,7 +306,7 @@ component =
               delay st.debounceTime
               AVar.put unit var
 
-            modifyState_ _ { debouncer = Just { var, fiber } }
+            void $ H.liftEffect $ traverse_ (Ref.write $ Just { var, fiber }) st.debounceRef
 
           -- Key stream is not yet implemented. However, this should capture user
           -- key events and expire their search after a set number of milliseconds.
