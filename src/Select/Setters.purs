@@ -41,7 +41,7 @@ setToggleProps
   :: ∀ o item p
    . Array (HP.IProp (ToggleProps p) (Query o item Unit))
   -> Array (HP.IProp (ToggleProps p) (Query o item Unit))
-setToggleProps = flip (<>)
+setToggleProps = (<>)
   [ HE.onFocus $ Select.always $ Select.setVisibility On
   , HE.onMouseDown \ev -> Just do
       Select.preventClick ev
@@ -83,7 +83,7 @@ setInputProps
   :: ∀ o item p
    . Array (HP.IProp (InputProps p) (Query o item Unit))
   -> Array (HP.IProp (InputProps p) (Query o item Unit))
-setInputProps = flip (<>)
+setInputProps = (<>)
   [ HE.onFocus $ Select.always $ Select.setVisibility On
   , HE.onKeyDown $ Just <<< Select.key
   , HE.onValueInput $ Just <<< Select.search
@@ -118,7 +118,7 @@ setItemProps
    . Int
   -> Array (HP.IProp (ItemProps p) (Query o item Unit))
   -> Array (HP.IProp (ItemProps p) (Query o item Unit))
-setItemProps index = flip (<>)
+setItemProps index = (<>)
   [ HE.onMouseDown \ev -> Just do
       Select.preventClick ev
       Select.select index
@@ -133,5 +133,5 @@ setContainerProps
   :: ∀ o item p
    . Array (HP.IProp (onMouseDown :: ME.MouseEvent | p) (Query o item Unit))
   -> Array (HP.IProp (onMouseDown :: ME.MouseEvent | p) (Query o item Unit))
-setContainerProps = flip (<>)
+setContainerProps = (<>)
   [ HE.onMouseDown $ Just <<< Select.preventClick ]
