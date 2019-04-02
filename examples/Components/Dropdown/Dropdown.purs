@@ -45,8 +45,8 @@ component =
     eval = case _ of
       HandleSelect (Select.Selected item) a -> do
         st <- H.get
-        _ <- H.query unit $ Select.setVisibility Select.Off
-        _ <- H.query unit $ Select.replaceItems $ difference st.items [ item ]
+        _ <- H.query unit $ H.action $ Select.SetVisibility Select.Off
+        _ <- H.query unit $ H.action $ Select.ReplaceItems $ difference st.items [ item ]
         H.modify_ _ { text = item }
         pure a
 
@@ -71,7 +71,7 @@ component =
           where
             renderToggle =
               HH.button
-                ( Setters.setToggleProps [ HP.classes CSS.button ] )
+                ( Setters.setToggleProps state [ HP.classes CSS.button ] )
                 [ HH.text st.text ]
 
             renderMenu =

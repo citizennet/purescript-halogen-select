@@ -73,8 +73,8 @@ component =
           st <- H.get
           let newItems = difference (filterItems search st.items) st.selected
               index = elemIndex search st.items
-          _ <- H.query unit $ Select.replaceItems newItems
-          traverse_ (H.query unit <<< Select.highlight <<< Select.Index) index
+          _ <- H.query unit $ H.action $ Select.ReplaceItems newItems
+          traverse_ (H.query unit <<< H.action <<< Select.Highlight <<< Select.Index) index
 
         Select.Selected item -> do
           st <- H.get
@@ -82,7 +82,7 @@ component =
           _ <- if st.keepOpen
             then pure unit
             else do
-              _ <- H.query unit $ Select.setVisibility Select.Off
+              _ <- H.query unit $ H.action $ Select.SetVisibility Select.Off
               pure unit
 
           if length (filter ((==) item) st.items) > 0
@@ -93,7 +93,7 @@ component =
 
           newSt <- H.get
           let newItems = difference newSt.items newSt.selected
-          _ <- H.query unit $ Select.replaceItems newItems
+          _ <- H.query unit $ H.action $ Select.ReplaceItems newItems
           pure unit
 
         otherwise -> pure unit
@@ -103,7 +103,7 @@ component =
         H.modify_ _ { selected = filter ((/=) item) st.selected }
         newSt <- H.get
         let newItems = difference newSt.items newSt.selected
-        _ <- H.query unit $ Select.replaceItems newItems
+        _ <- H.query unit $ H.action $ Select.ReplaceItems newItems
         pure a
 
 
@@ -131,7 +131,7 @@ renderInputContainer state = HH.div_ [ renderInput, renderContainer ]
       where
         renderChild =
           HH.div
-          [ HE.onClick $ Select.always $ Select.raise $ H.action $ Log "I was clicked" ]
+          [ HE.onClick $ HE.input_ $ Select.Raise $ H.action $ Log "I was clicked" ]
           [ HH.text "CLICK ME I'M FROM THE PARENT" ]
 
         renderItems html =

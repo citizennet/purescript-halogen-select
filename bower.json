@@ -32,7 +32,7 @@
   ],
   "dependencies": {
     "purescript-halogen": "^4.0.0",
-    "purescript-halogen-renderless": "^0.0.3"
+    "purescript-halogen-renderless": "^0.0.4"
   },
   "devDependencies": {
     "purescript-debug": "^4.0.0"
