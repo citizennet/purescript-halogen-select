@@ -4,13 +4,13 @@
 -- | below.
 module Select.Setters where
 
-import Prelude
+import Prelude (append, unit, ($), (<<<))
 
 import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Select (Action, Target(..), Visibility(..), andThen, focus, highlight, key, preventClick, search, select, setVisibility)
+import Select (Action, Target(..), Visibility(..), andThen, focus, highlight, key, preventClick, search, select, setVisibility) 
 import Select as Select
 import Web.Event.Event (Event)
 import Web.UIEvent.FocusEvent as FE

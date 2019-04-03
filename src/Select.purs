@@ -8,19 +8,15 @@ module Select where
 import Prelude
 
 import Control.Comonad (extract)
-import Type.Row (type (+))
 import Control.Comonad.Store (Store, store)
 import Control.Monad.Free (liftF)
 import Data.Array (length, (!!))
-import Data.Const (Const)
-import Data.Functor.Variant (VariantF)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Newtype (class Newtype, unwrap)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (for_, traverse, traverse_)
 import Data.Tuple (Tuple(..))
 import Data.Variant (SProxy(..), Variant, inj, onMatch)
-import Data.Variant.Internal (FProxy)
 import Effect.Aff (Fiber, delay, error, forkAff, killFiber)
 import Effect.Aff.AVar (AVar)
 import Effect.Aff.AVar as AVar
@@ -36,17 +32,9 @@ import Web.Event.Event (preventDefault)
 import Web.HTML.HTMLElement as HTMLElement
 import Web.UIEvent.KeyboardEvent as KE
 import Web.UIEvent.MouseEvent as ME
-import Data.Functor.Mu (Mu)
 
 -----
 -- ACTIONS
-
--- type List a = Variant (nil :: Unit, cons :: Tuple a (List a))
--- We would have to newtype this, which defeats the point, since we lose extensibility. However, with VariantF we can utilize fixed-point combinators to introduce a recursive variant.
-type NIL r = (nil :: FProxy (Const Unit) | r)
-type CONS a r = (cons :: FProxy (Tuple a) | r)
-type ListF r a = VariantF (NIL + CONS a + r)
-type List r a = Mu (ListF r a)
 
 newtype Action item v ps m = Action (Variant
   ( search :: String 
@@ -204,7 +192,7 @@ type Debouncer =
 -- | The component's input type, which includes the component's render function. This
 -- | render function can also be used to share data with the parent component, as every
 -- | time the parent re-renders, the render function will refresh in `Select`.
-newtype Input item v ps m = Input
+type Input item v ps m =
   { inputType     :: InputType
   , items         :: Array item
   , initialSearch :: Maybe String
@@ -224,20 +212,21 @@ component handleExtraActions = H.mkComponent
       { handleQuery = handleQuery handleExtraActions
       , handleAction = handleAction handleExtraActions
       , receive = Just <<< receive
-      , initialize = Just (initialize unit)
+      , initialize = Just $ initialize unit
       }
   }
-  where
-  initialState (Input i) = store i.render
-    { inputType: i.inputType
-    , search: fromMaybe "" i.initialSearch
-    , debounceTime: fromMaybe (Milliseconds 0.0) i.debounceTime
-    , debounceRef: Nothing
-    , items: i.items
-    , highlightedIndex: Nothing
-    , visibility: Off
-    , lastIndex: length i.items - 1
-    }
+
+initialState :: forall item v ps m. Input item v ps m -> StateStore item v ps m
+initialState i = store i.render
+  { inputType: i.inputType
+  , search: fromMaybe "" i.initialSearch
+  , debounceTime: fromMaybe (Milliseconds 0.0) i.debounceTime
+  , debounceRef: Nothing
+  , items: i.items
+  , highlightedIndex: Nothing
+  , visibility: Off
+  , lastIndex: length i.items - 1
+  }
 
 handleAction 
   :: forall item v ps out m
@@ -334,7 +323,7 @@ handleAction handleExtraActions = unwrap >>> flip onMatch handleExtraActions
         modifyState_ _ { visibility = v, highlightedIndex = Just 0 }
         H.raise $ visibilityChanged v
 
-  , receive: \(Input input) -> do
+  , receive: \input -> do
       modifyStore_ input.render identity
   
   , andThen: \(Tuple act1 act2) ->

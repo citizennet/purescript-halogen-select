@@ -4,13 +4,14 @@ module Docs.Internal.Component where
 
 import Prelude
 
-import Effect.Aff.Class (class MonadAff)
+import Data.Const (Const)
 import Data.Maybe (Maybe(..))
+import Data.Symbol (SProxy(..))
+import Docs.Components.Dropdown as Dropdown
+import Docs.Components.Typeahead as Typeahead
+import Effect.Aff.Class (class MonadAff)
 import Halogen as H
 import Halogen.HTML as HH
-
-import Docs.Components.Typeahead as Typeahead
-import Docs.Components.Dropdown as Dropdown
 
 ----------
 -- Component Types
@@ -18,62 +19,60 @@ import Docs.Components.Dropdown as Dropdown
 type State = Unit
 type Input = Unit
 type Message = Void
-
-data Query a = NoOp a
+type Query = Const Void
+type Action = Void
 
 type Component m = H.Component HH.HTML Query Unit Void m
-type DSL q m = H.ParentDSL State Query q Unit Void m
-type HTML q m = H.ParentHTML Query q Unit m
+type HalogenM m = H.HalogenM State Action () Void m
+type HTML m = H.ComponentHTML Action ChildSlots m
+
+type ChildSlots =
+  ( typeahead :: H.Slot Typeahead.Query Typeahead.Message Unit 
+  , dropdown :: H.Slot Dropdown.Query Dropdown.Message Unit
+  )
+
+_typeahead = SProxy :: SProxy "typeahead"
+_dropdown = SProxy :: SProxy "dropdown"
 
 ----------
 -- Built components
 
 typeahead :: ∀ m. MonadAff m => Component m
-typeahead =
-  H.parentComponent
-    { initialState: const unit
-    , render
-    , eval
-    , receiver: const Nothing
-    }
+typeahead = H.mkComponent
+  { initialState: const unit
+  , render
+  , eval: H.mkEval H.defaultEval
+  }
   where
-    eval :: Query ~> DSL Typeahead.Query m
-    eval (NoOp a) = pure a
+  render :: Unit -> HTML m
+  render _ = HH.slot _typeahead unit Typeahead.component { items: users, keepOpen: false } (const Nothing)
 
-    render :: Unit -> HTML Typeahead.Query m
-    render _ = HH.slot unit Typeahead.component { items: users, keepOpen: false } (const Nothing)
-
-    users :: Array String
-    users =
-      [ "Lyndsey Duffield"
-      , "Chris Pine"
-      , "Kevin Hart"
-      , "Dave Chappelle"
-      , "Hannibal Buress"
-      , "Rico Suave"
-      ]
+  users :: Array String
+  users =
+    [ "Lyndsey Duffield"
+    , "Chris Pine"
+    , "Kevin Hart"
+    , "Dave Chappelle"
+    , "Hannibal Buress"
+    , "Rico Suave"
+    ]
 
 dropdown :: ∀ m. MonadAff m => Component m
-dropdown =
-  H.parentComponent
-    { initialState: const unit
-    , render
-    , eval
-    , receiver: const Nothing
-    }
+dropdown = H.mkComponent
+  { initialState: const unit
+  , render
+  , eval: H.mkEval H.defaultEval
+  }
   where
-    eval :: Query ~> DSL Dropdown.Query m
-    eval (NoOp a) = pure a
+  render :: Unit -> HTML m
+  render _ = HH.slot _dropdown unit Dropdown.component { items: users } (const Nothing)
 
-    render :: Unit -> HTML Dropdown.Query m
-    render _ = HH.slot unit Dropdown.component { items: users } (const Nothing)
-
-    users :: Array String
-    users =
-      [ "Lyndsey Duffield"
-      , "Chris Pine"
-      , "Kevin Hart"
-      , "Dave Chappelle"
-      , "Hannibal Buress"
-      , "Rico Suave"
-      ]
+  users :: Array String
+  users =
+    [ "Lyndsey Duffield"
+    , "Chris Pine"
+    , "Kevin Hart"
+    , "Dave Chappelle"
+    , "Hannibal Buress"
+    , "Rico Suave"
+    ]
