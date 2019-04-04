@@ -12,7 +12,6 @@ import Record.Builder as Builder
 import Control.Monad.Free (liftF)
 import Data.Array (length, (!!))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Newtype (class Newtype, unwrap)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (for_, traverse, traverse_)
 import Data.Tuple (Tuple(..))
@@ -210,24 +209,17 @@ component render handleExtraActions = H.mkComponent
       , initialize = Just $ initialize unit
       }
   }
-
-initialState
-  :: forall item st act ps m
-   . Row.Lacks "debounceRef" st
-  => Row.Lacks "visibility" st
-  => Row.Lacks "highlightedIndex" st
-  => Row.Lacks "lastIndex" st
-  => Input item st 
-  -> State item st
-initialState input = Builder.build pipeline input
   where
-  pipeline =
-    Builder.modify (SProxy :: _ "debounceTime") (fromMaybe (Milliseconds 0.0))
-      >>> Builder.modify (SProxy :: _ "search") (fromMaybe "")
-      >>> Builder.insert (SProxy :: _ "debounceRef") Nothing
-      >>> Builder.insert (SProxy :: _ "visibility") Off
-      >>> Builder.insert (SProxy :: _ "highlightedIndex") Nothing
-      >>> Builder.insert (SProxy :: _ "lastIndex") (length input.items - 1)
+  initialState :: Input item st -> State item st
+  initialState input = Builder.build pipeline input
+    where
+    pipeline =
+      Builder.modify (SProxy :: _ "debounceTime") (fromMaybe (Milliseconds 0.0))
+        >>> Builder.modify (SProxy :: _ "search") (fromMaybe "")
+        >>> Builder.insert (SProxy :: _ "debounceRef") Nothing
+        >>> Builder.insert (SProxy :: _ "visibility") Off
+        >>> Builder.insert (SProxy :: _ "highlightedIndex") Nothing
+        >>> Builder.insert (SProxy :: _ "lastIndex") (length input.items - 1)
 
 handleAction 
   :: forall item st act ps msg m
