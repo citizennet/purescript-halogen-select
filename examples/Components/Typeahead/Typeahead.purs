@@ -7,7 +7,6 @@ import Data.Const (Const)
 import Data.Foldable (for_, length)
 import Data.Maybe (Maybe(..))
 import Data.Monoid (guard)
-import Data.Newtype (over)
 import Data.String (Pattern(..), contains)
 import Data.Symbol (SProxy(..))
 import Data.Variant (Variant, inj, match)
@@ -29,8 +28,8 @@ type TypeaheadItem = String
 data Action
   = HandleSelect SelectMessage
 
-type ChildSlots m = 
-  ( select :: H.Slot (SelectQuery m) SelectMessage Unit 
+type ChildSlots = 
+  ( select :: H.Slot SelectQuery SelectMessage Unit 
   )
 
 _select = SProxy :: SProxy "select"
@@ -42,7 +41,7 @@ component = H.mkComponent
   , eval: H.mkEval $ H.defaultEval { handleAction = handleAction }
   }
   where
-  handleAction :: Action -> H.HalogenM Unit Action (ChildSlots m) Void m Unit
+  handleAction :: Action -> H.HalogenM Unit Action ChildSlots Void m Unit
   handleAction = case _ of
     HandleSelect msg -> match
       { searched: \search -> do
@@ -59,18 +58,17 @@ component = H.mkComponent
       , itemRemoved: \_ -> pure unit
       } msg
 
-  render :: Unit -> H.ComponentHTML Action (ChildSlots m) m
+  render :: Unit -> H.ComponentHTML Action ChildSlots m
   render _ =
     HH.div
       [ class_ "w-full" ]
-      [ HH.slot _select unit (Select.component handleExtraActions) input (Just <<< HandleSelect) ]
+      [ HH.slot _select unit (Select.component renderSelect handleExtraActions) input (Just <<< HandleSelect) ]
     where
     input =
       { search: Nothing
       , debounceTime: Nothing
       , inputType: Select.TextInput
       , items: [ "d'angelo", "susy", "george", "hao", "patricia", "ferdinand" ]
-      , render: renderSelect
 
       -- extensions
       , selectedItems: [] 
@@ -91,12 +89,12 @@ component = H.mkComponent
     - and, of course, you can do whatever you'd like with the render function
 -}
 
-type SelectQuery m = Select.Query TypeaheadItem ExtraState ExtraActions () m
+type SelectQuery = Select.Query TypeaheadItem ExtraActions ()
 
 -----
 -- State
 
-type SelectState m = Select.State TypeaheadItem ExtraState ExtraActions () m
+type SelectState = Select.State TypeaheadItem ExtraState
 
 type ExtraState =
   ( selectedItems :: Array TypeaheadItem
@@ -116,7 +114,7 @@ type ExtraMessages =
 -----
 -- Actions
 
-type SelectAction m = Select.Action TypeaheadItem ExtraState ExtraActions () m
+type SelectAction = Select.Action ExtraActions
 
 type ExtraActions = 
   ( remove :: TypeaheadItem
@@ -125,32 +123,32 @@ type ExtraActions =
   , handleSelected :: String
   )
 
-remove :: forall m. String -> SelectAction m
-remove = Select.Action <<< inj (SProxy :: _ "remove")
+remove :: String -> SelectAction
+remove = inj (SProxy :: _ "remove")
 
-logInfo :: forall m. String -> SelectAction m
-logInfo = Select.Action <<< inj (SProxy :: _ "logInfo")
+logInfo :: String -> SelectAction
+logInfo = inj (SProxy :: _ "logInfo")
 
-handleSearch :: forall m. String -> SelectAction m
-handleSearch = Select.Action <<< inj (SProxy :: _ "handleSearch")
+handleSearch :: String -> SelectAction
+handleSearch = inj (SProxy :: _ "handleSearch")
 
-handleSelected :: forall m. String -> SelectAction m
-handleSelected = Select.Action <<< inj (SProxy :: _ "handleSelected")
+handleSelected :: String -> SelectAction
+handleSelected = inj (SProxy :: _ "handleSelected")
 
 handleExtraActions 
   :: forall m
    . MonadAff m
   => Variant ExtraActions 
-  -> H.HalogenM (SelectState m) (SelectAction m) () SelectMessage m Unit
+  -> H.HalogenM SelectState SelectAction () SelectMessage m Unit
 handleExtraActions = match  
   { logInfo: \str -> 
       Console.log str 
 
   , remove: \item ->
-      H.modify_ $ over Select.State \st -> st { selectedItems = filter (_ /= item) st.selectedItems }
+      H.modify_ \st -> st { selectedItems = filter (_ /= item) st.selectedItems }
   
   , handleSearch: \search -> do
-      (Select.State st) <- H.get
+      st <- H.get
       let 
         newItems = difference (filterItems search st.items) st.selectedItems
         index = elemIndex search st.items
@@ -158,24 +156,21 @@ handleExtraActions = match
         Select.handleAction handleExtraActions $ Select.highlight $ Select.Index ix
   
   , handleSelected: \item -> do
-      (Select.State st) <- H.get
+      st <- H.get
       when (not st.keepOpen) do
         Select.handleAction handleExtraActions $ Select.setVisibility Select.Off
-      H.modify_ $ over Select.State _ { selectedItems = (item : st.selectedItems) }
+      H.modify_ _ { selectedItems = (item : st.selectedItems) }
   }
 
 -----
 -- Rendering
 
-renderSelect 
-  :: forall m
-   . SelectState m
-  -> H.ComponentHTML (SelectAction m) () m
-renderSelect (Select.State state) = 
+renderSelect :: forall m. SelectState -> H.ComponentHTML SelectAction () m
+renderSelect state = 
   HH.div_ 
     [ renderSelections, renderInput, renderContainer ]
   where
-  renderSelections :: forall props. HH.HTML props (SelectAction m)
+  renderSelections :: forall props. HH.HTML props SelectAction
   renderSelections = case length state.selectedItems of
     0 -> 
       HH.div_ []
@@ -196,8 +191,7 @@ renderSelect (Select.State state) =
 
     closeButton item =
       HH.span
-        [ HE.onClick \_ -> Just do 
-            remove item `Select.andThen` logInfo ("removing " <> item <> "...")
+        [ HE.onClick \_ -> Just (remove item)
         , class_ "absolute pin-t pin-b pin-r p-1 mx-3 cursor-pointer" 
         ]
         [ HH.text "×" ]

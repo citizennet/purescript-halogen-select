@@ -12,7 +12,6 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
 import Select as Select
-import Select.Simple as SS
 import Select.Setters as Setters
 
 type State =
@@ -25,13 +24,13 @@ type Input =
   }
 
 data Action
-  = HandleSelect (SS.Message String)
+  = HandleSelect (Select.Message String ())
 
 type Query = Const Void
 type Message = Void
 
-type ChildSlots m = 
-  ( select :: SS.Slot String m Unit
+type ChildSlots = 
+  ( select :: H.Slot (Select.Query String () ()) (Select.Message String ()) Unit
   )
 
 _select = SProxy :: SProxy "select"
@@ -46,7 +45,7 @@ component = H.mkComponent
   initialState :: Input -> State
   initialState i = { items: i.items, text: "Select an option" }
 
-  handleAction :: Action -> H.HalogenM State Action (ChildSlots m) Message m Unit
+  handleAction :: Action -> H.HalogenM State Action ChildSlots Message m Unit
   handleAction = case _ of
     HandleSelect msg -> onMatch
       { selected: \item -> do
@@ -56,26 +55,25 @@ component = H.mkComponent
           H.modify_ _ { text = item }
       } (\_ -> pure unit) msg
 
-  render :: State -> H.ComponentHTML Action (ChildSlots m) m
+  render :: State -> H.ComponentHTML Action ChildSlots m
   render st =
     HH.div
       [ HP.class_ $ HH.ClassName "w-full" ]
-      [ HH.slot _select unit (SS.component) input (Just <<< HandleSelect) ]
+      [ HH.slot _select unit (Select.component renderDropdown (\_ -> pure unit)) input (Just <<< HandleSelect) ]
     where
     input =
       { search: Nothing
       , debounceTime: Nothing
       , inputType: Select.Toggle
       , items: difference st.items [ st.text ]
-      , render: renderDropdown
       }
 
-    renderDropdown :: SS.State String m -> SS.ComponentHTML String m
-    renderDropdown (Select.State state) = HH.div_ [ renderToggle, renderMenu ]
+    renderDropdown :: Select.State String () -> H.ComponentHTML (Select.Action ()) () m
+    renderDropdown state = HH.div_ [ renderToggle, renderMenu ]
       where
       renderToggle =
         HH.button
-          ( Setters.setToggleProps (Select.State state) [ HP.classes CSS.button ] )
+          ( Setters.setToggleProps state [ HP.classes CSS.button ] )
           [ HH.text st.text ]
 
       renderMenu =
