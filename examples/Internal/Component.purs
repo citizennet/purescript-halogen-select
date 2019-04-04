@@ -27,7 +27,7 @@ type HalogenM m = H.HalogenM State Action () Void m
 type HTML m = H.ComponentHTML Action ChildSlots m
 
 type ChildSlots =
-  ( typeahead :: H.Slot Typeahead.Query Typeahead.Message Unit 
+  ( typeahead :: H.Slot (Const Void) Void Unit 
   , dropdown :: H.Slot Dropdown.Query Dropdown.Message Unit
   )
 
@@ -45,7 +45,7 @@ typeahead = H.mkComponent
   }
   where
   render :: Unit -> HTML m
-  render _ = HH.slot _typeahead unit Typeahead.component { items: users, keepOpen: false } (const Nothing)
+  render _ = HH.slot _typeahead unit Typeahead.component unit (const Nothing)
 
   users :: Array String
   users =

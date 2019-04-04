@@ -7,12 +7,12 @@ module Select where
 
 import Prelude
 
-import Control.Comonad (extract)
-import Control.Comonad.Store (Store, store)
+import Prim.Row as Row
+import Record.Builder as Builder
 import Control.Monad.Free (liftF)
 import Data.Array (length, (!!))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Newtype (class Newtype, unwrap)
+import Data.Newtype (class Newtype, unwrap, over)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (for_, traverse, traverse_)
 import Data.Tuple (Tuple(..))
@@ -26,7 +26,6 @@ import Effect.Ref as Ref
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.Query.ChildQuery (ChildQueryBox)
-import Renderless.State (getState, modifyState_, modifyStore_)
 import Unsafe.Coerce (unsafeCoerce)
 import Web.Event.Event (preventDefault)
 import Web.HTML.HTMLElement as HTMLElement
@@ -36,7 +35,7 @@ import Web.UIEvent.MouseEvent as ME
 -----
 -- ACTIONS
 
-newtype Action item v ps m = Action (Variant
+newtype Action item st act ps m = Action (Variant
   ( search :: String 
   , highlight :: Target
   , select :: Target
@@ -44,71 +43,74 @@ newtype Action item v ps m = Action (Variant
   , key :: KE.KeyboardEvent
   , preventClick :: ME.MouseEvent
   , setVisibility :: Visibility
-  , receive :: Input item v ps m
+  , receive :: Input item st act ps m
   , initialize :: Unit
-  , andThen :: Tuple (Action item v ps m) (Action item v ps m)
-  | v
+  , andThen :: Tuple (Action item st act ps m) (Action item st act ps m)
+  | act
   ))
 
-derive instance newtypeAction :: Newtype (Action item v ps m) _
+derive instance newtypeAction :: Newtype (Action item st act ps m) _
 
-search :: forall item v ps m. String -> Action item v ps m
+search :: forall item st act ps m. String -> Action item st act ps m
 search = Action <<< inj (SProxy :: _ "search")
 
-highlight :: forall item v ps m. Target -> Action item v ps m
+highlight :: forall item st act ps m. Target -> Action item st act ps m
 highlight = Action <<< inj (SProxy :: _ "highlight")
 
-select :: forall item v ps m. Target -> Action item v ps m
+select :: forall item st act ps m. Target -> Action item st act ps m
 select = Action <<< inj (SProxy :: _ "select")
 
-focus :: forall item v ps m. Boolean -> Action item v ps m
+focus :: forall item st act ps m. Boolean -> Action item st act ps m
 focus = Action <<< inj (SProxy :: _ "focus")
 
-key :: forall item v ps m. KE.KeyboardEvent -> Action item v ps m
+key :: forall item st act ps m. KE.KeyboardEvent -> Action item st act ps m
 key = Action <<< inj (SProxy :: _ "key")
 
-preventClick :: forall item v ps m. ME.MouseEvent -> Action item v ps m
+preventClick :: forall item st act ps m. ME.MouseEvent -> Action item st act ps m
 preventClick = Action <<< inj (SProxy :: _ "preventClick")
 
-setVisibility :: forall item v ps m. Visibility -> Action item v ps m
+setVisibility :: forall item st act ps m. Visibility -> Action item st act ps m
 setVisibility = Action <<< inj (SProxy :: _ "setVisibility")
 
-receive :: forall item v ps m. Input item v ps m -> Action item v ps m
+receive :: forall item st act ps m. Input item st act ps m -> Action item st act ps m
 receive = Action <<< inj (SProxy :: _ "receive") 
 
-initialize :: forall item v ps m. Unit -> Action item v ps m
+initialize :: forall item st act ps m. Unit -> Action item st act ps m
 initialize = Action <<< inj (SProxy :: _ "initialize") 
 
-andThen :: forall item v ps m. Action item v ps m -> Action item v ps m -> Action item v ps m
+andThen 
+  :: forall item st act ps m
+   . Action item st act ps m 
+  -> Action item st act ps m -> Action item st act ps m
 andThen act1 = Action <<< inj (SProxy :: _ "andThen") <<< Tuple act1
 
 -----
 -- QUERIES 
 
-data Query item v ps m a
+data Query item st act ps m a
   = GetVisibility (Visibility -> a)
   | ReplaceItems (Array item) a
   -- send a query through `Select` to a child component
   | SendQuery (ChildQueryBox ps (Maybe a))
-  | PerformAction (Action item v ps m) a
+  | PerformAction (Action item st act ps m) a
 
 -----
 -- MESSAGES
 
-type Message item out = Variant
+type Message item msg = Variant
   ( searched :: String
   , selected :: item
   , visibilityChanged :: Visibility
-  | out
+  | msg
   )
 
-searched :: forall item out. String -> Message item out
+searched :: forall item msg. String -> Message item msg
 searched = inj (SProxy :: _ "searched")
 
-selected :: forall item out. item -> Message item out
+selected :: forall item msg. item -> Message item msg
 selected = inj (SProxy :: _ "selected")
 
-visibilityChanged :: forall item out. Visibility -> Message item out
+visibilityChanged :: forall item msg. Visibility -> Message item msg
 visibilityChanged = inj (SProxy :: _ "visibilityChanged")
 
 -----
@@ -152,11 +154,7 @@ data InputType
   = TextInput
   | Toggle
 
--- | The component's state, as packed in `Store`
-type StateStore item v ps m =
-  Store (State item) (H.ComponentHTML (Action item v ps m) ps m)
-
--- | The component's state, once unpacked from `Store`.
+-- | The component's state
 -- |
 -- | - `inputType`: Controls whether the component is input-driven or toggle-driven
 -- | - `search`: The text the user has typed into the text input, or stream of keys
@@ -172,42 +170,51 @@ type StateStore item v ps m =
 -- | - `highlightedIndex`: What item in the array of items should be considered
 -- |                       highlighted. Useful for rendering.
 -- | - `lastIndex`: The length of the array of items.
-type State item =
-  { inputType        :: InputType
-  , search           :: String
-  , debounceTime     :: Milliseconds
-  , debounceRef      :: Maybe (Ref (Maybe Debouncer))
-  , items            :: Array item
-  , visibility       :: Visibility
+newtype State item st act ps m = State
+  { inputType :: InputType
+  , search :: String
+  , debounceTime :: Milliseconds
+  , debounceRef :: Maybe (Ref (Maybe Debouncer))
+  , items :: Array item
+  , visibility :: Visibility
   , highlightedIndex :: Maybe Int
-  , lastIndex        :: Int
+  , lastIndex :: Int
+  , render :: State item st act ps m -> H.ComponentHTML (Action item st act ps m) ps m
+  | st
   }
+
+derive instance newtypeState :: Newtype (State item st act ps m) _
 
 -- | Represents a running computation that, when it completes, will trigger debounced
 type Debouncer =
-  { var   :: AVar Unit
+  { var :: AVar Unit
   , fiber :: Fiber Unit 
   }
 
 -- | The component's input type, which includes the component's render function. This
 -- | render function can also be used to share data with the parent component, as every
 -- | time the parent re-renders, the render function will refresh in `Select`.
-type Input item v ps m =
-  { inputType     :: InputType
-  , items         :: Array item
-  , initialSearch :: Maybe String
-  , debounceTime  :: Maybe Milliseconds
-  , render        :: State item -> H.ComponentHTML (Action item v ps m) ps m
+type Input item st act ps m =
+  { inputType :: InputType
+  , items :: Array item
+  , search :: Maybe String
+  , debounceTime :: Maybe Milliseconds
+  , render :: State item st act ps m -> H.ComponentHTML (Action item st act ps m) ps m
+  | st
   }
 
 component 
-  :: forall item v ps out m
-   . MonadAff m
-  => (Variant v -> H.HalogenM (StateStore item v ps m) (Action item v ps m) ps (Message item out) m Unit)
-  -> H.Component HH.HTML (Query item v ps m) (Input item v ps m) (Message item out) m
+  :: forall item st act ps msg m
+   . Row.Lacks "debounceRef" st
+  => Row.Lacks "visibility" st
+  => Row.Lacks "highlightedIndex" st
+  => Row.Lacks "lastIndex" st
+  => MonadAff m
+  => (Variant act -> H.HalogenM (State item st act ps m) (Action item st act ps m) ps (Message item msg) m Unit)
+  -> H.Component HH.HTML (Query item st act ps m) (Input item st act ps m) (Message item msg) m
 component handleExtraActions = H.mkComponent
   { initialState
-  , render: extract
+  , render: \s@(State st) -> st.render s
   , eval: H.mkEval $ H.defaultEval
       { handleQuery = handleQuery handleExtraActions
       , handleAction = handleAction handleExtraActions
@@ -216,33 +223,39 @@ component handleExtraActions = H.mkComponent
       }
   }
 
-initialState :: forall item v ps m. Input item v ps m -> StateStore item v ps m
-initialState i = store i.render
-  { inputType: i.inputType
-  , search: fromMaybe "" i.initialSearch
-  , debounceTime: fromMaybe (Milliseconds 0.0) i.debounceTime
-  , debounceRef: Nothing
-  , items: i.items
-  , highlightedIndex: Nothing
-  , visibility: Off
-  , lastIndex: length i.items - 1
-  }
+initialState
+  :: forall item st act ps m
+   . Row.Lacks "debounceRef" st
+  => Row.Lacks "visibility" st
+  => Row.Lacks "highlightedIndex" st
+  => Row.Lacks "lastIndex" st
+  => Input item st act ps m 
+  -> State item st act ps m
+initialState input = State (Builder.build pipeline input)
+  where
+  pipeline =
+    Builder.modify (SProxy :: _ "debounceTime") (fromMaybe (Milliseconds 0.0))
+      >>> Builder.modify (SProxy :: _ "search") (fromMaybe "")
+      >>> Builder.insert (SProxy :: _ "debounceRef") Nothing
+      >>> Builder.insert (SProxy :: _ "visibility") Off
+      >>> Builder.insert (SProxy :: _ "highlightedIndex") Nothing
+      >>> Builder.insert (SProxy :: _ "lastIndex") (length input.items - 1)
 
 handleAction 
-  :: forall item v ps out m
+  :: forall item st act ps msg m
    . MonadAff m 
-  => (Variant v -> H.HalogenM (StateStore item v ps m) (Action item v ps m) ps (Message item out) m Unit)
-  -> Action item v ps m
-  -> H.HalogenM (StateStore item v ps m) (Action item v ps m) ps (Message item out) m Unit
+  => (Variant act -> H.HalogenM (State item st act ps m) (Action item st act ps m) ps (Message item msg) m Unit)
+  -> Action item st act ps m
+  -> H.HalogenM (State item st act ps m) (Action item st act ps m) ps (Message item msg) m Unit
 handleAction handleExtraActions = unwrap >>> flip onMatch handleExtraActions
   { initialize: \_ -> do
       ref <- H.liftEffect $ Ref.new Nothing
-      modifyState_ _ { debounceRef = Just ref }
+      H.modify_ (over State _ { debounceRef = Just ref })
 
   , search: \str -> do
-      st <- getState
+      (State st) <- H.get
       ref  <- H.liftEffect $ map join $ traverse Ref.read st.debounceRef
-      modifyState_ _ { search = str }
+      H.modify_ (over State _ { search = str })
       void $ H.fork $ handleAction' $ setVisibility On
 
       case st.inputType, ref of
@@ -257,8 +270,8 @@ handleAction handleExtraActions = unwrap >>> flip onMatch handleExtraActions
           _ <- H.fork do
             _ <- H.liftAff $ AVar.take var
             void $ H.liftEffect $ traverse_ (Ref.write Nothing) st.debounceRef
-            modifyState_ _ { highlightedIndex = Just 0 }
-            newState <- getState
+            H.modify_ (over State _ { highlightedIndex = Just 0 })
+            (State newState) <- H.get
             H.raise $ searched newState.search
 
           void $ H.liftEffect $ traverse_ (Ref.write $ Just { var, fiber }) st.debounceRef
@@ -277,13 +290,13 @@ handleAction handleExtraActions = unwrap >>> flip onMatch handleExtraActions
         _, _ -> pure unit
 
   , highlight: \target -> do
-      st <- getState
+      (State st) <- H.get
       when (st.visibility == Off) do
         let targetIndex = getTargetIndex st target
-        modifyState_ _ { highlightedIndex = Just targetIndex }
+        H.modify_ (over State _ { highlightedIndex = Just targetIndex })
 
   , select: \target -> do 
-      st <- getState
+      (State st) <- H.get
       when (st.visibility == On) do 
         let raise' ix = for_ (st.items !! ix) (H.raise <<< selected)
         case target of
@@ -310,21 +323,21 @@ handleAction handleExtraActions = unwrap >>> flip onMatch handleExtraActions
           preventIt
           for_ inputElement (H.liftEffect <<< HTMLElement.blur)
         "Enter" -> do
-          st <- getState
+          (State st) <- H.get
           preventIt
           for_ st.highlightedIndex (handleAction' <<< select <<< Index)
-        otherKey    -> pure unit
+        otherKey -> pure unit
 
   , preventClick: H.liftEffect <<< preventDefault <<< ME.toEvent
 
   , setVisibility: \v -> do
-      st <- getState
+      (State st) <- H.get
       when (st.visibility /= v) do
-        modifyState_ _ { visibility = v, highlightedIndex = Just 0 }
+        H.modify_ $ over State _ { visibility = v, highlightedIndex = Just 0 }
         H.raise $ visibilityChanged v
 
-  , receive: \input -> do
-      modifyStore_ input.render identity
+  , receive: \input ->
+      H.modify_ (over State \st -> st { render = input.render })
   
   , andThen: \(Tuple act1 act2) ->
       handleAction' act1 *> handleAction' act2
@@ -342,18 +355,18 @@ handleAction handleExtraActions = unwrap >>> flip onMatch handleExtraActions
 
 -- Just the normal Halogen eval
 handleQuery 
-  :: forall item v ps out m a
+  :: forall item st act ps msg m a
    . MonadAff m 
-  => (Variant v -> H.HalogenM (StateStore item v ps m) (Action item v ps m) ps (Message item out) m Unit)
-  -> Query item v ps m a
-  -> H.HalogenM (StateStore item v ps m) (Action item v ps m) ps (Message item out) m (Maybe a)
+  => (Variant act -> H.HalogenM (State item st act ps m) (Action item st act ps m) ps (Message item msg) m Unit)
+  -> Query item st act ps m a
+  -> H.HalogenM (State item st act ps m) (Action item st act ps m) ps (Message item msg) m (Maybe a)
 handleQuery handleExtraActions = case _ of
   GetVisibility f -> do
-    st <- getState
+    (State st) <- H.get
     pure (Just (f st.visibility))
 
   ReplaceItems items a -> do
-    modifyState_ _
+    H.modify_ $ over State _
       { items = items
       , lastIndex = length items - 1
       , highlightedIndex = Nothing 

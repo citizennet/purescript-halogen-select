@@ -63,19 +63,19 @@ component = H.mkComponent
       [ HH.slot _select unit (SS.component) input (Just <<< HandleSelect) ]
     where
     input =
-      { initialSearch: Nothing
+      { search: Nothing
       , debounceTime: Nothing
       , inputType: Select.Toggle
       , items: difference st.items [ st.text ]
       , render: renderDropdown
       }
 
-    renderDropdown :: Select.State String -> SS.ComponentHTML String m
-    renderDropdown state = HH.div_ [ renderToggle, renderMenu ]
+    renderDropdown :: SS.State String m -> SS.ComponentHTML String m
+    renderDropdown (Select.State state) = HH.div_ [ renderToggle, renderMenu ]
       where
       renderToggle =
         HH.button
-          ( Setters.setToggleProps state [ HP.classes CSS.button ] )
+          ( Setters.setToggleProps (Select.State state) [ HP.classes CSS.button ] )
           [ HH.text st.text ]
 
       renderMenu =
