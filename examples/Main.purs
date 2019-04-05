@@ -32,7 +32,6 @@ import Web.HTML.Window (document)
 main :: Effect Unit
 main = pure unit
 
-{-
 main :: Effect Unit
 main = HA.runHalogenAff do
   elements <- awaitSelectAll
@@ -40,20 +39,19 @@ main = HA.runHalogenAff do
     , attr: "data-component"
     }
   for_ elements \e -> runUI app e.attr e.element
--}
 
 ----------
 -- Routes
 
-{-
 type Components m
   = Map.Map String (H.Component HH.HTML (ProxyS (Const Void) Unit) Unit Void m)
 
 routes :: ∀ m. MonadAff m => Components m
-routes = Map.fromFoldable
-  [ Tuple "typeahead" $ proxy Component.typeahead
-  , Tuple "dropdown" $ proxy Component.dropdown 
-  ]
+routes = Map.fromFoldable []
+  -- FIXME: Make wrapper components that just mask types but do nothing
+  -- [ Tuple "typeahead" $ proxy Component.typeahead
+  -- , Tuple "dropdown" $ proxy Component.dropdown 
+  -- ]
 
 app :: ∀ m. MonadAff m => H.Component HH.HTML (Const Void) String Void m
 app = H.mkComponent
@@ -86,4 +84,4 @@ selectElements { query, attr } = do
 
   attrs <- liftEffect $ traverse (getAttribute attr <<< toElement) elems
   pure $ zipWith ({ element: _, attr: _ }) elems (fromMaybe "" <$> attrs)
--}
+

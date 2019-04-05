@@ -3,17 +3,14 @@ module Docs.Components.Typeahead where
 import Prelude
 
 import Data.Array (elemIndex, mapWithIndex, difference, filter, (:))
-import Data.Const (Const)
 import Data.Foldable (for_, length)
 import Data.Maybe (Maybe(..))
 import Data.Monoid (guard)
 import Data.String (Pattern(..), contains)
 import Data.Symbol (SProxy(..))
-import Data.Variant (Variant, inj, match)
 import Docs.CSS as CSS
 import Docs.Components.Dropdown as Dropdown
 import Effect.Aff.Class (class MonadAff)
-import Effect.Class.Console as Console
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
@@ -42,8 +39,8 @@ import Select.Setters as Setters
 -- Just like the dropdown, all we have to do to export a full component is just 
 -- specialize the types and supply a render function, query handler, and message 
 -- handler.
--- component :: forall m. MonadAff m => H.ComponentHTML HH.HTML _ _ _ m
--- component = Select.component render handleQuery handleMessage
+component :: forall m. MonadAff m => H.Component HH.HTML Query Input Message m
+component = Select.component render handleQuery handleMessage
 
 
 -----
