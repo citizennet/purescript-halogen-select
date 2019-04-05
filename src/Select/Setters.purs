@@ -37,15 +37,15 @@ type ToggleProps props =
 -- | renderToggle = div (setToggleProps [ class "btn-class" ]) [ ...html ]
 -- | ```
 setToggleProps
-  :: forall props item st act
+  :: forall props item st query ps
    . State item st
-  -> Array (HP.IProp (ToggleProps props) (Action act))
-  -> Array (HP.IProp (ToggleProps props) (Action act))
+  -> Array (HP.IProp (ToggleProps props) (Action item query ps))
+  -> Array (HP.IProp (ToggleProps props) (Action item query ps))
 setToggleProps st = append
-  [ HE.onFocus \_ -> Just $ setVisibility On
-  , HE.onMouseDown $ Just <<< toggleClick
-  , HE.onKeyDown $ Just <<< key
-  , HE.onBlur \_ -> Just $ setVisibility Off
+  [ HE.onFocus \_ -> Just $ SetVisibility On
+  , HE.onMouseDown $ Just <<< ToggleClick
+  , HE.onKeyDown $ Just <<< Key
+  , HE.onBlur \_ -> Just $ SetVisibility Off
   , HP.tabIndex 0
   , HP.ref (H.RefLabel "select-input")
   ]
@@ -72,15 +72,15 @@ type InputProps props =
 -- | renderInput = input_ (setInputProps [ class "my-class" ])
 -- | ```
 setInputProps
-  :: ∀ props act
-   . Array (HP.IProp (InputProps props) (Action act))
-  -> Array (HP.IProp (InputProps props) (Action act))
+  :: forall props item query ps
+   . Array (HP.IProp (InputProps props) (Action item query ps))
+  -> Array (HP.IProp (InputProps props) (Action item query ps))
 setInputProps = append
-  [ HE.onFocus \_ -> Just $ setVisibility On
-  , HE.onKeyDown $ Just <<< key
-  , HE.onValueInput $ Just <<< search
-  , HE.onMouseDown \_ -> Just $ setVisibility On
-  , HE.onBlur \_ -> Just $ setVisibility Off
+  [ HE.onFocus \_ -> Just $ SetVisibility On
+  , HE.onKeyDown $ Just <<< Key
+  , HE.onValueInput $ Just <<< Search
+  , HE.onMouseDown \_ -> Just $ SetVisibility On
+  , HE.onBlur \_ -> Just $ SetVisibility Off
   , HP.tabIndex 0
   , HP.ref (H.RefLabel "select-input")
   ]
@@ -106,13 +106,13 @@ type ItemProps props =
 -- | render = renderItem `mapWithIndex` itemsArray
 -- | ```
 setItemProps
-  :: forall props act
-   . Int
-  -> Array (HP.IProp (ItemProps props) (Action act))
-  -> Array (HP.IProp (ItemProps props) (Action act))
+  :: forall props item query ps
+   . Int 
+  -> Array (HP.IProp (ItemProps props) (Action item query ps)) 
+  -> Array (HP.IProp (ItemProps props) (Action item query ps))
 setItemProps index = append
-  [ HE.onMouseDown \ev -> Just (select (Index index) (Just ev))
-  , HE.onMouseOver \_ -> Just $ highlight (Index index)
+  [ HE.onMouseDown \ev -> Just (Select (Index index) (Just ev))
+  , HE.onMouseOver \_ -> Just $ Highlight (Index index)
   ]
 
 -- | A helper function that augments an array of `IProps` with a `MouseDown`
@@ -120,8 +120,8 @@ setItemProps index = append
 -- | from bubbling up a blur event to the DOM. This should be used on the parent
 -- | element that contains your items.
 setContainerProps
-  :: forall props act
-   . Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action act))
-  -> Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action act))
+  :: forall props item query ps
+   . Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action item query ps))
+  -> Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action item query ps))
 setContainerProps = append
-  [ HE.onMouseDown $ Just <<< preventClick ]
+  [ HE.onMouseDown $ Just <<< PreventClick ]

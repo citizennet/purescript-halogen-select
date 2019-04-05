@@ -9,7 +9,6 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Symbol (SProxy(..))
 import Data.Traversable (for_, sequence, traverse)
 import Data.Tuple (Tuple(..))
-import Docs.Internal.Component as Component
 import Docs.Internal.Proxy (ProxyS, proxy)
 import Effect (Effect)
 import Effect.Aff (Aff)
@@ -31,16 +30,22 @@ import Web.HTML.Window (document)
 -- Then, mounts the right component at each node.
 
 main :: Effect Unit
+main = pure unit
+
+{-
+main :: Effect Unit
 main = HA.runHalogenAff do
   elements <- awaitSelectAll
     { query: QuerySelector "div[data-component]"
     , attr: "data-component"
     }
   for_ elements \e -> runUI app e.attr e.element
+-}
 
 ----------
 -- Routes
 
+{-
 type Components m
   = Map.Map String (H.Component HH.HTML (ProxyS (Const Void) Unit) Unit Void m)
 
@@ -81,3 +86,4 @@ selectElements { query, attr } = do
 
   attrs <- liftEffect $ traverse (getAttribute attr <<< toElement) elems
   pure $ zipWith ({ element: _, attr: _ }) elems (fromMaybe "" <$> attrs)
+-}
