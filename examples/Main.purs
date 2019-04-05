@@ -9,8 +9,9 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Symbol (SProxy(..))
 import Data.Traversable (for_, sequence, traverse)
 import Data.Tuple (Tuple(..))
-import Docs.Internal.Component as Component
 import Docs.Internal.Proxy (ProxyS, proxy)
+import Docs.Components.Typeahead as Typeahead
+import Docs.Components.Dropdown as Dropdown
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Aff.Class (class MonadAff)
@@ -19,6 +20,7 @@ import Halogen as H
 import Halogen.Aff as HA
 import Halogen.HTML as HH
 import Halogen.VDom.Driver (runUI)
+import Select as Select
 import Web.DOM.Element (getAttribute)
 import Web.DOM.NodeList (toArray)
 import Web.DOM.ParentNode (QuerySelector(..), querySelectorAll)
@@ -46,8 +48,8 @@ type Components m
 
 routes :: ∀ m. MonadAff m => Components m
 routes = Map.fromFoldable
-  [ Tuple "typeahead" $ proxy Component.typeahead
-  , Tuple "dropdown" $ proxy Component.dropdown 
+  [ Tuple "typeahead" $ proxy typeahead
+  , Tuple "dropdown" $ proxy dropdown 
   ]
 
 app :: ∀ m. MonadAff m => H.Component HH.HTML (Const Void) String Void m
@@ -81,3 +83,43 @@ selectElements { query, attr } = do
 
   attrs <- liftEffect $ traverse (getAttribute attr <<< toElement) elems
   pure $ zipWith ({ element: _, attr: _ }) elems (fromMaybe "" <$> attrs)
+
+----------
+-- Components
+
+dropdown :: forall t0 t1 t2 t3. MonadAff t3 => H.Component HH.HTML t0 t1 t2 t3
+dropdown = H.mkComponent
+  { initialState: const unit
+  , render: \_ ->
+      HH.slot (SProxy :: SProxy "dropdown") unit Dropdown.component input \_ -> Nothing
+  , eval: H.mkEval H.defaultEval
+  }
+  where
+  input = 
+    { inputType: Select.Toggle
+    , items: [ "one", "two", "three" ]
+    , debounceTime: Nothing
+    , search: Nothing
+    -- extension
+    , selection: Nothing
+    }
+
+typeahead :: forall t0 t1 t2 t3. MonadAff t3 => H.Component HH.HTML t0 t1 t2 t3
+typeahead = H.mkComponent
+  { initialState: const unit
+  , render: \_ ->
+      HH.slot (SProxy :: SProxy "typeahead") unit Typeahead.component input \_ -> Nothing
+  , eval: H.mkEval H.defaultEval
+  }
+  where
+  items = [ "one", "two", "three" ]
+  input = 
+    { inputType: Select.Toggle
+    , items
+    , debounceTime: Nothing
+    , search: Nothing
+    -- extension
+    , selectedItems: []
+    , visibleItems: items
+    }
+
