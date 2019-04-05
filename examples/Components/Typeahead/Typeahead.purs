@@ -135,8 +135,7 @@ handleQuery
   => ExtraQuery a
   -> H.HalogenM State Action ChildSlots Message m (Maybe a)
 handleQuery = case _ of  
-  Remove item a -> pure (Just a) 
-  {- <$ do
+  Remove item a -> Just a <$ do
     st <- H.get
     let newSelections = filter (_ /= item) st.selectedItems
     H.modify_ _
@@ -144,12 +143,9 @@ handleQuery = case _ of
       , visibleItems = difference newSelections st.items
       }
     H.raise $ Select.Raised $ ItemRemoved item
-  -}
   
   -- We can handle our child component
-  HandleDropdown msg a -> pure (Just a) 
-  {-
-    <$ case msg of
+  HandleDropdown msg a -> Just a <$ case msg of
     Select.Selected item -> do
       st <- H.get
       let index = elemIndex item st.items
@@ -157,11 +153,11 @@ handleQuery = case _ of
         -- Remember that we're handling this from the typeahead; calling
         -- the below will cause the *typeahead* to select the item, not the
         -- dropdown.
-        Select.handleAction handleQuery handleMessage $ Select.Select $ Select.Index ix
+        Select.handleAction handleQuery handleMessage 
+          $ Select.Select (Select.Index ix) Nothing
 
     _ -> 
       pure unit
-  -}
 
 -----
 -- Render Function
