@@ -32,9 +32,6 @@
   ],
   "dependencies": {
     "purescript-halogen": "^5.0.0-rc.3",
-    "purescript-halogen-renderless": "^0.0.4",
-    "purescript-variant": "^6.0.0",
-    "purescript-fixed-points": "^5.1.0",
     "purescript-record": "^2.0.0"
   },
   "devDependencies": {
