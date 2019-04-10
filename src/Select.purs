@@ -7,14 +7,13 @@ module Select where
 
 import Prelude
 
-import Prim.Row as Row
-import Record.Builder as Builder
 import Control.Monad.Free (liftF)
 import Data.Array (length, (!!))
+import Data.Const (Const)
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Symbol (SProxy(..))
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (for_, traverse, traverse_)
-import Data.Symbol (SProxy(..))
 import Effect.Aff (Fiber, delay, error, forkAff, killFiber)
 import Effect.Aff.AVar (AVar)
 import Effect.Aff.AVar as AVar
@@ -24,6 +23,8 @@ import Effect.Ref as Ref
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.Query.ChildQuery (ChildQueryBox)
+import Prim.Row as Row
+import Record.Builder as Builder
 import Web.Event.Event (preventDefault)
 import Web.HTML.HTMLElement as HTMLElement
 import Web.UIEvent.KeyboardEvent as KE
@@ -45,8 +46,10 @@ data Action item query ps
   | AndThen (Action item query ps) (Action item query ps)
   | AsAction (Query item query ps Unit)
 
+type Action' item = Action item (Const Void) ()
+
 -----
--- QUERIES 
+-- QUERIES
 
 data Query item query ps a
     -- send a query through `Select` to a child component
@@ -54,17 +57,27 @@ data Query item query ps a
   | Send (ChildQueryBox ps (Maybe a))
   | Embed (query a)
 
+type Query' item = Query item (Const Void) ()
+
 -----
 -- MESSAGES
 
-data Message item msg 
+data Message item msg
   = Searched String
   | Selected item
   | VisibilityChanged Visibility
   | Raised msg
 
+type Message' item = Message item Void
+
 -----
 -- HELPER TYPES
+
+-- | The component slot type for easy use in a parent component
+type Slot item query ps msg = H.Slot (Query item query ps) (Message item msg)
+
+-- | The component slot type when there is no extension
+type Slot' item = Slot item (Const Void) () Void
 
 -- | Represents a way to navigate on `Highlight` events: to the previous
 -- | item, next item, or the item at a particular index.
@@ -132,9 +145,11 @@ type State item st =
   | st
   }
 
+type State' item = State item ()
+
 type Debouncer =
   { var :: AVar Unit
-  , fiber :: Fiber Unit 
+  , fiber :: Fiber Unit
   }
 
 type Input item st =
@@ -145,7 +160,9 @@ type Input item st =
   | st
   }
 
-component 
+type Input' item = Input item ()
+
+component
   :: forall item st query ps msg m
    . Row.Lacks "debounceRef" st
   => Row.Lacks "visibility" st
@@ -177,14 +194,14 @@ component render handleExtraQuery handleMessage = H.mkComponent
         >>> Builder.insert (SProxy :: _ "highlightedIndex") Nothing
         >>> Builder.insert (SProxy :: _ "lastIndex") (length input.items - 1)
 
-handleAction 
+handleAction
   :: forall item st query ps msg m
-   . MonadAff m 
+   . MonadAff m
   => (forall a. query a -> H.HalogenM (State item st) (Action item query ps) ps (Message item msg) m (Maybe a))
   -> (Message item msg -> H.HalogenM (State item st) (Action item query ps) ps (Message item msg) m Unit)
   -> Action item query ps
   -> H.HalogenM (State item st) (Action item query ps) ps (Message item msg) m Unit
-handleAction handleExtraQuery handleMessage = case _ of 
+handleAction handleExtraQuery handleMessage = case _ of
   Initialize -> do
     ref <- H.liftEffect $ Ref.new Nothing
     H.modify_ _ { debounceRef = Just ref }
@@ -232,10 +249,10 @@ handleAction handleExtraQuery handleMessage = case _ of
       let targetIndex = getTargetIndex st target
       H.modify_ _ { highlightedIndex = Just targetIndex }
 
-  Select target mbEv -> do 
+  Select target mbEv -> do
     for_ mbEv (H.liftEffect <<< preventDefault <<< ME.toEvent)
     st <- H.get
-    when (st.visibility == On) do 
+    when (st.visibility == On) do
       let raiseSelected ix = for_ (st.items !! ix) (raise' <<< Selected)
       case target of
         Index ix -> raiseSelected ix
@@ -247,15 +264,15 @@ handleAction handleExtraQuery handleMessage = case _ of
     st <- H.get
     case st.visibility of
       On -> do
-        handleAction' $ Focus false 
+        handleAction' $ Focus false
         handleAction' $ SetVisibility Off
       Off -> do
-        handleAction' $ Focus true 
+        handleAction' $ Focus true
         handleAction' $ SetVisibility On
 
   Focus shouldFocus -> do
     inputElement <- H.getHTMLElementRef $ H.RefLabel "select-input"
-    for_ inputElement \el -> H.liftEffect case shouldFocus of 
+    for_ inputElement \el -> H.liftEffect case shouldFocus of
       true -> HTMLElement.focus el
       _ -> HTMLElement.blur el
 
@@ -263,9 +280,9 @@ handleAction handleExtraQuery handleMessage = case _ of
     void $ H.fork $ handleAction' $ SetVisibility On
     let preventIt = H.liftEffect $ preventDefault $ KE.toEvent ev
     case KE.code ev of
-      "ArrowUp" -> 
+      "ArrowUp" ->
         preventIt *> handleAction' (Highlight Prev)
-      "ArrowDown" -> 
+      "ArrowDown" ->
         preventIt *> handleAction' (Highlight Next)
       "Escape" -> do
         inputElement <- H.getHTMLElementRef $ H.RefLabel "select-input"
@@ -278,7 +295,7 @@ handleAction handleExtraQuery handleMessage = case _ of
           handleAction' $ Select (Index ix) Nothing
       otherKey -> pure unit
 
-  PreventClick ev -> 
+  PreventClick ev ->
     H.liftEffect $ preventDefault $ ME.toEvent ev
 
   SetVisibility v -> do
@@ -287,22 +304,22 @@ handleAction handleExtraQuery handleMessage = case _ of
       H.modify_ _ { visibility = v, highlightedIndex = Just 0 }
       raise' $ VisibilityChanged v
 
-  AndThen act1 act2 -> do 
-    handleAction' act1 
-    handleAction' act2 
+  AndThen act1 act2 -> do
+    handleAction' act1
+    handleAction' act2
     pure unit
   
   AsAction query -> do
     _ <- handleQuery handleExtraQuery query
     pure unit
-  
+
   where
   -- recursively evaluate an action
   handleAction' act = handleAction handleExtraQuery handleMessage act
 
   -- attempt to handle a message internally, and then raise the
   -- message to a parent component.
-  raise' msg = do 
+  raise' msg = do
     void $ H.fork $ handleMessage msg
     H.raise msg
 
@@ -316,9 +333,9 @@ handleAction handleExtraQuery handleMessage = case _ of
       _ -> 0
 
 -- Just the normal Halogen eval
-handleQuery 
+handleQuery
   :: forall item st query ps msg m a
-   . MonadAff m 
+   . MonadAff m
   => (query a -> H.HalogenM (State item st) (Action item query ps) ps (Message item msg) m (Maybe a))
   -> Query item query ps a
   -> H.HalogenM (State item st) (Action item query ps) ps (Message item msg) m (Maybe a)
@@ -327,13 +344,13 @@ handleQuery handleExtraQuery = case _ of
     H.modify_ _
       { items = items
       , lastIndex = length items - 1
-      , highlightedIndex = Nothing 
+      , highlightedIndex = Nothing
       }
     pure (Just a)
 
-  Send box -> 
+  Send box ->
     H.HalogenM $ liftF $ H.ChildQuery box
 
-  Embed query -> 
+  Embed query ->
     handleExtraQuery query
 
