@@ -193,7 +193,7 @@ handleAction handleExtraQuery handleMessage = case _ of
     st <- H.get
     ref  <- H.liftEffect $ map join $ traverse Ref.read st.debounceRef
     H.modify_ _ { search = str }
-    void $ H.fork $ handleAction' $ SetVisibility On
+    void $ H.fork $ handleAction handleExtraQuery handleMessage $ SetVisibility On
 
     case st.inputType, ref of
       TextInput, Nothing -> unit <$ do
@@ -247,11 +247,12 @@ handleAction handleExtraQuery handleMessage = case _ of
     st <- H.get
     case st.visibility of
       On -> do
-        handleAction' $ Focus false 
-        handleAction' $ SetVisibility Off
+        handleAction handleExtraQuery handleMessage $ Focus false 
+        handleAction handleExtraQuery handleMessage $ SetVisibility Off
       Off -> do
-        handleAction' $ Focus true 
-        handleAction' $ SetVisibility On
+	pure unit
+        handleAction handleExtraQuery handleMessage $ Focus true 
+        handleAction handleExtraQuery handleMessage $ SetVisibility On
 
   Focus shouldFocus -> do
     inputElement <- H.getHTMLElementRef $ H.RefLabel "select-input"
@@ -260,13 +261,13 @@ handleAction handleExtraQuery handleMessage = case _ of
       _ -> HTMLElement.blur el
 
   Key ev -> do
-    void $ H.fork $ handleAction' $ SetVisibility On
+    void $ H.fork $ handleAction handleExtraQuery handleMessage $ SetVisibility On
     let preventIt = H.liftEffect $ preventDefault $ KE.toEvent ev
     case KE.code ev of
       "ArrowUp" -> 
-        preventIt *> handleAction' (Highlight Prev)
+        preventIt *> handleAction handleExtraQuery handleMessage (Highlight Prev)
       "ArrowDown" -> 
-        preventIt *> handleAction' (Highlight Next)
+        preventIt *> handleAction handleExtraQuery handleMessage (Highlight Next)
       "Escape" -> do
         inputElement <- H.getHTMLElementRef $ H.RefLabel "select-input"
         preventIt
@@ -275,7 +276,7 @@ handleAction handleExtraQuery handleMessage = case _ of
         st <- H.get
         preventIt
         for_ st.highlightedIndex \ix ->
-          handleAction' $ Select (Index ix) Nothing
+          handleAction handleExtraQuery handleMessage $ Select (Index ix) Nothing
       otherKey -> pure unit
 
   PreventClick ev -> 
@@ -288,8 +289,8 @@ handleAction handleExtraQuery handleMessage = case _ of
       raise' $ VisibilityChanged v
 
   AndThen act1 act2 -> do 
-    handleAction' act1 
-    handleAction' act2 
+    handleAction handleExtraQuery handleMessage act1 
+    handleAction handleExtraQuery handleMessage act2 
     pure unit
   
   RunQuery query -> do
@@ -297,9 +298,6 @@ handleAction handleExtraQuery handleMessage = case _ of
     pure unit
   
   where
-  -- recursively evaluate an action
-  handleAction' = handleAction handleExtraQuery handleMessage
-
   -- attempt to handle a message internally, and then raise the
   -- message to a parent component.
   raise' msg = do 

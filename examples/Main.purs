@@ -2,6 +2,7 @@ module Main where
 
 import Prelude
 
+import Debug.Trace (traceM)
 import Data.Array (zipWith)
 import Data.Const (Const)
 import Data.Map as Map
@@ -38,6 +39,7 @@ main = HA.runHalogenAff do
     { query: QuerySelector "div[data-component]"
     , attr: "data-component"
     }
+  traceM elements
   for_ elements \e -> runUI app e.attr e.element
 
 ----------
