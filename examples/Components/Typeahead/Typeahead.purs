@@ -189,8 +189,7 @@ render state =
     closeButton item =
       HH.span
         [ HE.onClick \_ -> 
-	    -- nicer with variants. worth it?
-            Just $ Select.RunQuery $ Select.Embed $ Remove item unit
+            Just $ Select.AsAction $ Select.Embed $ Remove item unit
         , class_ "absolute pin-t pin-b pin-r p-1 mx-3 cursor-pointer" 
         ]
         [ HH.text "×" ]
@@ -211,8 +210,7 @@ render state =
     -- a select component.
     renderChild = HH.slot _dropdown unit Dropdown.component input handleChild
       where
-      -- better with variants; worth it?
-      handleChild msg = Just (Select.RunQuery (Select.Embed (HandleDropdown msg unit)))
+      handleChild msg = Just (Select.AsAction (Select.Embed (H.tell (HandleDropdown msg))))
 
       input = 
         { inputType: Select.Toggle

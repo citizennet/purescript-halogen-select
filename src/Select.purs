@@ -43,7 +43,7 @@ data Action item query ps
   | SetVisibility Visibility
   | Initialize
   | AndThen (Action item query ps) (Action item query ps)
-  | RunQuery (Query item query ps Unit)
+  | AsAction (Query item query ps Unit)
 
 -----
 -- QUERIES 
@@ -292,7 +292,7 @@ handleAction handleExtraQuery handleMessage = case _ of
     handleAction' act2 
     pure unit
   
-  RunQuery query -> do
+  AsAction query -> do
     _ <- handleQuery handleExtraQuery query
     pure unit
   
@@ -336,3 +336,4 @@ handleQuery handleExtraQuery = case _ of
 
   Embed query -> 
     handleExtraQuery query
+
