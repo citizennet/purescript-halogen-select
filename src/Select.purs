@@ -298,7 +298,7 @@ handleAction handleExtraQuery handleMessage = case _ of
   
   where
   -- recursively evaluate an action
-  handleAction' act = handleAction handleExtraQuery handleMessage
+  handleAction' act = handleAction handleExtraQuery handleMessage act
 
   -- attempt to handle a message internally, and then raise the
   -- message to a parent component.

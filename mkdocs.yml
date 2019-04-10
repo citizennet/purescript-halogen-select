@@ -9,7 +9,7 @@ repo_name: 'purescript-halogen-select'
 repo_url: 'https://github.com/citizennet/purescript-halogen-select'
 
 # Copyright
-copyright: 'Copyright &copy; 2018 CitizenNet'
+copyright: 'Copyright &copy; 2019 CitizenNet'
 
 # Config
 theme:
@@ -27,15 +27,6 @@ theme:
 # To mount components
 extra_javascript:
   - js/app.js
-
-# To style components
-# extra_css:
-#  - css/cn-tailwind.scoped.css
-
-# Google Analytics
-# google_analytics:
-#   - 'UA-XXXXXXXX-X'
-#   - 'auto'
 
 # Extensions
 # Recommended here:
@@ -84,3 +75,4 @@ pages:
     # - 'Controlling component behavior from HTML': 'index.md'
     - 'Understanding free queries': 'concepts/understanding-free-queries.md'
   - Examples: 'examples.md'
+

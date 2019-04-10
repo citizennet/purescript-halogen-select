@@ -5,15 +5,13 @@
     "watch": "pulp -w build",
     "build-docs": "pulp build -I examples --to docs/js/app.js",
     "watch-docs": "pulp -w --then 'mkdocs serve' build -I examples --to docs/js/app.js",
-    "clean": "rm -rf output bower_components node_modules site docs/js docs/css",
-    "postinstall": "bower i --silent",
-    "fetch-css": "curl https://cdn.rawgit.com/citizennet/purescript-ocelot/dev/dist/cn-tailwind.scoped.css --output cn-tailwind.scoped.css",
-    "move-css": "mkdir -p docs/css/ && mv cn-tailwind.scoped.css docs/css/"
+    "clean": "rm -rf output bower_components node_modules site docs/js",
+    "postinstall": "bower i --silent"
   },
   "devDependencies": {
     "bower": "^1.8.8",
     "npm-check-updates": "^3.1.0",
-    "pulp": "^12.3.1",
-    "purescript": "^0.12.3"
+    "pulp": "12.3.1",
+    "purescript": "0.12.3"
   }
 }

@@ -48,21 +48,6 @@ jobs:
           paths:
             - js
 
-  css:
-    <<: *defaults
-    steps:
-      - checkout
-
-      - run:
-          name: Fetch and persist CSS
-          command: |
-            yarn fetch-css && yarn move-css
-
-      - persist_to_workspace:
-          root: docs
-          paths:
-            - css
-
   site:
     working_directory: ~/select
     docker:
@@ -139,16 +124,6 @@ workflows:
               ignore: gh-pages
 
       # On master branch, rebuild docs
-      - css:
-          filters:
-            branches:
-              only:
-                - master
-                - docs
-
-          requires:
-            - test
-
       - site:
           filters:
             branches:
@@ -168,4 +143,4 @@ workflows:
 
           requires:
             - site
-            - css
+
