@@ -99,8 +99,6 @@ dropdown = H.mkComponent
     , debounceTime: Nothing
     , search: Nothing
     , lastIndex: 2
-
-    -- extension
     , items: [ "one", "two", "three" ]
     , selection: Nothing
     }
@@ -118,9 +116,6 @@ typeahead = H.mkComponent
     , debounceTime: Just (Milliseconds 300.0)
     , search: Nothing
     , lastIndex: 0
-
-    -- extension
     , selections: mempty
     , available: NotAsked
     }
-

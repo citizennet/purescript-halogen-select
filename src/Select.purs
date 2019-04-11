@@ -85,32 +85,14 @@ derive instance eqTarget :: Eq Target
 -- | ```purescript
 -- | render state = if state.visibility == On then renderAll else renderInputOnly
 -- | ```
--- |
--- | This is a Boolean Algebra, where `On` corresponds to true, and `Off` to
--- | false, as one might expect. Thus, `not` will invert visibility.
 data Visibility = Off | On
 derive instance eqVisibility :: Eq Visibility
 derive instance ordVisibility :: Ord Visibility
 
-instance heytingAlgebraVisibility :: HeytingAlgebra Visibility where
-  tt = On
-  ff = Off
-  not On = Off
-  not Off = On
-  conj On On = On
-  conj _ _ = Off
-  disj Off Off = Off
-  disj _ _ = On
-  implies On Off = Off
-  implies _ _ = On
-instance booleanAlgebraVisibility :: BooleanAlgebra Visibility
-
 -- | Text-driven inputs will operate like a normal search-driven selection component.
 -- | Toggle-driven inputs will capture key streams and debounce in reverse (only notify
 -- | about searches when time has expired).
-data InputType
-  = Text
-  | Toggle
+data InputType = Text | Toggle
 
 -- | The component state
 type State st =
@@ -176,14 +158,14 @@ component spec = H.mkComponent
   }
   where
   initialState :: Input st -> State st
-  initialState input = Builder.build pipeline input
+  initialState = Builder.build pipeline
     where
     pipeline = 
       Builder.modify (SProxy :: _ "search") (fromMaybe "")
         >>> Builder.modify (SProxy :: _ "debounceTime") (fromMaybe mempty)
-	>>> Builder.insert (SProxy :: _ "debounceRef") Nothing
+        >>> Builder.insert (SProxy :: _ "debounceRef") Nothing
         >>> Builder.insert (SProxy :: _ "visibility") Off
-	>>> Builder.insert (SProxy :: _ "highlightedIndex") Nothing
+        >>> Builder.insert (SProxy :: _ "highlightedIndex") Nothing
 
 handleAction
   :: forall st query ps msg m
@@ -209,9 +191,9 @@ handleAction handleExtraQuery handleMessage = case _ of
       pipeline = 
         Builder.modify (SProxy :: SProxy "search") (const st.search)
           >>> Builder.modify (SProxy :: SProxy "debounceTime") (const st.debounceTime)
-	  >>> Builder.insert (SProxy :: SProxy "debounceRef") st.debounceRef
+          >>> Builder.insert (SProxy :: SProxy "debounceRef") st.debounceRef
           >>> Builder.insert (SProxy :: SProxy "visibility") st.visibility
-	  >>> Builder.insert (SProxy :: SProxy "highlightedIndex") st.highlightedIndex
+          >>> Builder.insert (SProxy :: SProxy "highlightedIndex") st.highlightedIndex
     H.put (Builder.build pipeline input)
 
   Search str -> do
@@ -314,12 +296,10 @@ handleAction handleExtraQuery handleMessage = case _ of
     handleAction' act2
     pure unit
   
-  AsAction query -> do
-    _ <- handleQuery handleExtraQuery query
-    pure unit
+  AsAction query -> unit <$ handleQuery handleExtraQuery query
 
   where
-  -- recursively evaluate an action
+  -- eta-expansion is necessary to avoid infinite recursion
   handleAction' act = handleAction handleExtraQuery handleMessage act
 
   -- attempt to handle a message internally, and then raise the
@@ -337,7 +317,6 @@ handleAction handleExtraQuery handleMessage = case _ of
       Just i | i /= st.lastIndex -> i + 1
       _ -> 0
 
--- Just the normal Halogen eval
 handleQuery
   :: forall st query ps msg m a
    . MonadAff m
@@ -350,4 +329,3 @@ handleQuery handleExtraQuery = case _ of
 
   Embed query ->
     handleExtraQuery query
-

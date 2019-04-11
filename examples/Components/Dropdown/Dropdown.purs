@@ -57,9 +57,6 @@ spec = Select.defaultSpec
           [ HH.ul [ HP.classes CSS.ul ] html ]
 
       renderItem index item =
-        HH.li
-          ( Setters.setItemProps index [ HP.class_ bgClass ] )
-          [ HH.text item ]
+        HH.li (Setters.setItemProps index [ HP.class_ bgClass ]) [ HH.text item ]
         where
         bgClass = HH.ClassName $ "bg-grey-lighter" # guard (state.highlightedIndex == Just index)
-

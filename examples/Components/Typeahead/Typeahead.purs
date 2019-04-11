@@ -59,20 +59,19 @@ spec = Select.defaultSpec
   
     Select.Searched str -> do
       st <- H.get
-
       -- we'll use an external api to search locations 
       H.modify_ _ { available = RD.Loading }
       items <- searchLocations str
       H.modify_ _ { available = items, lastIndex = maybe 0 (\arr -> length arr - 1) $ RD.toMaybe items }
-
       -- and then highlight the first one
       handleAction $ Select.Highlight $ Select.Index 0
-  
-    _ -> 
-      pure unit
+
+    _ -> pure unit
     where
+    -- eta-expanded to avoid infinite recursion
     handleAction act = Select.handleAction handleQuery handleMessage act
 
+  -- type signature is necessary for the `a` parameter 
   handleQuery :: forall a. ExtraQuery a -> H.HalogenM _ _ _ _ _ (Maybe a)
   handleQuery = case _ of  
     Remove item a -> Just a <$ do
@@ -81,7 +80,6 @@ spec = Select.defaultSpec
       H.modify_ _ { selections = newSelections }
       H.raise $ Select.Raised $ ItemRemoved item
   
-    -- We can also handle our child component
     HandleDropdown msg a -> Just a <$ case msg of
       Select.Raised (DD.SelectionChanged oldSelection newSelection) -> do
         st <- H.get
@@ -105,17 +103,12 @@ spec = Select.defaultSpec
       _ ->
         HH.div
           [ class_ "bg-white rounded-sm w-full border-b border-grey-lighter" ]
-          [ HH.ul
-            [ class_ "list-reset" ]
-            (renderSelectedItem <$> state.selections)
-          ]
+          [ HH.ul [ class_ "list-reset" ] (renderSelectedItem <$> state.selections) ]
       where
       renderSelectedItem item =
         HH.li
           [ class_ "px-4 py-1 text-grey-darkest hover:bg-grey-lighter relative" ]
-          [ renderLocation item
-          , closeButton item
-          ]
+          [ renderLocation item, closeButton item ]
 
       closeButton item =
         HH.span
@@ -145,34 +138,31 @@ spec = Select.defaultSpec
           , search: Nothing
           , debounceTime: Nothing
           , lastIndex: 1
-	  , items: [ "Earth", "Mars" ]
-	  , selection: Nothing
+          , items: [ "Earth", "Mars" ]
+          , selection: Nothing
           }
 
       renderItems f = do
         let renderMsg msg = [ HH.span [ class_ "pa-4" ] [ HH.text msg ] ]
         HH.div
-          ( Setters.setContainerProps
-            [ class_ "absolute bg-white shadow rounded-sm pin-t pin-l w-full" ]
-          )
+          (Setters.setContainerProps [ class_ "absolute bg-white shadow rounded-sm pin-t pin-l w-full" ])
           case state.available of
             RD.NotAsked -> renderMsg "No search performed..."
             RD.Loading -> renderMsg "Loading..."
             RD.Failure e -> renderMsg e
             RD.Success available -> 
-	     [ HH.ul 
-                 [ class_ "list-reset" ] 
-                 (f available) 
-             , renderChild
-	     ]
+              [ HH.ul 
+                  [ class_ "list-reset" ] 
+                  (f available) 
+              , renderChild
+              ]
 
       renderItem index item =
-        HH.li (Setters.setItemProps index [ class_ (base <> extra) ]) [ renderLocation item ]
+        HH.li (Setters.setItemProps index [ class_ $ base <> extra ]) [ renderLocation item ]
         where
         base = "px-4 py-1 text-grey-darkest"
         extra = " bg-grey-lighter" # guard (state.highlightedIndex == Just index) 
 
------
 -- Helpers
 
 class_ :: ∀ p i. String -> HH.IProp ( "class" :: String | i ) p
@@ -189,7 +179,7 @@ renderLocation { name, population } =
     [ HH.text name
     , HH.span
         [ class_ "ml-4 text-grey-lighter" ]
-	[ HH.text population ]
+        [ HH.text population ]
     ]
 
 searchLocations :: forall m. MonadAff m => String -> m (RD.RemoteData String (Array Location))
@@ -197,4 +187,3 @@ searchLocations search = liftAff do
   res <- AX.get AR.json ("https://swapi.co/api/planets/?search=" <> search) 
   let body = lmap AR.printResponseFormatError res.body
   pure $ RD.fromEither $ traverse decodeJson =<< (_ .: "results") =<< decodeJson =<< body
-
