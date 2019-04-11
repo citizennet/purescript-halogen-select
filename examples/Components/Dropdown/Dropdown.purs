@@ -2,11 +2,11 @@ module Docs.Components.Dropdown where
 
 import Prelude
 
-import Effect.Aff.Class (class MonadAff)
-import Data.Array as Array
-import Data.Array ((!!))
 import Data.Const (Const)
+import Effect.Aff.Class (class MonadAff)
+import Data.Array ((!!), mapWithIndex)
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Tuple (Tuple(..))
 import Docs.CSS as CSS
 import Halogen as H
 import Halogen.HTML as HH
@@ -34,9 +34,8 @@ import Select.Setters as Setters
 -- for another, thereby building an entirely different component. In this case, we'll 
 -- provide a render function and a handleMessage function, but use `pure Nothing` for 
 -- our query handler as we don't need to extend the query algebra in any way.
-component :: forall m. MonadAff m => H.Component HH.HTML Query Input Message m
-component = Select.component render (\_ -> pure Nothing) handleMessage
-
+spec :: forall m. MonadAff m => Select.Spec ExtraState (Const Void) () ExtraMessage m 
+spec = Select.defaultSpec { render = render, handleMessage = handleMessage }
 
 -----
 -- State
@@ -45,21 +44,27 @@ component = Select.component render (\_ -> pure Nothing) handleMessage
 -- extend its state to include a `selection` field which maintains the index of the 
 -- selected item.
 type ExtraState =
-  ( selection :: Maybe Int )
+  ( items :: Array String
+  , selection :: Maybe String 
+  )
 
 -- We can create a new type synonym that extends Select's state with this new field.
-type State = Select.State String ExtraState
+type State = Select.State ExtraState
 
 -- We can do the same for the Input type if we want. We'll get the new fields in 
 -- state via the input, so the parameter shows up here, too.
-type Input = Select.Input String ExtraState
+type Input = Select.Input ExtraState
 
 
 -----
 -- Message
 
--- We don't need to add any new messages to Select, but we could if we wanted to!
-type Message = Select.Message String Void
+-- We'll notify parent components when the selection has changed. We'll tell the parent
+-- about the old state and the new state.
+data ExtraMessage
+  = SelectionChanged (Tuple (Maybe String) (Maybe String))
+
+type Message = Select.Message ExtraMessage
 
 -- Sometimes you may need to take some action when a message is emitted. For example,
 -- there are several ways an item can be selected in `Select` and you may want to
@@ -69,11 +74,13 @@ type Message = Select.Message String Void
 handleMessage :: forall m. Message -> H.HalogenM State Action () Message m Unit
 handleMessage = case _ of
   -- We want to take action when an item has been selected, so let's handle that.
-  Select.Selected item -> do
-    H.modify_ \st -> st { selection = Array.elemIndex item st.items }
+  Select.Selected ix -> do
+    st <- H.get
+    let selection = st.items !! ix
+    H.modify_ _ { selection = selection }
+    H.raise $ Select.Raised $ SelectionChanged $ Tuple st.selection selection
   _ -> 
     pure unit
-
 
 -----
 -- Query
@@ -83,12 +90,8 @@ handleMessage = case _ of
 -- can freely extend the query algebra (and, by extension, the actions) new queries 
 -- so long as you also provide a handler for them.
 
--- For convenience, we'll create a synonym for `Query` with no extensions
-type Query = Select.Query String (Const Void) ()
-
--- For convenience, we'll create a synonym for `Action` with no extensions.
-type Action = Select.Action String (Const Void) ()
-
+type Query = Select.Query'
+type Action = Select.Action ExtraState (Const Void) ()
 
 -----
 -- Render Function
@@ -99,15 +102,13 @@ render state = HH.div_ [ renderToggle, renderMenu ]
   renderToggle =
     HH.button
       ( Setters.setToggleProps state [ HP.classes CSS.button ] )
-      -- We can use our new `selection` value in state to display the selected item
-      -- if there is one.
-      [ HH.text $ fromMaybe "Select an option" $ (state.items !! _) =<< state.selection ]
+      [ HH.text $ fromMaybe "Select an option" state.selection ]
 
   renderMenu =
     HH.div [ HP.classes CSS.menu ]
       if state.visibility == Select.Off
         then []
-        else [ renderContainer $ renderItem `Array.mapWithIndex` state.items ]
+        else [ renderContainer $ renderItem `mapWithIndex` state.items ]
     where
     renderContainer html =
       HH.div

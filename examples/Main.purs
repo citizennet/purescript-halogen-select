@@ -8,8 +8,10 @@ import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Symbol (SProxy(..))
 import Data.Traversable (for_, sequence, traverse)
+import Data.Time.Duration (Milliseconds(..))
 import Data.Tuple (Tuple(..))
 import Docs.Internal.Proxy (ProxyS, proxy)
+import Docs.Internal.RemoteData (RemoteData(..))
 import Docs.Components.Typeahead as Typeahead
 import Docs.Components.Dropdown as Dropdown
 import Effect (Effect)
@@ -69,18 +71,15 @@ app = H.mkComponent
 awaitSelectAll
   :: { query :: QuerySelector, attr :: String }
   -> Aff (Array { element :: HTMLElement, attr :: String })
-awaitSelectAll ask@{ query } = HA.awaitLoad >>= \_ -> selectElements ask >>= pure
+awaitSelectAll ask@{ query } = HA.awaitLoad >>= \_ -> selectElements ask
 
 selectElements
   :: { query :: QuerySelector, attr :: String }
   -> Aff (Array { element :: HTMLElement, attr :: String })
 selectElements { query, attr } = do
-  nodeArray <- liftEffect do
-    toArray =<< querySelectorAll query <<< toParentNode =<< document =<< window
-
-  let elems :: Array HTMLElement
-      elems = fromMaybe [] <<< sequence $ fromNode <$> nodeArray
-
+  nodeArray <- liftEffect $ toArray =<< querySelectorAll query <<< toParentNode =<< document =<< window
+  let 
+    elems = fromMaybe [] <<< sequence $ fromNode <$> nodeArray
   attrs <- liftEffect $ traverse (getAttribute attr <<< toElement) elems
   pure $ zipWith ({ element: _, attr: _ }) elems (fromMaybe "" <$> attrs)
 
@@ -91,16 +90,18 @@ dropdown :: forall t0 t1 t2 t3. MonadAff t3 => H.Component HH.HTML t0 t1 t2 t3
 dropdown = H.mkComponent
   { initialState: const unit
   , render: \_ ->
-      HH.slot (SProxy :: SProxy "dropdown") unit Dropdown.component input \_ -> Nothing
+      HH.slot (SProxy :: SProxy "dropdown") unit (Select.component Dropdown.spec) input \_ -> Nothing
   , eval: H.mkEval H.defaultEval
   }
   where
   input = 
     { inputType: Select.Toggle
-    , items: [ "one", "two", "three" ]
     , debounceTime: Nothing
     , search: Nothing
+    , lastIndex: 2
+
     -- extension
+    , items: [ "one", "two", "three" ]
     , selection: Nothing
     }
 
@@ -108,18 +109,18 @@ typeahead :: forall t0 t1 t2 t3. MonadAff t3 => H.Component HH.HTML t0 t1 t2 t3
 typeahead = H.mkComponent
   { initialState: const unit
   , render: \_ ->
-      HH.slot (SProxy :: SProxy "typeahead") unit Typeahead.component input \_ -> Nothing
+      HH.slot (SProxy :: SProxy "typeahead") unit (Select.component Typeahead.spec) input \_ -> Nothing
   , eval: H.mkEval H.defaultEval
   }
   where
-  items = [ "one", "two", "three" ]
   input = 
-    { inputType: Select.Toggle
-    , items
-    , debounceTime: Nothing
+    { inputType: Select.Text
+    , debounceTime: Just (Milliseconds 300.0)
     , search: Nothing
+    , lastIndex: 0
+
     -- extension
-    , selectedItems: []
-    , visibleItems: items
+    , selections: mempty
+    , available: NotAsked
     }
 
