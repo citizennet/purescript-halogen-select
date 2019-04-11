@@ -29,9 +29,6 @@ import Web.HTML.HTMLElement as HTMLElement
 import Web.UIEvent.KeyboardEvent as KE
 import Web.UIEvent.MouseEvent as ME
 
------
--- ACTIONS
-
 data Action st query ps
   = Search String
   | Highlight Target
@@ -46,7 +43,7 @@ data Action st query ps
   | Receive (Input st)
   | AsAction (Query query ps Unit)
 
-type Action' = Action () (Const Void) ()
+type Action' st = Action st (Const Void) ()
 
 -----
 -- QUERIES
@@ -127,8 +124,6 @@ type State st =
   | st
   }
 
-type State' = State ()
-
 type Debouncer =
   { var :: AVar Unit
   , fiber :: Fiber Unit
@@ -142,8 +137,6 @@ type Input st =
   | st
   }
 
-type Input' = Input ()
-
 type Spec st query ps msg m =
   { render :: State st -> H.ComponentHTML (Action st query ps) ps m
   , handleQuery :: forall a. query a -> H.HalogenM (State st) (Action st query ps) ps (Message msg) m (Maybe a)
@@ -151,6 +144,8 @@ type Spec st query ps msg m =
   , initialize :: Maybe (Action st query ps)
   , receive :: Input st -> Maybe (Action st query ps)
   }
+
+type Spec' st m = Spec st (Const Void) () Void m
 
 defaultSpec :: forall st query ps msg m. Spec st query ps msg m
 defaultSpec = 

@@ -39,7 +39,7 @@ type ChildSlots =
   ( dropdown :: DD.Slot Unit )
 
 type Slot = 
-  H.Slot (Select.Query ExtraQuery ChildSlots) (Select.Message ExtraMessage)
+  Select.Slot ExtraQuery ChildSlots ExtraMessage
 
 spec :: forall m. MonadAff m => Select.Spec ExtraState ExtraQuery ChildSlots ExtraMessage m
 spec = Select.defaultSpec 
