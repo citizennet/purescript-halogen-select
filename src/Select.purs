@@ -39,7 +39,6 @@ data Action st query ps
   | PreventClick ME.MouseEvent
   | SetVisibility Visibility
   | Initialize
-  | AndThen (Action st query ps) (Action st query ps)
   | Receive (Input st)
   | AsAction (Query query ps Unit)
 
@@ -103,6 +102,7 @@ type State st =
   , visibility :: Visibility
   , highlightedIndex :: Maybe Int
   , lastIndex :: Int
+  , watchInput :: Boolean
   | st
   }
 
@@ -116,15 +116,28 @@ type Input st =
   , search :: Maybe String
   , debounceTime :: Maybe Milliseconds
   , lastIndex :: Int
+  , watchInput :: Boolean
   | st
   }
 
 type Spec st query ps msg m =
-  { render :: State st -> H.ComponentHTML (Action st query ps) ps m
-  , handleQuery :: forall a. query a -> H.HalogenM (State st) (Action st query ps) ps (Message msg) m (Maybe a)
-  , handleMessage :: Message msg -> H.HalogenM (State st) (Action st query ps) ps (Message msg) m Unit
-  , initialize :: Maybe (Action st query ps)
-  , receive :: Input st -> Maybe (Action st query ps)
+  { render 
+      :: State st 
+      -> H.ComponentHTML (Action st query ps) ps m
+  , handleQuery 
+      :: forall a
+       . query a 
+      -> H.HalogenM (State st) (Action st query ps) ps (Message msg) m (Maybe a)
+  , handleMessage 
+      :: Message msg 
+      -> H.HalogenM (State st) (Action st query ps) ps (Message msg) m Unit
+  , initialize 
+      :: Maybe (Action st query ps)
+  , receive 
+      :: Input st 
+      -> Maybe (Action st query ps)
+  , finalize
+      :: Maybe (Action st query ps)
   }
 
 type Spec' st m = Spec st (Const Void) () Void m
@@ -136,6 +149,7 @@ defaultSpec =
   , handleMessage: const (pure unit)
   , initialize: Just Initialize
   , receive: Just <<< Receive
+  , finalize: Nothing
   }
   
 component
@@ -154,6 +168,7 @@ component spec = H.mkComponent
       , handleAction = handleAction spec.handleQuery spec.handleMessage
       , initialize = spec.initialize
       , receive = spec.receive
+      , finalize = spec.finalize
       }
   }
   where
@@ -173,8 +188,13 @@ handleAction
   => Row.Lacks "debounceRef" st
   => Row.Lacks "visibility" st
   => Row.Lacks "highlightedIndex" st
-  => (forall a. query a -> H.HalogenM (State st) (Action st query ps) ps (Message msg) m (Maybe a))
-  -> (Message msg -> H.HalogenM (State st) (Action st query ps) ps (Message msg) m Unit)
+  => (forall a
+         . query a 
+        -> H.HalogenM (State st) (Action st query ps) ps (Message msg) m (Maybe a)
+     )
+  -> (Message msg 
+        -> H.HalogenM (State st) (Action st query ps) ps (Message msg) m Unit
+     )
   -> Action st query ps
   -> H.HalogenM (State st) (Action st query ps) ps (Message msg) m Unit
 handleAction handleExtraQuery handleMessage = case _ of
@@ -182,19 +202,21 @@ handleAction handleExtraQuery handleMessage = case _ of
     ref <- H.liftEffect $ Ref.new Nothing
     H.modify_ _ { debounceRef = Just ref }
   
-  -- We want to update user-added state values from the parent as well as the lastIndex but
-  -- not internal fields. Because we don't know what extra fields the user may have provided,
-  -- we have to use Builder here to go off of their concrete provided Input type. 
+  -- We want to update user-added state values from the parent as well as the lastIndex 
+  -- but not internal fields. Because we don't know what extra fields the user may have 
+  -- provided, we have to use Builder here to go off of their concrete provided Input 
+  -- type. 
   Receive input -> do
     st <- H.get
-    let 
-      pipeline = 
-        Builder.modify (SProxy :: SProxy "search") (const st.search)
-          >>> Builder.modify (SProxy :: SProxy "debounceTime") (const st.debounceTime)
-          >>> Builder.insert (SProxy :: SProxy "debounceRef") st.debounceRef
-          >>> Builder.insert (SProxy :: SProxy "visibility") st.visibility
-          >>> Builder.insert (SProxy :: SProxy "highlightedIndex") st.highlightedIndex
-    H.put (Builder.build pipeline input)
+    when st.watchInput do
+      let 
+        pipeline = 
+          Builder.modify (SProxy :: SProxy "search") (const st.search)
+            >>> Builder.modify (SProxy :: SProxy "debounceTime") (const st.debounceTime)
+            >>> Builder.insert (SProxy :: SProxy "debounceRef") st.debounceRef
+            >>> Builder.insert (SProxy :: SProxy "visibility") st.visibility
+            >>> Builder.insert (SProxy :: SProxy "highlightedIndex") st.highlightedIndex
+      H.put (Builder.build pipeline input)
 
   Search str -> do
     st <- H.get
@@ -291,11 +313,6 @@ handleAction handleExtraQuery handleMessage = case _ of
       H.modify_ _ { visibility = v, highlightedIndex = Just 0 }
       raise' $ VisibilityChanged v
 
-  AndThen act1 act2 -> do
-    handleAction' act1
-    handleAction' act2
-    pure unit
-  
   AsAction query -> unit <$ handleQuery handleExtraQuery query
 
   where
