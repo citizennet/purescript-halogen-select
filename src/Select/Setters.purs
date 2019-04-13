@@ -37,10 +37,10 @@ type ToggleProps props =
 -- | renderToggle = div (setToggleProps [ class "btn-class" ]) [ ...html ]
 -- | ```
 setToggleProps
-  :: forall props st query ps
+  :: forall props st act
    . State st
-  -> Array (HP.IProp (ToggleProps props) (Action st query ps))
-  -> Array (HP.IProp (ToggleProps props) (Action st query ps))
+  -> Array (HP.IProp (ToggleProps props) (Action st act))
+  -> Array (HP.IProp (ToggleProps props) (Action st act))
 setToggleProps st = append
   [ HE.onFocus \_ -> Just $ SetVisibility On
   , HE.onMouseDown $ Just <<< ToggleClick
@@ -72,9 +72,9 @@ type InputProps props =
 -- | renderInput = input_ (setInputProps [ class "my-class" ])
 -- | ```
 setInputProps
-  :: forall st props query ps
-   . Array (HP.IProp (InputProps props) (Action st query ps))
-  -> Array (HP.IProp (InputProps props) (Action st query ps))
+  :: forall props st act
+   . Array (HP.IProp (InputProps props) (Action st act))
+  -> Array (HP.IProp (InputProps props) (Action st act))
 setInputProps = append
   [ HE.onFocus \_ -> Just $ SetVisibility On
   , HE.onKeyDown $ Just <<< Key
@@ -106,10 +106,10 @@ type ItemProps props =
 -- | render = renderItem `mapWithIndex` itemsArray
 -- | ```
 setItemProps
-  :: forall st props query ps
+  :: forall props st act
    . Int 
-  -> Array (HP.IProp (ItemProps props) (Action st query ps)) 
-  -> Array (HP.IProp (ItemProps props) (Action st query ps))
+  -> Array (HP.IProp (ItemProps props) (Action st act)) 
+  -> Array (HP.IProp (ItemProps props) (Action st act))
 setItemProps index = append
   [ HE.onMouseDown \ev -> Just (Select (Index index) (Just ev))
   , HE.onMouseOver \_ -> Just $ Highlight (Index index)
@@ -120,8 +120,9 @@ setItemProps index = append
 -- | from bubbling up a blur event to the DOM. This should be used on the parent
 -- | element that contains your items.
 setContainerProps
-  :: forall st props query ps
-   . Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action st query ps))
-  -> Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action st query ps))
+  :: forall props st act
+   . Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action st act))
+  -> Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action st act))
 setContainerProps = append
   [ HE.onMouseDown $ Just <<< PreventClick ]
+

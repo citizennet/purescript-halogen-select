@@ -14,82 +14,90 @@ import Data.Symbol (SProxy(..))
 import Data.Traversable (traverse)
 import Docs.CSS as CSS
 import Docs.Internal.RemoteData as RD
-import Docs.Components.Dropdown as DD
-import Effect.Aff.Class (class MonadAff, liftAff)
+import Docs.Components.Dropdown as D
+import Effect.Aff (Aff)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Select as Select
-import Select.Setters as Setters
+import Select as S
+import Select.Setters as SS
 
 type ExtraState =
   ( selections :: Array Location 
   , available :: RD.RemoteData String (Array Location)
   )
 
+data ExtraAction
+  = Remove Location
+  | HandleDropdown (S.Message D.ExtraMessage)
+
 data ExtraQuery a
-  = Remove Location a
-  | HandleDropdown (Select.Message DD.ExtraMessage) a
+  = GetSelections (Array Location -> a)
 
 data ExtraMessage 
   = ItemRemoved Location 
 
 type ChildSlots = 
-  ( dropdown :: DD.Slot Unit )
+  ( dropdown :: D.Slot Unit )
 
 type Slot = 
-  Select.Slot ExtraQuery ChildSlots ExtraMessage
+  S.Slot ExtraQuery ChildSlots ExtraMessage
 
-spec :: forall m. MonadAff m => Select.Spec ExtraState ExtraQuery ChildSlots ExtraMessage m
-spec = Select.defaultSpec 
+spec :: S.Spec ExtraState ExtraQuery ExtraAction ChildSlots ExtraMessage Aff
+spec = S.defaultSpec 
   { render = render
+  , handleAction = handleAction
   , handleQuery = handleQuery
   , handleMessage = handleMessage
   }
   where
   handleMessage = case _ of
-    Select.Selected ix -> do
+    S.Selected ix -> do
       st <- H.get
-      case st.available of 
-        RD.Success arr -> do
-          let newSelections = fromMaybe st.selections $ (_ : st.selections) <$> (arr !! ix)
-          H.modify_ _ { selections = newSelections, search = "" } 
-        _ -> pure unit
+      for_ st.available \arr -> do
+        let newSelections = fromMaybe st.selections $ (_ : st.selections) <$> (arr !! ix)
+        H.modify_ _ { selections = newSelections, search = "" } 
   
-    Select.Searched str -> do
+    S.Searched str -> do
       st <- H.get
       -- we'll use an external api to search locations 
       H.modify_ _ { available = RD.Loading }
-      items <- searchLocations str
-      H.modify_ _ { available = items, lastIndex = maybe 0 (\arr -> length arr - 1) $ RD.toMaybe items }
-      -- and then highlight the first one
-      handleAction $ Select.Highlight $ Select.Index 0
-
+      items <- H.liftAff $ searchLocations str
+      H.modify_ _ 
+        { available = items
+        , lastIndex = maybe 0 (\arr -> length arr - 1) $ RD.toMaybe items 
+        }
     _ -> pure unit
-    where
-    -- eta-expanded to avoid infinite recursion
-    handleAction act = Select.handleAction handleQuery handleMessage act
 
-  -- type signature is necessary for the `a` parameter 
+  -- type signature is necessary for the `a` type variable 
   handleQuery :: forall a. ExtraQuery a -> H.HalogenM _ _ _ _ _ (Maybe a)
   handleQuery = case _ of  
-    Remove item a -> Just a <$ do
+    GetSelections reply -> do
+       st <- H.get
+       pure $ Just $ reply st.selections
+
+  handleAction = case _ of
+    Remove item -> do
       st <- H.get
       let newSelections = filter (_ /= item) st.selections
       H.modify_ _ { selections = newSelections }
-      H.raise $ Select.Raised $ ItemRemoved item
+      H.raise $ S.Message $ ItemRemoved item
   
-    HandleDropdown msg a -> Just a <$ case msg of
-      Select.Raised (DD.SelectionChanged oldSelection newSelection) -> do
+    HandleDropdown msg -> case msg of
+      S.Message (D.SelectionChanged oldSelection newSelection) -> do
         st <- H.get
         let 
           mkLocation str = { name: "User Added: " <> str, population: "1" }
           newSelections = case oldSelection, newSelection of
-            Nothing, Nothing -> Nothing
-            Nothing, Just str -> Just (mkLocation str : st.selections)
-            Just str, Nothing -> Just (filter (_ /= mkLocation str) st.selections)
-            Just old, Just new -> Just (mkLocation new : (filter (_ /= mkLocation old) st.selections))
+            Nothing, Nothing -> 
+              Nothing
+            Nothing, Just str -> 
+              Just (mkLocation str : st.selections)
+            Just str, Nothing -> 
+              Just (filter (_ /= mkLocation str) st.selections)
+            Just old, Just new -> 
+              Just (mkLocation new : (filter (_ /= mkLocation old) st.selections))
         for_ newSelections \selections -> 
           H.modify_ _ { selections = selections }
       _ -> 
@@ -112,12 +120,12 @@ spec = Select.defaultSpec
 
       closeButton item =
         HH.span
-          [ HE.onClick \_ -> Just $ Select.AsAction $ Select.Embed $ H.tell $ Remove item
+          [ HE.onClick \_ -> Just $ S.Action $ Remove item
           , class_ "absolute pin-t pin-b pin-r p-1 mx-3 cursor-pointer" 
           ]
           [ HH.text "×" ]
 
-    renderInput = HH.input $ Setters.setInputProps
+    renderInput = HH.input $ SS.setInputProps
       [ HP.classes CSS.input
       , HP.placeholder "Type to search..." 
       ]
@@ -125,19 +133,20 @@ spec = Select.defaultSpec
     renderContainer =
       HH.div 
         [ class_ "relative z-50" ]
-        ([ renderItems (mapWithIndex renderItem) ] # guard (state.visibility == Select.On))
+        ([ renderItems (mapWithIndex renderItem) ] # guard (state.visibility == S.On))
       where
       -- here we can render a further child component, the dropdown, which is *also*
       -- a select component.
-      renderChild = HH.slot _dropdown unit (Select.component DD.spec) input handleChild
+      renderChild = HH.slot _dropdown unit (S.component D.spec) input handleChild
         where
         _dropdown = SProxy :: SProxy "dropdown"
-        handleChild msg = Just (Select.AsAction (Select.Embed (H.tell (HandleDropdown msg))))
+        handleChild msg = Just $ S.Action $ HandleDropdown msg
         input = 
-          { inputType: Select.Toggle
+          { inputType: S.Toggle
           , search: Nothing
           , debounceTime: Nothing
           , lastIndex: 1
+          , watchInput: false
           , items: [ "Earth", "Mars" ]
           , selection: Nothing
           }
@@ -145,7 +154,7 @@ spec = Select.defaultSpec
       renderItems f = do
         let renderMsg msg = [ HH.span [ class_ "pa-4" ] [ HH.text msg ] ]
         HH.div
-          (Setters.setContainerProps [ class_ "absolute bg-white shadow rounded-sm pin-t pin-l w-full" ])
+          (SS.setContainerProps [ class_ "absolute bg-white shadow rounded-sm pin-t pin-l w-full" ])
           case state.available of
             RD.NotAsked -> renderMsg "No search performed..."
             RD.Loading -> renderMsg "Loading..."
@@ -158,7 +167,7 @@ spec = Select.defaultSpec
               ]
 
       renderItem index item =
-        HH.li (Setters.setItemProps index [ class_ $ base <> extra ]) [ renderLocation item ]
+        HH.li (SS.setItemProps index [ class_ $ base <> extra ]) [ renderLocation item ]
         where
         base = "px-4 py-1 text-grey-darkest"
         extra = " bg-grey-lighter" # guard (state.highlightedIndex == Just index) 
@@ -182,8 +191,8 @@ renderLocation { name, population } =
         [ HH.text population ]
     ]
 
-searchLocations :: forall m. MonadAff m => String -> m (RD.RemoteData String (Array Location))
-searchLocations search = liftAff do
+searchLocations :: String -> Aff (RD.RemoteData String (Array Location))
+searchLocations search = do
   res <- AX.get AR.json ("https://swapi.co/api/planets/?search=" <> search) 
   let body = lmap AR.printResponseFormatError res.body
   pure $ RD.fromEither $ traverse decodeJson =<< (_ .: "results") =<< decodeJson =<< body

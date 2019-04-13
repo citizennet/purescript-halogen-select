@@ -29,7 +29,7 @@ import Web.HTML.HTMLElement as HTMLElement
 import Web.UIEvent.KeyboardEvent as KE
 import Web.UIEvent.MouseEvent as ME
 
-data Action st query ps
+data Action st act
   = Search String
   | Highlight Target
   | Select Target (Maybe ME.MouseEvent)
@@ -40,16 +40,14 @@ data Action st query ps
   | SetVisibility Visibility
   | Initialize
   | Receive (Input st)
-  | AsAction (Query query ps Unit)
-
-type Action' st = Action st (Const Void) ()
+  | Action act
 
 -----
 -- QUERIES
 
 data Query query ps a
   = Send (ChildQueryBox ps (Maybe a))
-  | Embed (query a)
+  | Query (query a)
 
 type Query' = Query (Const Void) ()
 
@@ -60,7 +58,7 @@ data Message msg
   = Searched String
   | Selected Int
   | VisibilityChanged Visibility
-  | Raised msg
+  | Message msg
 
 type Message' = Message Void
 
@@ -120,52 +118,56 @@ type Input st =
   | st
   }
 
-type Spec st query ps msg m =
+type Spec st query act ps msg m =
   { render 
       :: State st 
-      -> H.ComponentHTML (Action st query ps) ps m
+      -> H.ComponentHTML (Action st act) ps m
+  , handleAction 
+      :: act
+      -> H.HalogenM (State st) (Action st act) ps (Message msg) m Unit
   , handleQuery 
       :: forall a
        . query a 
-      -> H.HalogenM (State st) (Action st query ps) ps (Message msg) m (Maybe a)
+      -> H.HalogenM (State st) (Action st act) ps (Message msg) m (Maybe a)
   , handleMessage 
       :: Message msg 
-      -> H.HalogenM (State st) (Action st query ps) ps (Message msg) m Unit
-  , initialize 
-      :: Maybe (Action st query ps)
+      -> H.HalogenM (State st) (Action st act) ps (Message msg) m Unit
   , receive 
       :: Input st 
-      -> Maybe (Action st query ps)
+      -> Maybe (Action st act)
+  , initialize 
+      :: Maybe (Action st act)
   , finalize
-      :: Maybe (Action st query ps)
+      :: Maybe (Action st act)
   }
 
-type Spec' st m = Spec st (Const Void) () Void m
+type Spec' st m = Spec st (Const Void) Void () Void m
 
-defaultSpec :: forall st query ps msg m. Spec st query ps msg m
+defaultSpec :: forall st query act ps msg m. Spec st query act ps msg m
 defaultSpec = 
   { render: const (HH.text mempty)
+  , handleAction: const (pure unit)
   , handleQuery: const (pure Nothing)
   , handleMessage: const (pure unit)
-  , initialize: Just Initialize
   , receive: Just <<< Receive
+  , initialize: Just Initialize
   , finalize: Nothing
   }
   
 component
-  :: forall st query ps msg m
+  :: forall st query act ps msg m
    . MonadAff m
   => Row.Lacks "debounceRef" st
   => Row.Lacks "visibility" st
   => Row.Lacks "highlightedIndex" st
-  => Spec st query ps msg m
+  => Spec st query act ps msg m
   -> H.Component HH.HTML (Query query ps) (Input st) (Message msg) m
 component spec = H.mkComponent
   { initialState
   , render: spec.render
   , eval: H.mkEval $ H.defaultEval
       { handleQuery = handleQuery spec.handleQuery
-      , handleAction = handleAction spec.handleQuery spec.handleMessage
+      , handleAction = handleAction spec.handleAction spec.handleMessage
       , initialize = spec.initialize
       , receive = spec.receive
       , finalize = spec.finalize
@@ -183,21 +185,16 @@ component spec = H.mkComponent
         >>> Builder.insert (SProxy :: _ "highlightedIndex") Nothing
 
 handleAction
-  :: forall st query ps msg m
+  :: forall st act ps msg m
    . MonadAff m
   => Row.Lacks "debounceRef" st
   => Row.Lacks "visibility" st
   => Row.Lacks "highlightedIndex" st
-  => (forall a
-         . query a 
-        -> H.HalogenM (State st) (Action st query ps) ps (Message msg) m (Maybe a)
-     )
-  -> (Message msg 
-        -> H.HalogenM (State st) (Action st query ps) ps (Message msg) m Unit
-     )
-  -> Action st query ps
-  -> H.HalogenM (State st) (Action st query ps) ps (Message msg) m Unit
-handleAction handleExtraQuery handleMessage = case _ of
+  => (act -> H.HalogenM (State st) (Action st act) ps (Message msg) m Unit)
+  -> (Message msg -> H.HalogenM (State st) (Action st act) ps (Message msg) m Unit)
+  -> Action st act
+  -> H.HalogenM (State st) (Action st act) ps (Message msg) m Unit
+handleAction handleAction' handleMessage = case _ of
   Initialize -> do
     ref <- H.liftEffect $ Ref.new Nothing
     H.modify_ _ { debounceRef = Just ref }
@@ -222,7 +219,7 @@ handleAction handleExtraQuery handleMessage = case _ of
     st <- H.get
     ref <- H.liftEffect $ map join $ traverse Ref.read st.debounceRef
     H.modify_ _ { search = str }
-    void $ H.fork $ handleAction' $ SetVisibility On
+    void $ H.fork $ handle $ SetVisibility On
 
     case st.inputType, ref of
       Text, Nothing -> unit <$ do
@@ -238,7 +235,7 @@ handleAction handleExtraQuery handleMessage = case _ of
           void $ H.liftEffect $ traverse_ (Ref.write Nothing) st.debounceRef
           H.modify_ _ { highlightedIndex = Just 0 }
           newState <- H.get
-          raise' $ Searched newState.search
+          raise $ Searched newState.search
 
         void $ H.liftEffect $ traverse_ (Ref.write $ Just { var, fiber }) st.debounceRef
 
@@ -264,20 +261,20 @@ handleAction handleExtraQuery handleMessage = case _ of
     for_ mbEv (H.liftEffect <<< preventDefault <<< ME.toEvent)
     st <- H.get
     when (st.visibility == On) case target of
-      Index ix -> raise' $ Selected ix
-      Next -> raise' $ Selected $ getTargetIndex st target
-      Prev -> raise' $ Selected $ getTargetIndex st target
+      Index ix -> raise $ Selected ix
+      Next -> raise $ Selected $ getTargetIndex st target
+      Prev -> raise $ Selected $ getTargetIndex st target
 
   ToggleClick ev -> do
     H.liftEffect $ preventDefault $ ME.toEvent ev
     st <- H.get
     case st.visibility of
       On -> do
-        handleAction' $ Focus false
-        handleAction' $ SetVisibility Off
+        handle $ Focus false
+        handle $ SetVisibility Off
       Off -> do
-        handleAction' $ Focus true
-        handleAction' $ SetVisibility On
+        handle $ Focus true
+        handle $ SetVisibility On
 
   Focus shouldFocus -> do
     inputElement <- H.getHTMLElementRef $ H.RefLabel "select-input"
@@ -286,13 +283,13 @@ handleAction handleExtraQuery handleMessage = case _ of
       _ -> HTMLElement.blur el
 
   Key ev -> do
-    void $ H.fork $ handleAction' $ SetVisibility On
+    void $ H.fork $ handle $ SetVisibility On
     let preventIt = H.liftEffect $ preventDefault $ KE.toEvent ev
     case KE.code ev of
       "ArrowUp" ->
-        preventIt *> handleAction' (Highlight Prev)
+        preventIt *> handle (Highlight Prev)
       "ArrowDown" ->
-        preventIt *> handleAction' (Highlight Next)
+        preventIt *> handle (Highlight Next)
       "Escape" -> do
         inputElement <- H.getHTMLElementRef $ H.RefLabel "select-input"
         preventIt
@@ -301,7 +298,7 @@ handleAction handleExtraQuery handleMessage = case _ of
         st <- H.get
         preventIt
         for_ st.highlightedIndex \ix ->
-          handleAction' $ Select (Index ix) Nothing
+          handle $ Select (Index ix) Nothing
       otherKey -> pure unit
 
   PreventClick ev ->
@@ -311,19 +308,16 @@ handleAction handleExtraQuery handleMessage = case _ of
     st <- H.get
     when (st.visibility /= v) do
       H.modify_ _ { visibility = v, highlightedIndex = Just 0 }
-      raise' $ VisibilityChanged v
+      raise $ VisibilityChanged v
 
-  AsAction query -> unit <$ handleQuery handleExtraQuery query
+  Action act -> handleAction' act
 
   where
   -- eta-expansion is necessary to avoid infinite recursion
-  handleAction' act = handleAction handleExtraQuery handleMessage act
+  handle act = handleAction handleAction' handleMessage act
 
-  -- attempt to handle a message internally, and then raise the
-  -- message to a parent component.
-  raise' msg = do
-    void $ H.fork $ handleMessage msg
-    H.raise msg
+  -- handle a message internally, then raise
+  raise msg = H.fork (handleMessage msg) *> H.raise msg
 
   getTargetIndex st = case _ of
     Index i -> i
@@ -335,14 +329,15 @@ handleAction handleExtraQuery handleMessage = case _ of
       _ -> 0
 
 handleQuery
-  :: forall st query ps msg m a
+  :: forall st query act ps msg m a
    . MonadAff m
-  => (query a -> H.HalogenM (State st) (Action st query ps) ps (Message msg) m (Maybe a))
+  => (query a -> H.HalogenM (State st) (Action st act) ps (Message msg) m (Maybe a))
   -> Query query ps a
-  -> H.HalogenM (State st) (Action st query ps) ps (Message msg) m (Maybe a)
-handleQuery handleExtraQuery = case _ of
+  -> H.HalogenM (State st) (Action st act) ps (Message msg) m (Maybe a)
+handleQuery handleQuery' = case _ of
   Send box ->
     H.HalogenM $ liftF $ H.ChildQuery box
 
-  Embed query ->
-    handleExtraQuery query
+  Query query ->
+    handleQuery' query
+
