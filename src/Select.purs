@@ -263,7 +263,7 @@ handleAction handleAction' handleMessage = case _ of
 
   Highlight target -> do
     st <- H.get
-    when (st.visibility == Off) do
+    when (st.visibility == On) do
       H.modify_ _ { highlightedIndex = Just $ getTargetIndex st target }
 
   Select target mbEv -> do

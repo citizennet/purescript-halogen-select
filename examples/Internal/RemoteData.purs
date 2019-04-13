@@ -2,7 +2,7 @@
 -- | https://github.com/krisajenkins/purescript-remotedata
 -- |
 -- | due to dependency conflicts
-module Docs.Internal.RemoteData where
+module Internal.RemoteData where
 
 import Prelude
 

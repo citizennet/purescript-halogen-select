@@ -1,7 +1,7 @@
 -- | A proxy that hides both the Query and Message of wrapped component.
 -- | Adapted from `Halogen.Component.Proxy` and `Halogen.Storybook.Proxy`.
 
-module Docs.Internal.Proxy
+module Internal.Proxy
   ( ProxyS
   , proxy
   ) where

@@ -24,9 +24,11 @@ theme:
   logo:
     icon: 'school'
 
-# To mount components
 extra_javascript:
   - js/app.js
+
+extra_css:
+  - css/Select.css
 
 # Extensions
 # Recommended here:

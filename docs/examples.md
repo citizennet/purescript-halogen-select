@@ -11,9 +11,9 @@ You can play around with a few example components here. However, for a much rich
 
 Dropdowns are a common button-driven input type, especially for navigation. But most custom dropdowns sacrifice usability: unlike browser default dropdowns, you can't type on most custom dropdowns, nor are many built with accessibility in mind. With `Select` you can easily create rich, usable dropdowns with little code.
 
-<div data-component="dropdown" class="ocelot-scoped"></div>
+<div data-component="dropdown"></div>
 
-Curious how to build a dropdown with `Select`? Check out [the dropdown tutorial](https://citizennet.github.io/tutorials/build-a-dropdown).
+Curious how to build a dropdown with `Select`? Check out [the dropdown tutorial](https://citizennet.github.io/tutorials/dropdown).
 
 ### Typeahead / Autocomplete
 
@@ -23,6 +23,6 @@ Building typeaheads with `Select` is only a little more complex than building dr
 
 The typeahead below is quite simple; to see examples of more sophisticated typeaheads -- including ones that fetch and display data asynchronously -- check out the [Ocelot component library](https://citizennet.github.io/purescript-ocelot/#typeaheads).
 
-<div data-component="typeahead" class="ocelot-scoped"></div>
+<div data-component="typeahead"></div>
 
-Curious how to build a typeahead with `Select`? Check out [the typeahead tutorial](https://citizennet.github.io/tutorials/build-a-typehead).
+Curious how to build a typeahead with `Select`? Check out [the typeahead tutorial](https://citizennet.github.io/tutorials/typeahead).
