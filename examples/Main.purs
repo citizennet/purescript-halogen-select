@@ -2,16 +2,16 @@ module Main where
 
 import Prelude
 
-import Data.Array (zipWith)
+import Data.Array (zipWith, length)
 import Data.Const (Const)
 import Data.Map as M
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Symbol (SProxy(..))
 import Data.Traversable (for_, sequence, traverse)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Tuple (Tuple(..))
 import Docs.Internal.Proxy (ProxyS, proxy)
-import Docs.Internal.RemoteData (RemoteData(..))
+import Docs.Internal.RemoteData (RemoteData(..), toMaybe)
 import Docs.Components.Typeahead as Typeahead
 import Docs.Components.Dropdown as Dropdown
 import Effect (Effect)
@@ -99,8 +99,7 @@ dropdown = H.mkComponent
     { inputType: Select.Toggle
     , debounceTime: Nothing
     , search: Nothing
-    , lastIndex: 2
-    , watchInput: false
+    , getItemCount: length <<< _.items
     , items: [ "one", "two", "three" ]
     , selection: Nothing
     }
@@ -118,8 +117,7 @@ typeahead = H.mkComponent
     { inputType: Select.Text
     , debounceTime: Just (Milliseconds 300.0)
     , search: Nothing
-    , watchInput: false
-    , lastIndex: 0
+    , getItemCount: maybe 0 length <<< toMaybe <<< _.available
     , selections: mempty
     , available: NotAsked
     }

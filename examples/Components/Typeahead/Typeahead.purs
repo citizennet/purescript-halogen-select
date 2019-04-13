@@ -30,13 +30,14 @@ type ExtraState =
 
 data ExtraAction
   = Remove Location
-  | HandleDropdown (S.Message D.ExtraMessage)
+  | HandleDropdown D.ExtraMessage
 
 data ExtraQuery a
   = GetSelections (Array Location -> a)
 
 data ExtraMessage 
   = ItemRemoved Location 
+  | SelectionsChanged (Array Location)
 
 type ChildSlots = 
   ( dropdown :: D.Slot Unit )
@@ -58,16 +59,14 @@ spec = S.defaultSpec
       for_ st.available \arr -> do
         let newSelections = fromMaybe st.selections $ (_ : st.selections) <$> (arr !! ix)
         H.modify_ _ { selections = newSelections, search = "" } 
+        H.raise $ SelectionsChanged arr
   
     S.Searched str -> do
       st <- H.get
       -- we'll use an external api to search locations 
       H.modify_ _ { available = RD.Loading }
       items <- H.liftAff $ searchLocations str
-      H.modify_ _ 
-        { available = items
-        , lastIndex = maybe 0 (\arr -> length arr - 1) $ RD.toMaybe items 
-        }
+      H.modify_ _ { available = items }
     _ -> pure unit
 
   -- type signature is necessary for the `a` type variable 
@@ -82,10 +81,10 @@ spec = S.defaultSpec
       st <- H.get
       let newSelections = filter (_ /= item) st.selections
       H.modify_ _ { selections = newSelections }
-      H.raise $ S.Message $ ItemRemoved item
+      H.raise $ ItemRemoved item
   
     HandleDropdown msg -> case msg of
-      S.Message (D.SelectionChanged oldSelection newSelection) -> do
+      D.SelectionChanged oldSelection newSelection -> do
         st <- H.get
         let 
           mkLocation str = { name: "User Added: " <> str, population: "1" }
@@ -100,8 +99,6 @@ spec = S.defaultSpec
               Just (mkLocation new : (filter (_ /= mkLocation old) st.selections))
         for_ newSelections \selections -> 
           H.modify_ _ { selections = selections }
-      _ -> 
-        pure unit
 
   render state = HH.div_ [ renderSelections, renderInput, renderContainer ]
     where
@@ -145,8 +142,7 @@ spec = S.defaultSpec
           { inputType: S.Toggle
           , search: Nothing
           , debounceTime: Nothing
-          , lastIndex: 1
-          , watchInput: false
+          , getItemCount: length <<< _.items
           , items: [ "Earth", "Mars" ]
           , selection: Nothing
           }
@@ -154,7 +150,9 @@ spec = S.defaultSpec
       renderItems f = do
         let renderMsg msg = [ HH.span [ class_ "pa-4" ] [ HH.text msg ] ]
         HH.div
-          (SS.setContainerProps [ class_ "absolute bg-white shadow rounded-sm pin-t pin-l w-full" ])
+          (SS.setContainerProps 
+            [ class_ "absolute bg-white shadow rounded-sm pin-t pin-l w-full" ]
+          )
           case state.available of
             RD.NotAsked -> renderMsg "No search performed..."
             RD.Loading -> renderMsg "Loading..."
@@ -167,7 +165,9 @@ spec = S.defaultSpec
               ]
 
       renderItem index item =
-        HH.li (SS.setItemProps index [ class_ $ base <> extra ]) [ renderLocation item ]
+        HH.li 
+          (SS.setItemProps index [ class_ $ base <> extra ]) 
+          [ renderLocation item ]
         where
         base = "px-4 py-1 text-grey-darkest"
         extra = " bg-grey-lighter" # guard (state.highlightedIndex == Just index) 
@@ -196,3 +196,4 @@ searchLocations search = do
   res <- AX.get AR.json ("https://swapi.co/api/planets/?search=" <> search) 
   let body = lmap AR.printResponseFormatError res.body
   pure $ RD.fromEither $ traverse decodeJson =<< (_ .: "results") =<< decodeJson =<< body
+

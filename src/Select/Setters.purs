@@ -11,7 +11,7 @@ import Halogen as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Select
-import Web.Event.Event (Event)
+import Web.Event.Event as E
 import Web.UIEvent.FocusEvent as FE
 import Web.UIEvent.KeyboardEvent as KE
 import Web.UIEvent.MouseEvent as ME
@@ -55,7 +55,7 @@ setToggleProps st = append
 type InputProps props =
   ( onFocus :: FE.FocusEvent
   , onKeyDown :: KE.KeyboardEvent
-  , onInput :: Event
+  , onInput :: E.Event
   , value :: String
   , onMouseDown :: ME.MouseEvent
   , onBlur :: FE.FocusEvent
@@ -101,7 +101,8 @@ type ItemProps props =
 -- | with `mapWithIndex`:
 -- |
 -- | ```purescript
--- | renderItem index itemHTML = HH.li (setItemProps index [ class "my-class" ]) [ itemHTML ]
+-- | renderItem index itemHTML = 
+-- |   HH.li (setItemProps index [ props ]) [ itemHTML ]
 -- |
 -- | render = renderItem `mapWithIndex` itemsArray
 -- | ```

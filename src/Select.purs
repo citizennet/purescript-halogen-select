@@ -24,6 +24,7 @@ import Halogen.HTML as HH
 import Halogen.Query.ChildQuery (ChildQueryBox)
 import Prim.Row as Row
 import Record.Builder as Builder
+import Unsafe.Coerce (unsafeCoerce)
 import Web.Event.Event (preventDefault)
 import Web.HTML.HTMLElement as HTMLElement
 import Web.UIEvent.KeyboardEvent as KE
@@ -38,7 +39,7 @@ data Action st act
   | Key KE.KeyboardEvent
   | PreventClick ME.MouseEvent
   | SetVisibility Visibility
-  | Initialize
+  | Initialize (Maybe (Action st act))
   | Receive (Input st)
   | Action act
 
@@ -52,21 +53,18 @@ data Query query ps a
 type Query' = Query (Const Void) ()
 
 -----
--- MESSAGES
+-- Message
 
-data Message msg
+data Message
   = Searched String
   | Selected Int
   | VisibilityChanged Visibility
-  | Message msg
-
-type Message' = Message Void
 
 -----
 -- HELPER TYPES
 
 -- | The component slot type for easy use in a parent component
-type Slot query ps msg = H.Slot (Query query ps) (Message msg)
+type Slot query ps msg = H.Slot (Query query ps) msg
 
 -- | The component slot type when there is no extension
 type Slot' = Slot (Const Void) () Void
@@ -99,8 +97,7 @@ type State st =
   , debounceRef :: Maybe (Ref (Maybe Debouncer))
   , visibility :: Visibility
   , highlightedIndex :: Maybe Int
-  , lastIndex :: Int
-  , watchInput :: Boolean
+  , getItemCount :: {| st } -> Int
   | st
   }
 
@@ -113,30 +110,44 @@ type Input st =
   { inputType :: InputType
   , search :: Maybe String
   , debounceTime :: Maybe Milliseconds
-  , lastIndex :: Int
-  , watchInput :: Boolean
+  , getItemCount :: {| st } -> Int
   | st
   }
 
 type Spec st query act ps msg m =
-  { render 
+  { -- usual Halogen component spec 
+    render 
       :: State st 
       -> H.ComponentHTML (Action st act) ps m
+    
+    -- handle additional actions provided to the component
   , handleAction 
       :: act
-      -> H.HalogenM (State st) (Action st act) ps (Message msg) m Unit
+      -> H.HalogenM (State st) (Action st act) ps msg m Unit
+
+    -- handle additional queries provided to the component
   , handleQuery 
       :: forall a
        . query a 
-      -> H.HalogenM (State st) (Action st act) ps (Message msg) m (Maybe a)
+      -> H.HalogenM (State st) (Action st act) ps msg m (Maybe a)
+
+    -- handle messages emitted by the component; provide H.raise to simply
+    -- raise the Select messages to the parent.
   , handleMessage 
-      :: Message msg 
-      -> H.HalogenM (State st) (Action st act) ps (Message msg) m Unit
+      :: Message
+      -> H.HalogenM (State st) (Action st act) ps msg m Unit
+
+    -- optionally handle input on parent re-renders; off by default, but use 
+    -- `Just <<< Receive` to enable Select's default receiver 
   , receive 
       :: Input st 
       -> Maybe (Action st act)
+
+    -- perform some action when the component initializes.
   , initialize 
       :: Maybe (Action st act)
+
+    -- optionally perform some action on initialization. disabled by default.
   , finalize
       :: Maybe (Action st act)
   }
@@ -149,8 +160,8 @@ defaultSpec =
   , handleAction: const (pure unit)
   , handleQuery: const (pure Nothing)
   , handleMessage: const (pure unit)
-  , receive: Just <<< Receive
-  , initialize: Just Initialize
+  , receive: const Nothing
+  , initialize: Nothing
   , finalize: Nothing
   }
   
@@ -161,14 +172,14 @@ component
   => Row.Lacks "visibility" st
   => Row.Lacks "highlightedIndex" st
   => Spec st query act ps msg m
-  -> H.Component HH.HTML (Query query ps) (Input st) (Message msg) m
+  -> H.Component HH.HTML (Query query ps) (Input st) msg m
 component spec = H.mkComponent
   { initialState
   , render: spec.render
   , eval: H.mkEval $ H.defaultEval
       { handleQuery = handleQuery spec.handleQuery
       , handleAction = handleAction spec.handleAction spec.handleMessage
-      , initialize = spec.initialize
+      , initialize = Just (Initialize spec.initialize)
       , receive = spec.receive
       , finalize = spec.finalize
       }
@@ -184,36 +195,47 @@ component spec = H.mkComponent
         >>> Builder.insert (SProxy :: _ "visibility") Off
         >>> Builder.insert (SProxy :: _ "highlightedIndex") Nothing
 
+handleQuery
+  :: forall st query act ps msg m a
+   . MonadAff m
+  => (query a -> H.HalogenM (State st) (Action st act) ps msg m (Maybe a))
+  -> Query query ps a
+  -> H.HalogenM (State st) (Action st act) ps msg m (Maybe a)
+handleQuery handleQuery' = case _ of
+  Send box ->
+    H.HalogenM $ liftF $ H.ChildQuery box
+
+  Query query ->
+    handleQuery' query
+
 handleAction
   :: forall st act ps msg m
    . MonadAff m
   => Row.Lacks "debounceRef" st
   => Row.Lacks "visibility" st
   => Row.Lacks "highlightedIndex" st
-  => (act -> H.HalogenM (State st) (Action st act) ps (Message msg) m Unit)
-  -> (Message msg -> H.HalogenM (State st) (Action st act) ps (Message msg) m Unit)
+  => (act -> H.HalogenM (State st) (Action st act) ps msg m Unit)
+  -> (Message -> H.HalogenM (State st) (Action st act) ps msg m Unit)
   -> Action st act
-  -> H.HalogenM (State st) (Action st act) ps (Message msg) m Unit
+  -> H.HalogenM (State st) (Action st act) ps msg m Unit
 handleAction handleAction' handleMessage = case _ of
-  Initialize -> do
+  Initialize mbAction -> do
     ref <- H.liftEffect $ Ref.new Nothing
     H.modify_ _ { debounceRef = Just ref }
+    for_ mbAction handle
   
-  -- We want to update user-added state values from the parent as well as the lastIndex 
-  -- but not internal fields. Because we don't know what extra fields the user may have 
-  -- provided, we have to use Builder here to go off of their concrete provided Input 
-  -- type. 
+  -- We want to update user-added state values, but not internal fields. Disabled
+  -- by default, but can be enabled via the spec.
   Receive input -> do
     st <- H.get
-    when st.watchInput do
-      let 
-        pipeline = 
-          Builder.modify (SProxy :: SProxy "search") (const st.search)
-            >>> Builder.modify (SProxy :: SProxy "debounceTime") (const st.debounceTime)
-            >>> Builder.insert (SProxy :: SProxy "debounceRef") st.debounceRef
-            >>> Builder.insert (SProxy :: SProxy "visibility") st.visibility
-            >>> Builder.insert (SProxy :: SProxy "highlightedIndex") st.highlightedIndex
-      H.put (Builder.build pipeline input)
+    let 
+      pipeline = 
+        Builder.modify (SProxy :: SProxy "search") (const st.search)
+          >>> Builder.modify (SProxy :: SProxy "debounceTime") (const st.debounceTime)
+          >>> Builder.insert (SProxy :: SProxy "debounceRef") st.debounceRef
+          >>> Builder.insert (SProxy :: SProxy "visibility") st.visibility
+          >>> Builder.insert (SProxy :: SProxy "highlightedIndex") st.highlightedIndex
+    H.put (Builder.build pipeline input)
 
   Search str -> do
     st <- H.get
@@ -229,13 +251,13 @@ handleAction handleAction' handleMessage = case _ of
           AVar.put unit var
 
         -- This compututation will fork and run in the background. When the
-        -- var is finally filled, the action will run (raise a new search)
+        -- var is finally filled, the action will run
         _ <- H.fork do
           _ <- H.liftAff $ AVar.take var
           void $ H.liftEffect $ traverse_ (Ref.write Nothing) st.debounceRef
           H.modify_ _ { highlightedIndex = Just 0 }
           newState <- H.get
-          raise $ Searched newState.search
+          handleMessage $ Searched newState.search
 
         void $ H.liftEffect $ traverse_ (Ref.write $ Just { var, fiber }) st.debounceRef
 
@@ -254,16 +276,15 @@ handleAction handleAction' handleMessage = case _ of
   Highlight target -> do
     st <- H.get
     when (st.visibility == Off) do
-      let targetIndex = getTargetIndex st target
-      H.modify_ _ { highlightedIndex = Just targetIndex }
+      H.modify_ _ { highlightedIndex = Just $ getTargetIndex st target }
 
   Select target mbEv -> do
     for_ mbEv (H.liftEffect <<< preventDefault <<< ME.toEvent)
     st <- H.get
     when (st.visibility == On) case target of
-      Index ix -> raise $ Selected ix
-      Next -> raise $ Selected $ getTargetIndex st target
-      Prev -> raise $ Selected $ getTargetIndex st target
+      Index ix -> handleMessage $ Selected ix
+      Next -> handleMessage $ Selected $ getTargetIndex st target
+      Prev -> handleMessage $ Selected $ getTargetIndex st target
 
   ToggleClick ev -> do
     H.liftEffect $ preventDefault $ ME.toEvent ev
@@ -308,7 +329,7 @@ handleAction handleAction' handleMessage = case _ of
     st <- H.get
     when (st.visibility /= v) do
       H.modify_ _ { visibility = v, highlightedIndex = Just 0 }
-      raise $ VisibilityChanged v
+      handleMessage $ VisibilityChanged v
 
   Action act -> handleAction' act
 
@@ -316,28 +337,23 @@ handleAction handleAction' handleMessage = case _ of
   -- eta-expansion is necessary to avoid infinite recursion
   handle act = handleAction handleAction' handleMessage act
 
-  -- handle a message internally, then raise
-  raise msg = H.fork (handleMessage msg) *> H.raise msg
-
   getTargetIndex st = case _ of
     Index i -> i
     Prev -> case st.highlightedIndex of
       Just i | i /= 0 -> i - 1
-      _ -> st.lastIndex
+      _ -> lastIndex st
     Next -> case st.highlightedIndex of
-      Just i | i /= st.lastIndex -> i + 1
+      Just i | i /= lastIndex st -> i + 1
       _ -> 0
+    where
+    -- we know that the getItemCount function will only touch user fields,
+    -- and that the state record contains *at least* the user fields, so
+    -- this saves us from a set of unnecessary record deletions / modifications
+    userState :: State st -> {| st }
+    userState = unsafeCoerce
 
-handleQuery
-  :: forall st query act ps msg m a
-   . MonadAff m
-  => (query a -> H.HalogenM (State st) (Action st act) ps (Message msg) m (Maybe a))
-  -> Query query ps a
-  -> H.HalogenM (State st) (Action st act) ps (Message msg) m (Maybe a)
-handleQuery handleQuery' = case _ of
-  Send box ->
-    H.HalogenM $ liftF $ H.ChildQuery box
+    lastIndex :: State st -> Int
+    lastIndex = (_ - 1) <<< st.getItemCount <<< userState
 
-  Query query ->
-    handleQuery' query
+
 

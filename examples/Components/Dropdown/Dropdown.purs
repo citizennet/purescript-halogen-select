@@ -23,12 +23,13 @@ data ExtraMessage
   = SelectionChanged (Maybe String) (Maybe String)
 
 type Slot =
-  H.Slot S.Query' (S.Message ExtraMessage)
+  H.Slot S.Query' ExtraMessage
 
 spec :: S.Spec ExtraState (Const Void) Void () ExtraMessage Aff
 spec = S.defaultSpec 
   { render = render
-  , handleMessage = handleMessage 
+  -- pass H.raise here to simply re-raise regular Select messages
+  , handleMessage = handleMessage
   }
   where
   handleMessage = case _ of
@@ -36,7 +37,7 @@ spec = S.defaultSpec
       st <- H.get
       let selection = st.items !! ix
       H.modify_ _ { selection = selection }
-      H.raise $ S.Message $ SelectionChanged st.selection selection
+      H.raise $ SelectionChanged st.selection selection
     _ -> pure unit
 
   render st = HH.div_ [ renderToggle, renderMenu ]
