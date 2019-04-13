@@ -35,6 +35,8 @@
     "purescript-record": "^2.0.0"
   },
   "devDependencies": {
-    "purescript-debug": "^4.0.0"
+    "purescript-debug": "^4.0.0",
+    "purescript-affjax": "^9.0.0",
+    "purescript-argonaut": "^6.0.0"
   }
 }

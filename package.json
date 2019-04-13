@@ -5,7 +5,7 @@
     "watch": "pulp -w build",
     "build-docs": "pulp build -I examples --to docs/js/app.js",
     "watch-docs": "pulp -w --then 'mkdocs serve' build -I examples --to docs/js/app.js",
-    "clean": "rm -rf output bower_components node_modules site docs/js",
+    "clean": "rm -rf output bower_components site docs/js",
     "postinstall": "bower i --silent"
   },
   "devDependencies": {

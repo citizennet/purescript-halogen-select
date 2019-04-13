@@ -11,7 +11,7 @@ import Halogen as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Select
-import Web.Event.Event (Event)
+import Web.Event.Event as E
 import Web.UIEvent.FocusEvent as FE
 import Web.UIEvent.KeyboardEvent as KE
 import Web.UIEvent.MouseEvent as ME
@@ -37,10 +37,10 @@ type ToggleProps props =
 -- | renderToggle = div (setToggleProps [ class "btn-class" ]) [ ...html ]
 -- | ```
 setToggleProps
-  :: forall props item st query ps
-   . State item st
-  -> Array (HP.IProp (ToggleProps props) (Action item query ps))
-  -> Array (HP.IProp (ToggleProps props) (Action item query ps))
+  :: forall props st act
+   . State st
+  -> Array (HP.IProp (ToggleProps props) (Action act))
+  -> Array (HP.IProp (ToggleProps props) (Action act))
 setToggleProps st = append
   [ HE.onFocus \_ -> Just $ SetVisibility On
   , HE.onMouseDown $ Just <<< ToggleClick
@@ -55,7 +55,7 @@ setToggleProps st = append
 type InputProps props =
   ( onFocus :: FE.FocusEvent
   , onKeyDown :: KE.KeyboardEvent
-  , onInput :: Event
+  , onInput :: E.Event
   , value :: String
   , onMouseDown :: ME.MouseEvent
   , onBlur :: FE.FocusEvent
@@ -72,9 +72,9 @@ type InputProps props =
 -- | renderInput = input_ (setInputProps [ class "my-class" ])
 -- | ```
 setInputProps
-  :: forall props item query ps
-   . Array (HP.IProp (InputProps props) (Action item query ps))
-  -> Array (HP.IProp (InputProps props) (Action item query ps))
+  :: forall props act
+   . Array (HP.IProp (InputProps props) (Action act))
+  -> Array (HP.IProp (InputProps props) (Action act))
 setInputProps = append
   [ HE.onFocus \_ -> Just $ SetVisibility On
   , HE.onKeyDown $ Just <<< Key
@@ -101,15 +101,16 @@ type ItemProps props =
 -- | with `mapWithIndex`:
 -- |
 -- | ```purescript
--- | renderItem index itemHTML = HH.li (setItemProps index [ class "my-class" ]) [ itemHTML ]
+-- | renderItem index itemHTML = 
+-- |   HH.li (setItemProps index [ props ]) [ itemHTML ]
 -- |
 -- | render = renderItem `mapWithIndex` itemsArray
 -- | ```
 setItemProps
-  :: forall props item query ps
+  :: forall props act
    . Int 
-  -> Array (HP.IProp (ItemProps props) (Action item query ps)) 
-  -> Array (HP.IProp (ItemProps props) (Action item query ps))
+  -> Array (HP.IProp (ItemProps props) (Action act)) 
+  -> Array (HP.IProp (ItemProps props) (Action act))
 setItemProps index = append
   [ HE.onMouseDown \ev -> Just (Select (Index index) (Just ev))
   , HE.onMouseOver \_ -> Just $ Highlight (Index index)
@@ -120,8 +121,9 @@ setItemProps index = append
 -- | from bubbling up a blur event to the DOM. This should be used on the parent
 -- | element that contains your items.
 setContainerProps
-  :: forall props item query ps
-   . Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action item query ps))
-  -> Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action item query ps))
+  :: forall props act
+   . Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action act))
+  -> Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action act))
 setContainerProps = append
   [ HE.onMouseDown $ Just <<< PreventClick ]
+

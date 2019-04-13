@@ -2,245 +2,199 @@ module Docs.Components.Typeahead where
 
 import Prelude
 
-import Data.Array (elemIndex, mapWithIndex, difference, filter, (:))
+import Affjax as AX
+import Affjax.ResponseFormat as AR
+import Data.Argonaut.Decode ((.:), decodeJson)
+import Data.Array (mapWithIndex, filter, (:), (!!))
 import Data.Foldable (for_, length)
-import Data.Maybe (Maybe(..))
+import Data.Bifunctor (lmap)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Monoid (guard)
-import Data.String (Pattern(..), contains)
 import Data.Symbol (SProxy(..))
+import Data.Traversable (traverse)
 import Docs.CSS as CSS
-import Docs.Components.Dropdown as Dropdown
-import Effect.Aff.Class (class MonadAff)
+import Docs.Internal.RemoteData as RD
+import Docs.Components.Dropdown as D
+import Effect.Aff (Aff)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Select as Select
-import Select.Setters as Setters
-
-{-
-  You can make complex selection interfaces like typeaheads the same way you can
-  make simpler ones like dropdowns. It just comes down to how much of Select you
-  want to extend.
-
-  In this case, we'll extend the component so that it can manage a list of selections,
-  where no selected item should be displayed in the list of available options. We'll
-  need to extend the component state with the list of selections; we'll need to extend
-  the query algebra with the ability to click to remove items; and we'll go ahead and
-  add a new message that lets a parent component know when an item was removed.
-
-  Plus, we'll get fancy: we'll have a dropdown running *inside* Select, using our
-  previous work.
--}
-
------
--- Component
-
--- Just like the dropdown, all we have to do to export a full component is just 
--- specialize the types and supply a render function, query handler, and message 
--- handler.
-component :: forall m. MonadAff m => H.Component HH.HTML Query Input Message m
-component = Select.component render handleQuery handleMessage
-
-
------
--- State
-
--- Select doesn't maintain any selections on its own, but we can extend it to 
--- hold a list of selected items by adding new contents to state. We'll need
--- three lists: a list of all items, a list of non-selected items, and a list
--- of selected items.
-type State = Select.State String ExtraState
+import Select as S
+import Select.Setters as SS
 
 type ExtraState =
-  ( selectedItems :: Array String
-  , visibleItems :: Array String
+  ( selections :: Array Location 
+  , available :: RD.RemoteData String (Array Location)
   )
 
--- Our input type will also need these items
-type Input = Select.Input String ExtraState
-
-
------
--- Child Components
-
--- We're going to embed a dropdown in the component, so we'll extend Select with
--- new child slots.
-type ChildSlots = 
-  ( dropdown :: H.Slot Dropdown.Query Dropdown.Message Unit )
-
-_dropdown = SProxy :: SProxy "dropdown"
-
-
------
--- Messages
-
--- We'll add a new message to Select to cover the case when an item is removed. The
--- parent might wish to display a confirmation of the last-removed item or use it
--- otherwise.
-type Message = Select.Message String ExtraMessage
-
-data ExtraMessage 
-  = ItemRemoved String 
-
--- We also need to take action when an item is selected in Select or a debounced
--- search has completed. We'll do that by handling the message within Select.
-handleMessage 
-  :: forall m
-   . MonadAff m
-  => Message 
-  -> H.HalogenM State Action ChildSlots Message m Unit
-handleMessage = case _ of
-  Select.Selected item -> do
-    st <- H.get
-    let newSelections = item : st.selectedItems
-    H.modify_ _ 
-      { selectedItems = newSelections
-      , visibleItems = difference newSelections st.items
-      , search = ""
-      }
-  
-  Select.Searched str -> do
-    st <- H.get
-    let 
-      visible = difference st.selectedItems $ filter (contains (Pattern str)) st.items
-      index = elemIndex str visible
-    H.modify_ _ { visibleItems = visible }
-    for_ index \ix -> do
-      Select.handleAction handleQuery handleMessage $ Select.Highlight $ Select.Index ix
-  
-  _ -> 
-    pure unit
-
-
-
------
--- Query
-
--- We introduced some new behavior for selecting items via the `handleMessage` function
--- but we also need to support removal and we need to handle messages output by our
--- further child component, the dropdown.
-type Query = Select.Query String ExtraQuery ChildSlots
-
--- We'll provide a synonym for the action type, too.
-type Action = Select.Action String ExtraQuery ChildSlots
+data ExtraAction
+  = Remove Location
+  | HandleDropdown D.ExtraMessage
 
 data ExtraQuery a
-  = Remove String a
-  | HandleDropdown Dropdown.Message a
+  = GetSelections (Array Location -> a)
 
-handleQuery 
-  :: forall m a
-   . MonadAff m
-  => ExtraQuery a
-  -> H.HalogenM State Action ChildSlots Message m (Maybe a)
-handleQuery = case _ of  
-  Remove item a -> Just a <$ do
-    st <- H.get
-    let newSelections = filter (_ /= item) st.selectedItems
-    H.modify_ _
-      { selectedItems = newSelections
-      , visibleItems = difference newSelections st.items
-      }
-    H.raise $ Select.Raised $ ItemRemoved item
-  
-  -- We can handle our child component
-  HandleDropdown msg a -> Just a <$ case msg of
-    Select.Selected item -> do
-      st <- H.get
-      let index = elemIndex item st.items
-      for_ index \ix -> 
-        -- Remember that we're handling this from the typeahead; calling
-        -- the below will cause the *typeahead* to select the item, not the
-        -- dropdown.
-        Select.handleAction handleQuery handleMessage 
-          $ Select.Select (Select.Index ix) Nothing
+data ExtraMessage 
+  = ItemRemoved Location 
+  | SelectionsChanged (Array Location)
 
-    _ -> 
-      pure unit
+type ChildSlots = 
+  ( dropdown :: D.Slot Unit )
 
------
--- Render Function
+type Slot = 
+  S.Slot ExtraQuery ChildSlots ExtraMessage
 
-render :: forall m. MonadAff m => State -> H.ComponentHTML Action ChildSlots m
-render state = 
-  HH.div_ 
-    [ renderSelections, renderInput, renderContainer ]
+spec :: S.Spec ExtraState ExtraQuery ExtraAction ChildSlots ExtraMessage Aff
+spec = S.defaultSpec 
+  { render = render
+  , handleAction = handleAction
+  , handleQuery = handleQuery
+  , handleMessage = handleMessage
+  }
   where
-  renderSelections :: forall props. HH.HTML props Action
-  renderSelections = case length state.selectedItems of
-    0 -> 
-      HH.div_ []
-    _ ->
-      HH.div
-        [ class_ "bg-white rounded-sm w-full border-b border-grey-lighter" ]
-        [ HH.ul
-          [ class_ "list-reset" ]
-          (renderSelectedItem <$> state.selectedItems)
-        ]
-    where
-    renderSelectedItem item =
-      HH.li
-        [ class_ "px-4 py-1 text-grey-darkest hover:bg-grey-lighter relative" ]
-        [ HH.span_ [ HH.text item ]
-        , closeButton item
-        ]
-
-    closeButton item =
-      HH.span
-        [ HE.onClick \_ -> 
-            Just $ Select.AsAction $ Select.Embed $ Remove item unit
-        , class_ "absolute pin-t pin-b pin-r p-1 mx-3 cursor-pointer" 
-        ]
-        [ HH.text "×" ]
+  handleMessage = case _ of
+    S.Selected ix -> do
+      st <- H.get
+      for_ st.available \arr -> do
+        let newSelections = fromMaybe st.selections $ (_ : st.selections) <$> (arr !! ix)
+        H.modify_ _ { selections = newSelections, search = "" } 
+        H.raise $ SelectionsChanged arr
   
-  renderInput = HH.input $ Setters.setInputProps
-    [ HP.classes CSS.input
-    , HP.placeholder "Type to search..." 
-    ]
+    S.Searched str -> do
+      st <- H.get
+      -- we'll use an external api to search locations 
+      H.modify_ _ { available = RD.Loading }
+      items <- H.liftAff $ searchLocations str
+      H.modify_ _ { available = items }
+    _ -> pure unit
 
-  renderContainer =
-    HH.div 
-      [ class_ "relative z-50" ]
-      if state.visibility == Select.Off
-        then []
-        else [ renderItems $ renderItem `mapWithIndex` state.visibleItems ]
+  -- type signature is necessary for the `a` type variable 
+  handleQuery :: forall a. ExtraQuery a -> H.HalogenM _ _ _ _ _ (Maybe a)
+  handleQuery = case _ of  
+    GetSelections reply -> do
+       st <- H.get
+       pure $ Just $ reply st.selections
+
+  handleAction = case _ of
+    Remove item -> do
+      st <- H.get
+      let newSelections = filter (_ /= item) st.selections
+      H.modify_ _ { selections = newSelections }
+      H.raise $ ItemRemoved item
+  
+    HandleDropdown msg -> case msg of
+      D.SelectionChanged oldSelection newSelection -> do
+        st <- H.get
+        let 
+          mkLocation str = { name: "User Added: " <> str, population: "1" }
+          newSelections = case oldSelection, newSelection of
+            Nothing, Nothing -> 
+              Nothing
+            Nothing, Just str -> 
+              Just (mkLocation str : st.selections)
+            Just str, Nothing -> 
+              Just (filter (_ /= mkLocation str) st.selections)
+            Just old, Just new -> 
+              Just (mkLocation new : (filter (_ /= mkLocation old) st.selections))
+        for_ newSelections \selections -> 
+          H.modify_ _ { selections = selections }
+
+  render :: S.State ExtraState -> H.ComponentHTML (S.Action ExtraAction) ChildSlots Aff
+  render state = HH.div_ [ renderSelections, renderInput, renderContainer ]
     where
-    -- here we can render a further child component, the dropdown, which is *also*
-    -- a select component.
-    renderChild = HH.slot _dropdown unit Dropdown.component input handleChild
+    renderSelections = case length state.selections of
+      0 -> 
+        HH.div_ []
+      _ ->
+        HH.div
+          [ class_ "bg-white rounded-sm w-full border-b border-grey-lighter" ]
+          [ HH.ul [ class_ "list-reset" ] (renderSelectedItem <$> state.selections) ]
       where
-      handleChild msg = Just (Select.AsAction (Select.Embed (H.tell (HandleDropdown msg))))
+      renderSelectedItem item =
+        HH.li
+          [ class_ "px-4 py-1 text-grey-darkest hover:bg-grey-lighter relative" ]
+          [ renderLocation item, closeButton item ]
 
-      input = 
-        { inputType: Select.Toggle
-	, items: [ "Choice A", "Choice B" ]
-	, search: Nothing
-	, debounceTime: Nothing
-	, selection: Nothing
-	}
+      closeButton item =
+        HH.span
+          [ HE.onClick \_ -> Just $ S.Action $ Remove item
+          , class_ "absolute pin-t pin-b pin-r p-1 mx-3 cursor-pointer" 
+          ]
+          [ HH.text "×" ]
 
-    renderItems html =
-      HH.div
-        ( Setters.setContainerProps
-          [ class_ "absolute bg-white shadow rounded-sm pin-t pin-l w-full" ]
-        )
-        [ HH.ul 
-            [ class_ "list-reset" ] 
-            html 
-        , renderChild
-        ]
+    renderInput = HH.input $ SS.setInputProps
+      [ HP.classes CSS.input
+      , HP.placeholder "Type to search..." 
+      ]
 
-    renderItem index item =
-      HH.li (Setters.setItemProps index [ class_ (base <> extra) ]) [ HH.text item ]
+    renderContainer =
+      HH.div 
+        [ class_ "relative z-50" ]
+        ([ renderItems (mapWithIndex renderItem) ] # guard (state.visibility == S.On))
       where
-      base = "px-4 py-1 text-grey-darkest"
-      extra = " bg-grey-lighter" # guard (state.highlightedIndex == Just index) 
+      -- here we can render a further child component, the dropdown, which is *also*
+      -- a select component.
+      renderChild = HH.slot _dropdown unit (S.component D.spec) input handleChild
+        where
+        _dropdown = SProxy :: SProxy "dropdown"
+        handleChild msg = Just $ S.Action $ HandleDropdown msg
+        input = 
+          { inputType: S.Toggle
+          , search: Nothing
+          , debounceTime: Nothing
+          , getItemCount: length <<< _.items
+          , items: [ "Earth", "Mars" ]
+          , selection: Nothing
+          }
 
+      renderItems f = do
+        let renderMsg msg = [ HH.span [ class_ "pa-4" ] [ HH.text msg ] ]
+        HH.div
+          (SS.setContainerProps 
+            [ class_ "absolute bg-white shadow rounded-sm pin-t pin-l w-full" ]
+          )
+          case state.available of
+            RD.NotAsked -> renderMsg "No search performed..."
+            RD.Loading -> renderMsg "Loading..."
+            RD.Failure e -> renderMsg e
+            RD.Success available -> 
+              [ HH.ul 
+                  [ class_ "list-reset" ] 
+                  (f available) 
+              , renderChild
+              ]
 
------
+      renderItem index item =
+        HH.li 
+          (SS.setItemProps index [ class_ $ base <> extra ]) 
+          [ renderLocation item ]
+        where
+        base = "px-4 py-1 text-grey-darkest"
+        extra = " bg-grey-lighter" # guard (state.highlightedIndex == Just index) 
+
 -- Helpers
 
 class_ :: ∀ p i. String -> HH.IProp ( "class" :: String | i ) p
 class_ = HP.class_ <<< HH.ClassName
+
+type Location =
+  { name :: String
+  , population :: String
+  }
+
+renderLocation :: forall t0 t1. Location -> HH.HTML t0 t1
+renderLocation { name, population } = 
+  HH.div_
+    [ HH.text name
+    , HH.span
+        [ class_ "ml-4 text-grey-lighter" ]
+        [ HH.text population ]
+    ]
+
+searchLocations :: String -> Aff (RD.RemoteData String (Array Location))
+searchLocations search = do
+  res <- AX.get AR.json ("https://swapi.co/api/planets/?search=" <> search) 
+  let body = lmap AR.printResponseFormatError res.body
+  pure $ RD.fromEither $ traverse decodeJson =<< (_ .: "results") =<< decodeJson =<< body
 
