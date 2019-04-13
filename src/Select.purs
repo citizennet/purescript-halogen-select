@@ -30,7 +30,7 @@ import Web.HTML.HTMLElement as HTMLElement
 import Web.UIEvent.KeyboardEvent as KE
 import Web.UIEvent.MouseEvent as ME
 
-data Action st act
+data Action act
   = Search String
   | Highlight Target
   | Select Target (Maybe ME.MouseEvent)
@@ -39,9 +39,10 @@ data Action st act
   | Key KE.KeyboardEvent
   | PreventClick ME.MouseEvent
   | SetVisibility Visibility
-  | Initialize (Maybe (Action st act))
-  | Receive (Input st)
+  | Initialize (Maybe (Action act))
   | Action act
+
+type Action' = Action Void
 
 -----
 -- QUERIES
@@ -118,38 +119,38 @@ type Spec st query act ps msg m =
   { -- usual Halogen component spec 
     render 
       :: State st 
-      -> H.ComponentHTML (Action st act) ps m
+      -> H.ComponentHTML (Action act) ps m
     
     -- handle additional actions provided to the component
   , handleAction 
       :: act
-      -> H.HalogenM (State st) (Action st act) ps msg m Unit
+      -> H.HalogenM (State st) (Action act) ps msg m Unit
 
     -- handle additional queries provided to the component
   , handleQuery 
       :: forall a
        . query a 
-      -> H.HalogenM (State st) (Action st act) ps msg m (Maybe a)
+      -> H.HalogenM (State st) (Action act) ps msg m (Maybe a)
 
     -- handle messages emitted by the component; provide H.raise to simply
     -- raise the Select messages to the parent.
   , handleMessage 
       :: Message
-      -> H.HalogenM (State st) (Action st act) ps msg m Unit
+      -> H.HalogenM (State st) (Action act) ps msg m Unit
 
     -- optionally handle input on parent re-renders; off by default, but use 
     -- `Just <<< Receive` to enable Select's default receiver 
   , receive 
       :: Input st 
-      -> Maybe (Action st act)
+      -> Maybe (Action act)
 
     -- perform some action when the component initializes.
   , initialize 
-      :: Maybe (Action st act)
+      :: Maybe (Action act)
 
     -- optionally perform some action on initialization. disabled by default.
   , finalize
-      :: Maybe (Action st act)
+      :: Maybe (Action act)
   }
 
 type Spec' st m = Spec st (Const Void) Void () Void m
@@ -198,9 +199,9 @@ component spec = H.mkComponent
 handleQuery
   :: forall st query act ps msg m a
    . MonadAff m
-  => (query a -> H.HalogenM (State st) (Action st act) ps msg m (Maybe a))
+  => (query a -> H.HalogenM (State st) (Action act) ps msg m (Maybe a))
   -> Query query ps a
-  -> H.HalogenM (State st) (Action st act) ps msg m (Maybe a)
+  -> H.HalogenM (State st) (Action act) ps msg m (Maybe a)
 handleQuery handleQuery' = case _ of
   Send box ->
     H.HalogenM $ liftF $ H.ChildQuery box
@@ -214,29 +215,16 @@ handleAction
   => Row.Lacks "debounceRef" st
   => Row.Lacks "visibility" st
   => Row.Lacks "highlightedIndex" st
-  => (act -> H.HalogenM (State st) (Action st act) ps msg m Unit)
-  -> (Message -> H.HalogenM (State st) (Action st act) ps msg m Unit)
-  -> Action st act
-  -> H.HalogenM (State st) (Action st act) ps msg m Unit
+  => (act -> H.HalogenM (State st) (Action act) ps msg m Unit)
+  -> (Message -> H.HalogenM (State st) (Action act) ps msg m Unit)
+  -> Action act
+  -> H.HalogenM (State st) (Action act) ps msg m Unit
 handleAction handleAction' handleMessage = case _ of
   Initialize mbAction -> do
     ref <- H.liftEffect $ Ref.new Nothing
     H.modify_ _ { debounceRef = Just ref }
     for_ mbAction handle
   
-  -- We want to update user-added state values, but not internal fields. Disabled
-  -- by default, but can be enabled via the spec.
-  Receive input -> do
-    st <- H.get
-    let 
-      pipeline = 
-        Builder.modify (SProxy :: SProxy "search") (const st.search)
-          >>> Builder.modify (SProxy :: SProxy "debounceTime") (const st.debounceTime)
-          >>> Builder.insert (SProxy :: SProxy "debounceRef") st.debounceRef
-          >>> Builder.insert (SProxy :: SProxy "visibility") st.visibility
-          >>> Builder.insert (SProxy :: SProxy "highlightedIndex") st.highlightedIndex
-    H.put (Builder.build pipeline input)
-
   Search str -> do
     st <- H.get
     ref <- H.liftEffect $ map join $ traverse Ref.read st.debounceRef

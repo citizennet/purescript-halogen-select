@@ -8,7 +8,7 @@ import Data.Argonaut.Decode ((.:), decodeJson)
 import Data.Array (mapWithIndex, filter, (:), (!!))
 import Data.Foldable (for_, length)
 import Data.Bifunctor (lmap)
-import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Monoid (guard)
 import Data.Symbol (SProxy(..))
 import Data.Traversable (traverse)
@@ -100,6 +100,7 @@ spec = S.defaultSpec
         for_ newSelections \selections -> 
           H.modify_ _ { selections = selections }
 
+  render :: S.State ExtraState -> H.ComponentHTML (S.Action ExtraAction) ChildSlots Aff
   render state = HH.div_ [ renderSelections, renderInput, renderContainer ]
     where
     renderSelections = case length state.selections of

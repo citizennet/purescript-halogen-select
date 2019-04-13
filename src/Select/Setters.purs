@@ -39,8 +39,8 @@ type ToggleProps props =
 setToggleProps
   :: forall props st act
    . State st
-  -> Array (HP.IProp (ToggleProps props) (Action st act))
-  -> Array (HP.IProp (ToggleProps props) (Action st act))
+  -> Array (HP.IProp (ToggleProps props) (Action act))
+  -> Array (HP.IProp (ToggleProps props) (Action act))
 setToggleProps st = append
   [ HE.onFocus \_ -> Just $ SetVisibility On
   , HE.onMouseDown $ Just <<< ToggleClick
@@ -72,9 +72,9 @@ type InputProps props =
 -- | renderInput = input_ (setInputProps [ class "my-class" ])
 -- | ```
 setInputProps
-  :: forall props st act
-   . Array (HP.IProp (InputProps props) (Action st act))
-  -> Array (HP.IProp (InputProps props) (Action st act))
+  :: forall props act
+   . Array (HP.IProp (InputProps props) (Action act))
+  -> Array (HP.IProp (InputProps props) (Action act))
 setInputProps = append
   [ HE.onFocus \_ -> Just $ SetVisibility On
   , HE.onKeyDown $ Just <<< Key
@@ -107,10 +107,10 @@ type ItemProps props =
 -- | render = renderItem `mapWithIndex` itemsArray
 -- | ```
 setItemProps
-  :: forall props st act
+  :: forall props act
    . Int 
-  -> Array (HP.IProp (ItemProps props) (Action st act)) 
-  -> Array (HP.IProp (ItemProps props) (Action st act))
+  -> Array (HP.IProp (ItemProps props) (Action act)) 
+  -> Array (HP.IProp (ItemProps props) (Action act))
 setItemProps index = append
   [ HE.onMouseDown \ev -> Just (Select (Index index) (Just ev))
   , HE.onMouseOver \_ -> Just $ Highlight (Index index)
@@ -121,9 +121,9 @@ setItemProps index = append
 -- | from bubbling up a blur event to the DOM. This should be used on the parent
 -- | element that contains your items.
 setContainerProps
-  :: forall props st act
-   . Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action st act))
-  -> Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action st act))
+  :: forall props act
+   . Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action act))
+  -> Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action act))
 setContainerProps = append
   [ HE.onMouseDown $ Just <<< PreventClick ]
 
