@@ -240,8 +240,8 @@ handleAction handleAction' handleMessage = case _ of
 
         -- This compututation will fork and run in the background. When the
         -- var is finally filled, the action will run
-        _ <- H.fork do
-          _ <- H.liftAff $ AVar.take var
+        void $ H.fork do
+          void $ H.liftAff $ AVar.take var
           void $ H.liftEffect $ traverse_ (Ref.write Nothing) st.debounceRef
           H.modify_ _ { highlightedIndex = Just 0 }
           newState <- H.get
@@ -251,7 +251,7 @@ handleAction handleAction' handleMessage = case _ of
 
       Text, Just debouncer -> do
         let var = debouncer.var
-        _ <- H.liftAff $ killFiber (error "Time's up!") debouncer.fiber
+        void $ H.liftAff $ killFiber (error "Time's up!") debouncer.fiber
         fiber <- H.liftAff $ forkAff do
           delay st.debounceTime
           AVar.put unit var
