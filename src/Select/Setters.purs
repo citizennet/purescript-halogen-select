@@ -4,29 +4,28 @@
 -- | below.
 module Select.Setters where
 
-import Prelude
+import Prelude (append, ($), (<<<))
 
 import Data.Maybe (Maybe(..))
-import Halogen (RefLabel(..)) as H
+import Halogen as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Select (Query, Target(..), Visibility(..))
-import Select as Select
-import Web.Event.Event (Event)
+import Select
+import Web.Event.Event as E
 import Web.UIEvent.FocusEvent as FE
 import Web.UIEvent.KeyboardEvent as KE
 import Web.UIEvent.MouseEvent as ME
 
 -- | The properties that must be supported by the HTML element that serves
 -- | as a menu toggle. This should be used with toggle-driven `Select` components.
-type ToggleProps p =
+type ToggleProps props =
   ( onFocus :: FE.FocusEvent
   , onKeyDown :: KE.KeyboardEvent
   , onMouseDown :: ME.MouseEvent
   , onClick :: ME.MouseEvent
   , onBlur :: FE.FocusEvent
   , tabIndex :: Int
-  | p
+  | props
   )
 
 -- | A helper function that augments an array of `IProps` with `ToggleProps`. It
@@ -38,37 +37,30 @@ type ToggleProps p =
 -- | renderToggle = div (setToggleProps [ class "btn-class" ]) [ ...html ]
 -- | ```
 setToggleProps
-  :: ∀ o item p
-   . Array (HP.IProp (ToggleProps p) (Query o item Unit))
-  -> Array (HP.IProp (ToggleProps p) (Query o item Unit))
-setToggleProps = (<>)
-  [ HE.onFocus $ Select.always $ Select.setVisibility On
-  , HE.onMouseDown \ev -> Just do
-      Select.preventClick ev
-      Select.getVisibility >>= case _ of
-        Select.On -> do
-          Select.triggerBlur
-          Select.setVisibility Select.Off
-        Select.Off -> do
-          Select.triggerFocus
-          Select.setVisibility Select.On
-  , HE.onKeyDown $ Just <<< Select.key
-  , HE.onBlur $ Select.always $ Select.setVisibility Off
+  :: forall props st act
+   . State st
+  -> Array (HP.IProp (ToggleProps props) (Action act))
+  -> Array (HP.IProp (ToggleProps props) (Action act))
+setToggleProps st = append
+  [ HE.onFocus \_ -> Just $ SetVisibility On
+  , HE.onMouseDown $ Just <<< ToggleClick
+  , HE.onKeyDown $ Just <<< Key
+  , HE.onBlur \_ -> Just $ SetVisibility Off
   , HP.tabIndex 0
   , HP.ref (H.RefLabel "select-input")
   ]
 
 -- | The properties that must be supported by the HTML element that serves
 -- | as a text input. This should be used with input-driven `Select` components.
-type InputProps p =
+type InputProps props =
   ( onFocus :: FE.FocusEvent
   , onKeyDown :: KE.KeyboardEvent
-  , onInput :: Event
+  , onInput :: E.Event
   , value :: String
   , onMouseDown :: ME.MouseEvent
   , onBlur :: FE.FocusEvent
   , tabIndex :: Int
-  | p
+  | props
   )
 
 -- | A helper function that augments an array of `IProps` with `InputProps`. It
@@ -80,15 +72,15 @@ type InputProps p =
 -- | renderInput = input_ (setInputProps [ class "my-class" ])
 -- | ```
 setInputProps
-  :: ∀ o item p
-   . Array (HP.IProp (InputProps p) (Query o item Unit))
-  -> Array (HP.IProp (InputProps p) (Query o item Unit))
-setInputProps = (<>)
-  [ HE.onFocus $ Select.always $ Select.setVisibility On
-  , HE.onKeyDown $ Just <<< Select.key
-  , HE.onValueInput $ Just <<< Select.search
-  , HE.onMouseDown $ Select.always $ Select.setVisibility On
-  , HE.onBlur $ Select.always $ Select.setVisibility Off
+  :: forall props act
+   . Array (HP.IProp (InputProps props) (Action act))
+  -> Array (HP.IProp (InputProps props) (Action act))
+setInputProps = append
+  [ HE.onFocus \_ -> Just $ SetVisibility On
+  , HE.onKeyDown $ Just <<< Key
+  , HE.onValueInput $ Just <<< Search
+  , HE.onMouseDown \_ -> Just $ SetVisibility On
+  , HE.onBlur \_ -> Just $ SetVisibility Off
   , HP.tabIndex 0
   , HP.ref (H.RefLabel "select-input")
   ]
@@ -96,10 +88,10 @@ setInputProps = (<>)
 -- | The properties that must be supported by the HTML element that acts as a
 -- | selectable "item" in your UI. This should be attached to every item that
 -- | can be selected.
-type ItemProps p =
+type ItemProps props =
   ( onMouseDown :: ME.MouseEvent
   , onMouseOver :: ME.MouseEvent
-  | p
+  | props
   )
 
 -- | A helper function that augments an array of `IProps` with `ItemProps`. It
@@ -109,20 +101,19 @@ type ItemProps p =
 -- | with `mapWithIndex`:
 -- |
 -- | ```purescript
--- | renderItem index itemHTML = HH.li (setItemProps index [ class "my-class" ]) [ itemHTML ]
+-- | renderItem index itemHTML = 
+-- |   HH.li (setItemProps index [ props ]) [ itemHTML ]
 -- |
 -- | render = renderItem `mapWithIndex` itemsArray
 -- | ```
 setItemProps
-  :: ∀ o item p
-   . Int
-  -> Array (HP.IProp (ItemProps p) (Query o item Unit))
-  -> Array (HP.IProp (ItemProps p) (Query o item Unit))
-setItemProps index = (<>)
-  [ HE.onMouseDown \ev -> Just do
-      Select.preventClick ev
-      Select.select index
-  , HE.onMouseOver $ Select.always $ Select.highlight (Index index)
+  :: forall props act
+   . Int 
+  -> Array (HP.IProp (ItemProps props) (Action act)) 
+  -> Array (HP.IProp (ItemProps props) (Action act))
+setItemProps index = append
+  [ HE.onMouseDown \ev -> Just (Select (Index index) (Just ev))
+  , HE.onMouseOver \_ -> Just $ Highlight (Index index)
   ]
 
 -- | A helper function that augments an array of `IProps` with a `MouseDown`
@@ -130,8 +121,9 @@ setItemProps index = (<>)
 -- | from bubbling up a blur event to the DOM. This should be used on the parent
 -- | element that contains your items.
 setContainerProps
-  :: ∀ o item p
-   . Array (HP.IProp (onMouseDown :: ME.MouseEvent | p) (Query o item Unit))
-  -> Array (HP.IProp (onMouseDown :: ME.MouseEvent | p) (Query o item Unit))
-setContainerProps = (<>)
-  [ HE.onMouseDown $ Just <<< Select.preventClick ]
+  :: forall props act
+   . Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action act))
+  -> Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action act))
+setContainerProps = append
+  [ HE.onMouseDown $ Just <<< PreventClick ]
+
