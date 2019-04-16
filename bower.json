@@ -31,7 +31,7 @@
     "generated-docs"
   ],
   "dependencies": {
-    "purescript-halogen": "^5.0.0-rc.3",
+    "purescript-halogen": "^5.0.0-rc.4",
     "purescript-record": "^2.0.0"
   },
   "devDependencies": {
