@@ -10856,7 +10856,7 @@ var PS = {};
               if (v instanceof Query) {
                   return handleQuery$prime(v.value0);
               };
-              throw new Error("Failed pattern match at Select (line 205, column 28 - line 210, column 23): " + [ v.constructor.name ]);
+              throw new Error("Failed pattern match at Select (line 204, column 28 - line 209, column 23): " + [ v.constructor.name ]);
           };
       };
   };
@@ -10902,7 +10902,7 @@ var PS = {};
                                       };
                                       return 0;
                                   };
-                                  throw new Error("Failed pattern match at Select (line 328, column 23 - line 336, column 5): " + [ v.constructor.name ]);
+                                  throw new Error("Failed pattern match at Select (line 327, column 23 - line 335, column 5): " + [ v.constructor.name ]);
                               };
                           };
                           return function (v) {
@@ -11014,7 +11014,7 @@ var PS = {};
                                               if (v.value0 instanceof Prev) {
                                                   return handleMessage(Selected.create(getTargetIndex(v1)(v.value0)));
                                               };
-                                              throw new Error("Failed pattern match at Select (line 272, column 32 - line 275, column 66): " + [ v.value0.constructor.name ]);
+                                              throw new Error("Failed pattern match at Select (line 271, column 32 - line 274, column 66): " + [ v.value0.constructor.name ]);
                                           })());
                                       });
                                   });
@@ -11032,7 +11032,7 @@ var PS = {};
                                                   return handle(new SetVisibility(On.value));
                                               });
                                           };
-                                          throw new Error("Failed pattern match at Select (line 280, column 5 - line 286, column 34): " + [ v1.visibility.constructor.name ]);
+                                          throw new Error("Failed pattern match at Select (line 279, column 5 - line 285, column 34): " + [ v1.visibility.constructor.name ]);
                                       });
                                   });
                               };
@@ -11102,7 +11102,7 @@ var PS = {};
                               if (v instanceof Action) {
                                   return handleAction$prime(v.value0);
                               };
-                              throw new Error("Failed pattern match at Select (line 222, column 44 - line 322, column 34): " + [ v.constructor.name ]);
+                              throw new Error("Failed pattern match at Select (line 221, column 44 - line 321, column 34): " + [ v.constructor.name ]);
                           };
                       };
                   };
@@ -11355,17 +11355,15 @@ var PS = {};
   var Web_UIEvent_FocusEvent = PS["Web.UIEvent.FocusEvent"];
   var Web_UIEvent_KeyboardEvent = PS["Web.UIEvent.KeyboardEvent"];
   var Web_UIEvent_MouseEvent = PS["Web.UIEvent.MouseEvent"];                 
-  var setToggleProps = function (st) {
-      return Data_Semigroup.append(Data_Semigroup.semigroupArray)([ Halogen_HTML_Events.onFocus(function (v) {
-          return Data_Maybe.Just.create(new Select.SetVisibility(Select.On.value));
-      }), Halogen_HTML_Events.onMouseDown(function ($6) {
-          return Data_Maybe.Just.create(Select.ToggleClick.create($6));
-      }), Halogen_HTML_Events.onKeyDown(function ($7) {
-          return Data_Maybe.Just.create(Select.Key.create($7));
-      }), Halogen_HTML_Events.onBlur(function (v) {
-          return Data_Maybe.Just.create(new Select.SetVisibility(Select.Off.value));
-      }), Halogen_HTML_Properties.tabIndex(0), Halogen_HTML_Properties.ref("select-input") ]);
-  };
+  var setToggleProps = Data_Semigroup.append(Data_Semigroup.semigroupArray)([ Halogen_HTML_Events.onFocus(function (v) {
+      return Data_Maybe.Just.create(new Select.SetVisibility(Select.On.value));
+  }), Halogen_HTML_Events.onMouseDown(function ($6) {
+      return Data_Maybe.Just.create(Select.ToggleClick.create($6));
+  }), Halogen_HTML_Events.onKeyDown(function ($7) {
+      return Data_Maybe.Just.create(Select.Key.create($7));
+  }), Halogen_HTML_Events.onBlur(function (v) {
+      return Data_Maybe.Just.create(new Select.SetVisibility(Select.Off.value));
+  }), Halogen_HTML_Properties.tabIndex(0), Halogen_HTML_Properties.ref("select-input") ]);
   var setItemProps = function (index) {
       return Data_Semigroup.append(Data_Semigroup.semigroupArray)([ Halogen_HTML_Events.onMouseDown(function (ev) {
           return new Data_Maybe.Just(new Select.Select(new Select.Index(index), new Data_Maybe.Just(ev)));
@@ -11430,7 +11428,7 @@ var PS = {};
   })();
   var spec = (function () {
       var render = function (st) {
-          var renderToggle = Halogen_HTML_Elements.button(Select_Setters.setToggleProps(st)([ Internal_CSS.class_("Dropdown__toggle") ]))([ Halogen_HTML_Core.text(Data_Maybe.fromMaybe(st.buttonLabel)(st.selection)) ]);
+          var renderToggle = Halogen_HTML_Elements.button(Select_Setters.setToggleProps([ Internal_CSS.class_("Dropdown__toggle") ]))([ Halogen_HTML_Core.text(Data_Maybe.fromMaybe(st.buttonLabel)(st.selection)) ]);
           var renderContainer = (function () {
               var renderItem = function (index) {
                   return function (item) {
