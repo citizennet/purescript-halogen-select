@@ -37,11 +37,10 @@ type ToggleProps props =
 -- | renderToggle = div (setToggleProps [ class "btn-class" ]) [ ...html ]
 -- | ```
 setToggleProps
-  :: forall props st act
-   . State st
+  :: forall props act
+   . Array (HP.IProp (ToggleProps props) (Action act))
   -> Array (HP.IProp (ToggleProps props) (Action act))
-  -> Array (HP.IProp (ToggleProps props) (Action act))
-setToggleProps st = append
+setToggleProps = append
   [ HE.onFocus \_ -> Just $ SetVisibility On
   , HE.onMouseDown $ Just <<< ToggleClick
   , HE.onKeyDown $ Just <<< Key

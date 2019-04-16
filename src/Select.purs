@@ -138,8 +138,7 @@ type Spec st query act ps msg m =
       :: Message
       -> H.HalogenM (State st) (Action act) ps msg m Unit
 
-    -- optionally handle input on parent re-renders; off by default, but use 
-    -- `Just <<< Receive` to enable Select's default receiver 
+    -- optionally handle input on parent re-renders
   , receive 
       :: Input st 
       -> Maybe (Action act)

@@ -61,7 +61,7 @@ spec = S.defaultSpec { render = render, handleMessage = handleMessage }
     where
     renderToggle =
       HH.button
-        ( SS.setToggleProps st [ class_ "Dropdown__toggle" ] )
+        ( SS.setToggleProps [ class_ "Dropdown__toggle" ] )
         [ HH.text (fromMaybe st.buttonLabel st.selection) ]
 
     renderContainer = whenElem (st.visibility == S.On) \_ ->
