@@ -66,7 +66,7 @@ spec = S.defaultSpec { render = render, handleMessage = handleMessage }
 
     renderContainer = whenElem (st.visibility == S.On) \_ ->
       HH.div
-        ( SS.setContainerProps [ class_ "Dropdown__container" ] )
+        ( SS.setContainerProps st [ class_ "Dropdown__container" ] )
         ( renderItem `mapWithIndex` st.items )
       where
       renderItem index item =
