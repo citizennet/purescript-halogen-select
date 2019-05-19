@@ -88,7 +88,7 @@ dropdown :: forall t0 t1 t2. H.Component HH.HTML t0 t1 t2 Aff
 dropdown = H.mkComponent
   { initialState: const unit
   , render: \_ ->
-      HH.slot label unit (Select.component Dropdown.spec) (Dropdown.input input) \_ -> Nothing
+      HH.slot label unit Dropdown.component input \_ -> Nothing
   , eval: H.mkEval H.defaultEval
   }
   where
@@ -99,7 +99,7 @@ typeahead :: forall t0 t1 t2. H.Component HH.HTML t0 t1 t2 Aff
 typeahead = H.mkComponent
   { initialState: const unit
   , render: \_ ->
-      HH.slot label unit (Select.component Typeahead.spec) Typeahead.input \_ -> Nothing
+      HH.slot label unit Typeahead.component unit \_ -> Nothing
   , eval: H.mkEval H.defaultEval
   }
   where

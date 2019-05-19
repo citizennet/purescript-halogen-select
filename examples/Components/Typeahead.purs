@@ -46,6 +46,9 @@ data Message
 type ChildSlots =
   ( dropdown :: D.Slot Unit )
 
+component :: H.Component HH.HTML (S.Query Query ChildSlots) Unit Message Aff
+component = S.component (const input) spec
+
 -- this typeahead will be opaque; users can just use this pre-built
 -- input instead of the usual select one.
 input :: S.Input State
@@ -162,7 +165,7 @@ spec = S.defaultSpec
       ]
 
     renderDropdown = whenElem (st.visibility == S.On) \_ ->
-      HH.slot _dropdown unit (S.component D.spec) (D.input dropdownInput) handler
+      HH.slot _dropdown unit D.component dropdownInput handler
       where
       _dropdown = SProxy :: SProxy "dropdown"
       handler msg = Just $ S.Action $ HandleDropdown msg

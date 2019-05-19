@@ -32,6 +32,9 @@ type Input =
   , buttonLabel :: String
   }
 
+component :: H.Component HH.HTML S.Query' Input Message Aff
+component = S.component input spec
+
 input :: Input -> S.Input State
 input { items, buttonLabel } =
   { inputType: S.Toggle
