@@ -116,35 +116,35 @@ type Input st =
   }
 
 type Spec st query act ps msg m =
-  { -- usual Halogen component spec 
-    render 
-      :: State st 
+  { -- usual Halogen component spec
+    render
+      :: State st
       -> H.ComponentHTML (Action act) ps m
-    
+
     -- handle additional actions provided to the component
-  , handleAction 
+  , handleAction
       :: act
       -> H.HalogenM (State st) (Action act) ps msg m Unit
 
     -- handle additional queries provided to the component
-  , handleQuery 
+  , handleQuery
       :: forall a
-       . query a 
+       . query a
       -> H.HalogenM (State st) (Action act) ps msg m (Maybe a)
 
     -- handle messages emitted by the component; provide H.raise to simply
     -- raise the Select messages to the parent.
-  , handleMessage 
+  , handleMessage
       :: Message
       -> H.HalogenM (State st) (Action act) ps msg m Unit
 
     -- optionally handle input on parent re-renders
-  , receive 
-      :: Input st 
+  , receive
+      :: Input st
       -> Maybe (Action act)
 
     -- perform some action when the component initializes.
-  , initialize 
+  , initialize
       :: Maybe (Action act)
 
     -- optionally perform some action on initialization. disabled by default.
@@ -155,7 +155,7 @@ type Spec st query act ps msg m =
 type Spec' st m = Spec st (Const Void) Void () Void m
 
 defaultSpec :: forall st query act ps msg m. Spec st query act ps msg m
-defaultSpec = 
+defaultSpec =
   { render: const (HH.text mempty)
   , handleAction: const (pure unit)
   , handleQuery: const (pure Nothing)
@@ -164,7 +164,7 @@ defaultSpec =
   , initialize: Nothing
   , finalize: Nothing
   }
-  
+
 component
   :: forall st query act ps msg m
    . MonadAff m
@@ -188,7 +188,7 @@ component spec = H.mkComponent
   initialState :: Input st -> State st
   initialState = Builder.build pipeline
     where
-    pipeline = 
+    pipeline =
       Builder.modify (SProxy :: _ "search") (fromMaybe "")
         >>> Builder.modify (SProxy :: _ "debounceTime") (fromMaybe mempty)
         >>> Builder.insert (SProxy :: _ "debounceRef") Nothing
@@ -223,7 +223,7 @@ handleAction handleAction' handleMessage = case _ of
     ref <- H.liftEffect $ Ref.new Nothing
     H.modify_ _ { debounceRef = Just ref }
     for_ mbAction handle
-  
+
   Search str -> do
     st <- H.get
     ref <- H.liftEffect $ map join $ traverse Ref.read st.debounceRef
@@ -341,6 +341,3 @@ handleAction handleAction' handleMessage = case _ of
 
     lastIndex :: State st -> Int
     lastIndex = (_ - 1) <<< st.getItemCount <<< userState
-
-
-
