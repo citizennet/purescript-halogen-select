@@ -115,7 +115,7 @@ type Input st =
   | st
   }
 
-type Spec st query act ps msg m =
+type Spec st query act ps input msg m =
   { -- usual Halogen component spec
     render
       :: State st
@@ -140,7 +140,7 @@ type Spec st query act ps msg m =
 
     -- optionally handle input on parent re-renders
   , receive
-      :: Input st
+      :: input
       -> Maybe (Action act)
 
     -- perform some action when the component initializes.
@@ -152,9 +152,10 @@ type Spec st query act ps msg m =
       :: Maybe (Action act)
   }
 
-type Spec' st m = Spec st (Const Void) Void () Void m
+type Spec' st input m = Spec st (Const Void) Void () input Void m
 
-defaultSpec :: forall st query act ps msg m. Spec st query act ps msg m
+defaultSpec :: forall st query act ps input msg m
+             . Spec st query act ps input msg m
 defaultSpec =
   { render: const (HH.text mempty)
   , handleAction: const (pure unit)
@@ -166,15 +167,16 @@ defaultSpec =
   }
 
 component
-  :: forall st query act ps msg m
+  :: forall st query act ps input msg m
    . MonadAff m
   => Row.Lacks "debounceRef" st
   => Row.Lacks "visibility" st
   => Row.Lacks "highlightedIndex" st
-  => Spec st query act ps msg m
-  -> H.Component HH.HTML (Query query ps) (Input st) msg m
-component spec = H.mkComponent
-  { initialState
+  => Spec st query act ps input msg m
+  -> (input -> Input st)
+  -> H.Component HH.HTML (Query query ps) input msg m
+component spec initialState = H.mkComponent
+  { initialState: selectState <<< initialState
   , render: spec.render
   , eval: H.mkEval $ H.defaultEval
       { handleQuery = handleQuery spec.handleQuery
@@ -185,8 +187,8 @@ component spec = H.mkComponent
       }
   }
   where
-  initialState :: Input st -> State st
-  initialState = Builder.build pipeline
+  selectState :: Input st -> State st
+  selectState = Builder.build pipeline
     where
     pipeline =
       Builder.modify (SProxy :: _ "search") (fromMaybe "")
