@@ -13,4 +13,3 @@ classes_ = HP.classes <<< map HH.ClassName
 
 whenElem :: forall p i. Boolean -> (Unit -> HH.HTML i p) -> HH.HTML i p
 whenElem cond render = if cond then render unit else HH.text ""
-

@@ -18,7 +18,7 @@ type Slot =
 
 type State =
   ( items :: Array String
-  , selection :: Maybe String 
+  , selection :: Maybe String
   , buttonLabel :: String
   )
 
@@ -32,7 +32,7 @@ type Input =
   , buttonLabel :: String
   }
 
-input :: Input -> S.Input State 
+input :: Input -> S.Input State
 input { items, buttonLabel } =
   { inputType: S.Toggle
   , search: Nothing
@@ -54,8 +54,8 @@ spec = S.defaultSpec { render = render, handleMessage = handleMessage }
       H.raise $ SelectionChanged st.selection selection
     _ -> pure unit
 
-  render st = 
-    HH.div 
+  render st =
+    HH.div
       [ class_ "Dropdown" ]
       [ renderToggle, renderContainer ]
     where
@@ -70,13 +70,12 @@ spec = S.defaultSpec { render = render, handleMessage = handleMessage }
         ( renderItem `mapWithIndex` st.items )
       where
       renderItem index item =
-        HH.div 
-          ( SS.setItemProps index 
-              [ classes_ 
+        HH.div
+          ( SS.setItemProps index
+              [ classes_
                   [ "Dropdown__item"
                   , "Dropdown__item--highlighted" # guard (st.highlightedIndex == Just index)
                   ]
               ]
-          ) 
+          )
           [ HH.text item ]
-

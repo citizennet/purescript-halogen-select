@@ -48,7 +48,7 @@ type Components
 routes :: Components
 routes = M.fromFoldable
   [ Tuple "typeahead" $ proxy typeahead
-  , Tuple "dropdown" $ proxy dropdown 
+  , Tuple "dropdown" $ proxy dropdown
   ]
 
 app :: H.Component HH.HTML (Const Void) String Void Aff
@@ -74,9 +74,9 @@ selectElements
   :: { query :: QuerySelector, attr :: String }
   -> Aff (Array { element :: HTMLElement, attr :: String })
 selectElements { query, attr } = do
-  nodeArray <- liftEffect do 
+  nodeArray <- liftEffect do
     toArray =<< querySelectorAll query <<< toParentNode =<< document =<< window
-  let 
+  let
     elems = fromMaybe [] <<< sequence $ fromNode <$> nodeArray
   attrs <- liftEffect $ traverse (getAttribute attr <<< toElement) elems
   pure $ zipWith ({ element: _, attr: _ }) elems (fromMaybe "" <$> attrs)
@@ -104,4 +104,3 @@ typeahead = H.mkComponent
   }
   where
   label = SProxy :: SProxy "typeahead"
-

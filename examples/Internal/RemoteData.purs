@@ -1,4 +1,4 @@
--- | Copied over from 
+-- | Copied over from
 -- | https://github.com/krisajenkins/purescript-remotedata
 -- |
 -- | due to dependency conflicts
@@ -42,4 +42,3 @@ fromMaybe (Just value) = Success value
 fromEither :: forall e a. Either e a -> RemoteData e a
 fromEither (Left err) = Failure err
 fromEither (Right value) = Success value
-
