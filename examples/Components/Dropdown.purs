@@ -49,7 +49,7 @@ component = S.component input $ S.defaultSpec
       , selection: Nothing
       }
 
-    handleMessage :: S.Message -> H.HalogenM (S.State State) S.Action' Message Aff Unit
+    handleMessage :: S.Message -> H.HalogenM (S.State State) S.Action' () Message Aff Unit
     handleMessage = case _ of
       S.Selected ix -> do
         st <- H.get
