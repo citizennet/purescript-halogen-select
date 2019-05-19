@@ -19,7 +19,6 @@ import Halogen.Aff as HA
 import Halogen.HTML as HH
 import Halogen.VDom.Driver (runUI)
 import Internal.Proxy (ProxyS, proxy)
-import Select as Select
 import Web.DOM.Element (getAttribute)
 import Web.DOM.NodeList (toArray)
 import Web.DOM.ParentNode (QuerySelector(..), querySelectorAll)

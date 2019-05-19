@@ -2,7 +2,6 @@ module Components.Dropdown where
 
 import Prelude
 
-import Data.Const (Const)
 import Effect.Aff (Aff)
 import Data.Array ((!!), mapWithIndex, length)
 import Data.Maybe (Maybe(..), fromMaybe)
