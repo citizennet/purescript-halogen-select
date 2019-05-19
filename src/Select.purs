@@ -172,10 +172,10 @@ component
   => Row.Lacks "debounceRef" st
   => Row.Lacks "visibility" st
   => Row.Lacks "highlightedIndex" st
-  => Spec st query act ps input msg m
-  -> (input -> Input st)
+  => (input -> Input st)
+  -> Spec st query act ps input msg m
   -> H.Component HH.HTML (Query query ps) input msg m
-component spec initialState = H.mkComponent
+component initialState spec = H.mkComponent
   { initialState: selectState <<< initialState
   , render: spec.render
   , eval: H.mkEval $ H.defaultEval
