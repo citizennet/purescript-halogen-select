@@ -154,8 +154,9 @@ type Spec st query act ps input msg m =
 
 type Spec' st input m = Spec st (Const Void) Void () input Void m
 
-defaultSpec :: forall st query act ps input msg m
-             . Spec st query act ps input msg m
+defaultSpec
+  :: forall st query act ps input msg m
+   . Spec st query act ps input msg m
 defaultSpec =
   { render: const (HH.text mempty)
   , handleAction: const (pure unit)
