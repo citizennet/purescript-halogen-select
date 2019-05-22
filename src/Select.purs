@@ -176,8 +176,8 @@ component
   => (input -> Input st)
   -> Spec st query action slots input msg m
   -> H.Component HH.HTML (Query query slots) input msg m
-component initialState spec = H.mkComponent
-  { initialState: selectState <<< initialState
+component mkInput spec = H.mkComponent
+  { initialState: initialState <<< mkInput
   , render: spec.render
   , eval: H.mkEval $ H.defaultEval
       { handleQuery = handleQuery spec.handleQuery
@@ -188,8 +188,8 @@ component initialState spec = H.mkComponent
       }
   }
   where
-  selectState :: Input st -> State st
-  selectState = Builder.build pipeline
+  initialState :: Input st -> State st
+  initialState = Builder.build pipeline
     where
     pipeline =
       Builder.modify (SProxy :: _ "search") (fromMaybe "")
