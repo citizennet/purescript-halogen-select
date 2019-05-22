@@ -39,7 +39,7 @@ data Action action
   | Key KE.KeyboardEvent
   | PreventClick ME.MouseEvent
   | SetVisibility Visibility
-  | Initialize (Maybe (Action action))
+  | Initialize (Maybe action)
   | Action action
 
 type Action' = Action Void
@@ -141,15 +141,15 @@ type Spec st query action slots input msg m =
     -- optionally handle input on parent re-renders
   , receive
       :: input
-      -> Maybe (Action action)
+      -> Maybe action
 
     -- perform some action when the component initializes.
   , initialize
-      :: Maybe (Action action)
+      :: Maybe action
 
     -- optionally perform some action on initialization. disabled by default.
   , finalize
-      :: Maybe (Action action)
+      :: Maybe action
   }
 
 type Spec' st input m = Spec st (Const Void) Void () input Void m
@@ -183,8 +183,8 @@ component initialState spec = H.mkComponent
       { handleQuery = handleQuery spec.handleQuery
       , handleAction = handleAction spec.handleAction spec.handleMessage
       , initialize = Just (Initialize spec.initialize)
-      , receive = spec.receive
-      , finalize = spec.finalize
+      , receive = map Action <<< spec.receive
+      , finalize = map Action spec.finalize
       }
   }
   where
@@ -225,7 +225,7 @@ handleAction handleAction' handleMessage = case _ of
   Initialize mbAction -> do
     ref <- H.liftEffect $ Ref.new Nothing
     H.modify_ _ { debounceRef = Just ref }
-    for_ mbAction handle
+    for_ mbAction handleAction'
 
   Search str -> do
     st <- H.get
