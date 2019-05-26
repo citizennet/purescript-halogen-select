@@ -179,12 +179,12 @@ component
 component mkInput spec = H.mkComponent
   { initialState: initialState <<< mkInput
   , render: spec.render
-  , eval: H.mkEval $ H.defaultEval
-      { handleQuery = handleQuery spec.handleQuery
-      , handleAction = handleAction spec.handleAction spec.handleMessage
-      , initialize = Just (Initialize spec.initialize)
-      , receive = map Action <<< spec.receive
-      , finalize = map Action spec.finalize
+  , eval: H.mkEval
+      { handleQuery: handleQuery spec.handleQuery
+      , handleAction: handleAction spec.handleAction spec.handleMessage
+      , initialize: Just (Initialize spec.initialize)
+      , receive: map Action <<< spec.receive
+      , finalize: map Action spec.finalize
       }
   }
   where
