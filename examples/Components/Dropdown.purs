@@ -34,7 +34,7 @@ type Input =
 component :: H.Component HH.HTML S.Query' Input Message Aff
 component = S.component input $ S.defaultSpec
   { render = render
-  , handleMessage = handleMessage
+  , handleEvent = handleEvent
   }
   where
   input :: Input -> S.Input State
@@ -48,8 +48,8 @@ component = S.component input $ S.defaultSpec
     , selection: Nothing
     }
 
-  handleMessage :: S.Message -> H.HalogenM (S.State State) S.Action' () Message Aff Unit
-  handleMessage = case _ of
+  handleEvent :: S.Event -> H.HalogenM (S.State State) S.Action' () Message Aff Unit
+  handleEvent = case _ of
     S.Selected ix -> do
       st <- H.get
       let selection = st.items !! ix

@@ -51,7 +51,7 @@ component = S.component (const input) $ S.defaultSpec
   { render = render
   , handleAction = handleAction
   , handleQuery = handleQuery
-  , handleMessage = handleMessage
+  , handleEvent = handleEvent
   }
   where
   -- this typeahead will be opaque; users can just use this pre-built
@@ -66,10 +66,10 @@ component = S.component (const input) $ S.defaultSpec
     , available: RD.NotAsked
     }
 
-  handleMessage
-    :: S.Message
+  handleEvent
+    :: S.Event
     -> H.HalogenM (S.State State) (S.Action Action) ChildSlots Message Aff Unit
-  handleMessage = case _ of
+  handleEvent = case _ of
     S.Selected ix -> do
       st <- H.get
       for_ st.available \arr ->
