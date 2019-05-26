@@ -54,9 +54,9 @@ data Query query slots a
 type Query' = Query (Const Void) ()
 
 -----
--- Message
+-- Event
 
-data Message
+data Event
   = Searched String
   | Selected Int
   | VisibilityChanged Visibility
@@ -134,8 +134,8 @@ type Spec st query action slots input msg m =
 
     -- handle messages emitted by the component; provide H.raise to simply
     -- raise the Select messages to the parent.
-  , handleMessage
-      :: Message
+  , handleEvent
+      :: Event
       -> H.HalogenM (State st) (Action action) slots msg m Unit
 
     -- optionally handle input on parent re-renders
@@ -161,7 +161,7 @@ defaultSpec =
   { render: const (HH.text mempty)
   , handleAction: const (pure unit)
   , handleQuery: const (pure Nothing)
-  , handleMessage: const (pure unit)
+  , handleEvent: const (pure unit)
   , receive: const Nothing
   , initialize: Nothing
   , finalize: Nothing
@@ -181,7 +181,7 @@ component mkInput spec = H.mkComponent
   , render: spec.render
   , eval: H.mkEval
       { handleQuery: handleQuery spec.handleQuery
-      , handleAction: handleAction spec.handleAction spec.handleMessage
+      , handleAction: handleAction spec.handleAction spec.handleEvent
       , initialize: Just (Initialize spec.initialize)
       , receive: map Action <<< spec.receive
       , finalize: map Action spec.finalize
@@ -218,10 +218,10 @@ handleAction
   => Row.Lacks "visibility" st
   => Row.Lacks "highlightedIndex" st
   => (action -> H.HalogenM (State st) (Action action) slots msg m Unit)
-  -> (Message -> H.HalogenM (State st) (Action action) slots msg m Unit)
+  -> (Event -> H.HalogenM (State st) (Action action) slots msg m Unit)
   -> Action action
   -> H.HalogenM (State st) (Action action) slots msg m Unit
-handleAction handleAction' handleMessage = case _ of
+handleAction handleAction' handleEvent = case _ of
   Initialize mbAction -> do
     ref <- H.liftEffect $ Ref.new Nothing
     H.modify_ _ { debounceRef = Just ref }
@@ -247,7 +247,7 @@ handleAction handleAction' handleMessage = case _ of
           void $ H.liftEffect $ traverse_ (Ref.write Nothing) st.debounceRef
           H.modify_ _ { highlightedIndex = Just 0 }
           newState <- H.get
-          handleMessage $ Searched newState.search
+          handleEvent $ Searched newState.search
 
         void $ H.liftEffect $ traverse_ (Ref.write $ Just { var, fiber }) st.debounceRef
 
@@ -272,9 +272,9 @@ handleAction handleAction' handleMessage = case _ of
     for_ mbEv (H.liftEffect <<< preventDefault <<< ME.toEvent)
     st <- H.get
     when (st.visibility == On) case target of
-      Index ix -> handleMessage $ Selected ix
-      Next -> handleMessage $ Selected $ getTargetIndex st target
-      Prev -> handleMessage $ Selected $ getTargetIndex st target
+      Index ix -> handleEvent $ Selected ix
+      Next -> handleEvent $ Selected $ getTargetIndex st target
+      Prev -> handleEvent $ Selected $ getTargetIndex st target
 
   ToggleClick ev -> do
     H.liftEffect $ preventDefault $ ME.toEvent ev
@@ -319,13 +319,13 @@ handleAction handleAction' handleMessage = case _ of
     st <- H.get
     when (st.visibility /= v) do
       H.modify_ _ { visibility = v, highlightedIndex = Just 0 }
-      handleMessage $ VisibilityChanged v
+      handleEvent $ VisibilityChanged v
 
   Action act -> handleAction' act
 
   where
   -- eta-expansion is necessary to avoid infinite recursion
-  handle act = handleAction handleAction' handleMessage act
+  handle act = handleAction handleAction' handleEvent act
 
   getTargetIndex st = case _ of
     Index i -> i
