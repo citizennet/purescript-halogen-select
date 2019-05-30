@@ -19,7 +19,6 @@ import Halogen.Aff as HA
 import Halogen.HTML as HH
 import Halogen.VDom.Driver (runUI)
 import Internal.Proxy (ProxyS, proxy)
-import Select as Select
 import Web.DOM.Element (getAttribute)
 import Web.DOM.NodeList (toArray)
 import Web.DOM.ParentNode (QuerySelector(..), querySelectorAll)
@@ -48,7 +47,7 @@ type Components
 routes :: Components
 routes = M.fromFoldable
   [ Tuple "typeahead" $ proxy typeahead
-  , Tuple "dropdown" $ proxy dropdown 
+  , Tuple "dropdown" $ proxy dropdown
   ]
 
 app :: H.Component HH.HTML (Const Void) String Void Aff
@@ -74,9 +73,9 @@ selectElements
   :: { query :: QuerySelector, attr :: String }
   -> Aff (Array { element :: HTMLElement, attr :: String })
 selectElements { query, attr } = do
-  nodeArray <- liftEffect do 
+  nodeArray <- liftEffect do
     toArray =<< querySelectorAll query <<< toParentNode =<< document =<< window
-  let 
+  let
     elems = fromMaybe [] <<< sequence $ fromNode <$> nodeArray
   attrs <- liftEffect $ traverse (getAttribute attr <<< toElement) elems
   pure $ zipWith ({ element: _, attr: _ }) elems (fromMaybe "" <$> attrs)
@@ -88,7 +87,7 @@ dropdown :: forall t0 t1 t2. H.Component HH.HTML t0 t1 t2 Aff
 dropdown = H.mkComponent
   { initialState: const unit
   , render: \_ ->
-      HH.slot label unit (Select.component Dropdown.spec) (Dropdown.input input) \_ -> Nothing
+      HH.slot label unit Dropdown.component input \_ -> Nothing
   , eval: H.mkEval H.defaultEval
   }
   where
@@ -99,9 +98,8 @@ typeahead :: forall t0 t1 t2. H.Component HH.HTML t0 t1 t2 Aff
 typeahead = H.mkComponent
   { initialState: const unit
   , render: \_ ->
-      HH.slot label unit (Select.component Typeahead.spec) Typeahead.input \_ -> Nothing
+      HH.slot label unit Typeahead.component unit \_ -> Nothing
   , eval: H.mkEval H.defaultEval
   }
   where
   label = SProxy :: SProxy "typeahead"
-

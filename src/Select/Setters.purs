@@ -100,15 +100,15 @@ type ItemProps props =
 -- | with `mapWithIndex`:
 -- |
 -- | ```purescript
--- | renderItem index itemHTML = 
+-- | renderItem index itemHTML =
 -- |   HH.li (setItemProps index [ props ]) [ itemHTML ]
 -- |
 -- | render = renderItem `mapWithIndex` itemsArray
 -- | ```
 setItemProps
   :: forall props act
-   . Int 
-  -> Array (HP.IProp (ItemProps props) (Action act)) 
+   . Int
+  -> Array (HP.IProp (ItemProps props) (Action act))
   -> Array (HP.IProp (ItemProps props) (Action act))
 setItemProps index = append
   [ HE.onMouseDown \ev -> Just (Select (Index index) (Just ev))
@@ -125,4 +125,3 @@ setContainerProps
   -> Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action act))
 setContainerProps = append
   [ HE.onMouseDown $ Just <<< PreventClick ]
-

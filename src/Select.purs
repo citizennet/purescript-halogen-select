@@ -30,7 +30,7 @@ import Web.HTML.HTMLElement as HTMLElement
 import Web.UIEvent.KeyboardEvent as KE
 import Web.UIEvent.MouseEvent as ME
 
-data Action act
+data Action action
   = Search String
   | Highlight Target
   | Select Target (Maybe ME.MouseEvent)
@@ -39,24 +39,24 @@ data Action act
   | Key KE.KeyboardEvent
   | PreventClick ME.MouseEvent
   | SetVisibility Visibility
-  | Initialize (Maybe (Action act))
-  | Action act
+  | Initialize (Maybe action)
+  | Action action
 
 type Action' = Action Void
 
 -----
 -- QUERIES
 
-data Query query ps a
-  = Send (ChildQueryBox ps (Maybe a))
+data Query query slots a
+  = Send (ChildQueryBox slots (Maybe a))
   | Query (query a)
 
 type Query' = Query (Const Void) ()
 
 -----
--- Message
+-- Event
 
-data Message
+data Event
   = Searched String
   | Selected Int
   | VisibilityChanged Visibility
@@ -65,7 +65,7 @@ data Message
 -- HELPER TYPES
 
 -- | The component slot type for easy use in a parent component
-type Slot query ps msg = H.Slot (Query query ps) msg
+type Slot query slots msg = H.Slot (Query query slots) msg
 
 -- | The component slot type when there is no extension
 type Slot' = Slot (Const Void) () Void
@@ -115,80 +115,83 @@ type Input st =
   | st
   }
 
-type Spec st query act ps msg m =
-  { -- usual Halogen component spec 
-    render 
-      :: State st 
-      -> H.ComponentHTML (Action act) ps m
-    
+type Spec st query action slots input msg m =
+  { -- usual Halogen component spec
+    render
+      :: State st
+      -> H.ComponentHTML (Action action) slots m
+
     -- handle additional actions provided to the component
-  , handleAction 
-      :: act
-      -> H.HalogenM (State st) (Action act) ps msg m Unit
+  , handleAction
+      :: action
+      -> H.HalogenM (State st) (Action action) slots msg m Unit
 
     -- handle additional queries provided to the component
-  , handleQuery 
+  , handleQuery
       :: forall a
-       . query a 
-      -> H.HalogenM (State st) (Action act) ps msg m (Maybe a)
+       . query a
+      -> H.HalogenM (State st) (Action action) slots msg m (Maybe a)
 
     -- handle messages emitted by the component; provide H.raise to simply
     -- raise the Select messages to the parent.
-  , handleMessage 
-      :: Message
-      -> H.HalogenM (State st) (Action act) ps msg m Unit
+  , handleEvent
+      :: Event
+      -> H.HalogenM (State st) (Action action) slots msg m Unit
 
     -- optionally handle input on parent re-renders
-  , receive 
-      :: Input st 
-      -> Maybe (Action act)
+  , receive
+      :: input
+      -> Maybe action
 
     -- perform some action when the component initializes.
-  , initialize 
-      :: Maybe (Action act)
+  , initialize
+      :: Maybe action
 
     -- optionally perform some action on initialization. disabled by default.
   , finalize
-      :: Maybe (Action act)
+      :: Maybe action
   }
 
-type Spec' st m = Spec st (Const Void) Void () Void m
+type Spec' st input m = Spec st (Const Void) Void () input Void m
 
-defaultSpec :: forall st query act ps msg m. Spec st query act ps msg m
-defaultSpec = 
+defaultSpec
+  :: forall st query action slots input msg m
+   . Spec st query action slots input msg m
+defaultSpec =
   { render: const (HH.text mempty)
   , handleAction: const (pure unit)
   , handleQuery: const (pure Nothing)
-  , handleMessage: const (pure unit)
+  , handleEvent: const (pure unit)
   , receive: const Nothing
   , initialize: Nothing
   , finalize: Nothing
   }
-  
+
 component
-  :: forall st query act ps msg m
+  :: forall st query action slots input msg m
    . MonadAff m
   => Row.Lacks "debounceRef" st
   => Row.Lacks "visibility" st
   => Row.Lacks "highlightedIndex" st
-  => Spec st query act ps msg m
-  -> H.Component HH.HTML (Query query ps) (Input st) msg m
-component spec = H.mkComponent
-  { initialState
+  => (input -> Input st)
+  -> Spec st query action slots input msg m
+  -> H.Component HH.HTML (Query query slots) input msg m
+component mkInput spec = H.mkComponent
+  { initialState: initialState <<< mkInput
   , render: spec.render
-  , eval: H.mkEval $ H.defaultEval
-      { handleQuery = handleQuery spec.handleQuery
-      , handleAction = handleAction spec.handleAction spec.handleMessage
-      , initialize = Just (Initialize spec.initialize)
-      , receive = spec.receive
-      , finalize = spec.finalize
+  , eval: H.mkEval
+      { handleQuery: handleQuery spec.handleQuery
+      , handleAction: handleAction spec.handleAction spec.handleEvent
+      , initialize: Just (Initialize spec.initialize)
+      , receive: map Action <<< spec.receive
+      , finalize: map Action spec.finalize
       }
   }
   where
   initialState :: Input st -> State st
   initialState = Builder.build pipeline
     where
-    pipeline = 
+    pipeline =
       Builder.modify (SProxy :: _ "search") (fromMaybe "")
         >>> Builder.modify (SProxy :: _ "debounceTime") (fromMaybe mempty)
         >>> Builder.insert (SProxy :: _ "debounceRef") Nothing
@@ -196,11 +199,11 @@ component spec = H.mkComponent
         >>> Builder.insert (SProxy :: _ "highlightedIndex") Nothing
 
 handleQuery
-  :: forall st query act ps msg m a
+  :: forall st query action slots msg m a
    . MonadAff m
-  => (query a -> H.HalogenM (State st) (Action act) ps msg m (Maybe a))
-  -> Query query ps a
-  -> H.HalogenM (State st) (Action act) ps msg m (Maybe a)
+  => (query a -> H.HalogenM (State st) (Action action) slots msg m (Maybe a))
+  -> Query query slots a
+  -> H.HalogenM (State st) (Action action) slots msg m (Maybe a)
 handleQuery handleQuery' = case _ of
   Send box ->
     H.HalogenM $ liftF $ H.ChildQuery box
@@ -209,21 +212,21 @@ handleQuery handleQuery' = case _ of
     handleQuery' query
 
 handleAction
-  :: forall st act ps msg m
+  :: forall st action slots msg m
    . MonadAff m
   => Row.Lacks "debounceRef" st
   => Row.Lacks "visibility" st
   => Row.Lacks "highlightedIndex" st
-  => (act -> H.HalogenM (State st) (Action act) ps msg m Unit)
-  -> (Message -> H.HalogenM (State st) (Action act) ps msg m Unit)
-  -> Action act
-  -> H.HalogenM (State st) (Action act) ps msg m Unit
-handleAction handleAction' handleMessage = case _ of
+  => (action -> H.HalogenM (State st) (Action action) slots msg m Unit)
+  -> (Event -> H.HalogenM (State st) (Action action) slots msg m Unit)
+  -> Action action
+  -> H.HalogenM (State st) (Action action) slots msg m Unit
+handleAction handleAction' handleEvent = case _ of
   Initialize mbAction -> do
     ref <- H.liftEffect $ Ref.new Nothing
     H.modify_ _ { debounceRef = Just ref }
-    for_ mbAction handle
-  
+    for_ mbAction handleAction'
+
   Search str -> do
     st <- H.get
     ref <- H.liftEffect $ map join $ traverse Ref.read st.debounceRef
@@ -244,7 +247,7 @@ handleAction handleAction' handleMessage = case _ of
           void $ H.liftEffect $ traverse_ (Ref.write Nothing) st.debounceRef
           H.modify_ _ { highlightedIndex = Just 0 }
           newState <- H.get
-          handleMessage $ Searched newState.search
+          handleEvent $ Searched newState.search
 
         void $ H.liftEffect $ traverse_ (Ref.write $ Just { var, fiber }) st.debounceRef
 
@@ -269,9 +272,9 @@ handleAction handleAction' handleMessage = case _ of
     for_ mbEv (H.liftEffect <<< preventDefault <<< ME.toEvent)
     st <- H.get
     when (st.visibility == On) case target of
-      Index ix -> handleMessage $ Selected ix
-      Next -> handleMessage $ Selected $ getTargetIndex st target
-      Prev -> handleMessage $ Selected $ getTargetIndex st target
+      Index ix -> handleEvent $ Selected ix
+      Next -> handleEvent $ Selected $ getTargetIndex st target
+      Prev -> handleEvent $ Selected $ getTargetIndex st target
 
   ToggleClick ev -> do
     H.liftEffect $ preventDefault $ ME.toEvent ev
@@ -316,13 +319,13 @@ handleAction handleAction' handleMessage = case _ of
     st <- H.get
     when (st.visibility /= v) do
       H.modify_ _ { visibility = v, highlightedIndex = Just 0 }
-      handleMessage $ VisibilityChanged v
+      handleEvent $ VisibilityChanged v
 
   Action act -> handleAction' act
 
   where
   -- eta-expansion is necessary to avoid infinite recursion
-  handle act = handleAction handleAction' handleMessage act
+  handle act = handleAction handleAction' handleEvent act
 
   getTargetIndex st = case _ of
     Index i -> i
@@ -341,6 +344,3 @@ handleAction handleAction' handleMessage = case _ of
 
     lastIndex :: State st -> Int
     lastIndex = (_ - 1) <<< st.getItemCount <<< userState
-
-
-
