@@ -296,12 +296,12 @@ handleAction handleAction' handleEvent = case _ of
   Key ev -> do
     void $ H.fork $ handle $ SetVisibility On
     let preventIt = H.liftEffect $ preventDefault $ KE.toEvent ev
-    case KE.code ev of
-      "ArrowUp" ->
+    case KE.key ev of
+      x | x == "ArrowUp" || x == "Up" ->
         preventIt *> handle (Highlight Prev)
-      "ArrowDown" ->
+      x | x == "ArrowDown" || x == "Down" ->
         preventIt *> handle (Highlight Next)
-      "Escape" -> do
+      x | x == "Escape" || x == "Esc" -> do
         inputElement <- H.getHTMLElementRef $ H.RefLabel "select-input"
         preventIt
         for_ inputElement (H.liftEffect <<< HTMLElement.blur)
