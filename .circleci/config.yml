@@ -51,7 +51,7 @@ jobs:
   site:
     working_directory: ~/select
     docker:
-      - image: jfloff/alpine-python:3.4-slim
+      - image: jfloff/alpine-python:latest-slim
     steps:
       - checkout
 
