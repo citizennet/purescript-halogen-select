@@ -115,28 +115,37 @@ type Input st =
   | st
   }
 
+type Component query slots input msg m =
+  H.Component HH.HTML (Query query slots) input msg m
+
+type ComponentHTML action slots m =
+  H.ComponentHTML (Action action) slots m
+
+type HalogenM st action slots msg m a =
+  H.HalogenM (State st) (Action action) slots msg m a
+
 type Spec st query action slots input msg m =
   { -- usual Halogen component spec
     render
       :: State st
-      -> H.ComponentHTML (Action action) slots m
+      -> ComponentHTML action slots m
 
     -- handle additional actions provided to the component
   , handleAction
       :: action
-      -> H.HalogenM (State st) (Action action) slots msg m Unit
+      -> HalogenM st action slots msg m Unit
 
     -- handle additional queries provided to the component
   , handleQuery
       :: forall a
        . query a
-      -> H.HalogenM (State st) (Action action) slots msg m (Maybe a)
+      -> HalogenM st action slots msg m (Maybe a)
 
     -- handle messages emitted by the component; provide H.raise to simply
     -- raise the Select messages to the parent.
   , handleEvent
       :: Event
-      -> H.HalogenM (State st) (Action action) slots msg m Unit
+      -> HalogenM st action slots msg m Unit
 
     -- optionally handle input on parent re-renders
   , receive
@@ -201,9 +210,9 @@ component mkInput spec = H.mkComponent
 handleQuery
   :: forall st query action slots msg m a
    . MonadAff m
-  => (query a -> H.HalogenM (State st) (Action action) slots msg m (Maybe a))
+  => (query a -> HalogenM st action slots msg m (Maybe a))
   -> Query query slots a
-  -> H.HalogenM (State st) (Action action) slots msg m (Maybe a)
+  -> HalogenM st action slots msg m (Maybe a)
 handleQuery handleQuery' = case _ of
   Send box ->
     H.HalogenM $ liftF $ H.ChildQuery box
@@ -217,10 +226,10 @@ handleAction
   => Row.Lacks "debounceRef" st
   => Row.Lacks "visibility" st
   => Row.Lacks "highlightedIndex" st
-  => (action -> H.HalogenM (State st) (Action action) slots msg m Unit)
-  -> (Event -> H.HalogenM (State st) (Action action) slots msg m Unit)
+  => (action -> HalogenM st action slots msg m Unit)
+  -> (Event -> HalogenM st action slots msg m Unit)
   -> Action action
-  -> H.HalogenM (State st) (Action action) slots msg m Unit
+  -> HalogenM st action slots msg m Unit
 handleAction handleAction' handleEvent = case _ of
   Initialize mbAction -> do
     ref <- H.liftEffect $ Ref.new Nothing
