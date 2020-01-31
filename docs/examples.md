@@ -13,7 +13,7 @@ Dropdowns are a common button-driven input type, especially for navigation. But 
 
 <div data-component="dropdown"></div>
 
-Curious how to build a dropdown with `Select`? Check out [the dropdown tutorial](https://citizennet.github.io/tutorials/dropdown).
+Curious how to build a dropdown with `Select`? Check out [the dropdown tutorial](https://citizennet.github.io/purescript-halogen-select/tutorials/dropdown).
 
 ### Typeahead / Autocomplete
 
@@ -25,4 +25,4 @@ The typeahead below is quite simple; to see examples of more sophisticated typea
 
 <div data-component="typeahead"></div>
 
-Curious how to build a typeahead with `Select`? Check out [the typeahead tutorial](https://citizennet.github.io/tutorials/typeahead).
+Curious how to build a typeahead with `Select`? Check out [the typeahead tutorial](https://citizennet.github.io/purescript-halogen-select/tutorials/typeahead).
