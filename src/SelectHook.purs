@@ -144,6 +144,7 @@ useSelect inputRec =
         -- key events and expire their search after a set number of milliseconds.
         _ -> pure unit
 
+    -- Set up actions and other helper functions for Halogen Select
     let
       preventClick ev = do
         H.liftEffect $ preventDefault $ ME.toEvent ev
