@@ -34,10 +34,10 @@ type ToggleProps props =
   )
 
 type TogglePropArray slots output m props  =
-  Array (HP.IProp (ToggleProps props) (HookAction slots output m Unit))
+  Array (HP.IProp (ToggleProps props) (HookM slots output m Unit))
 
 type ContainerPropArray slots output m props =
-  Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (HookAction slots output m Unit))
+  Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (HookM slots output m Unit))
 
 -- | The properties that must be supported by the HTML element that serves
 -- | as a text input. This should be used with input-driven `Select` components.
@@ -53,7 +53,7 @@ type InputProps props =
   )
 
 type InputPropArray slots output m props =
-  Array (HP.IProp (InputProps props) (HookAction slots output m Unit))
+  Array (HP.IProp (InputProps props) (HookM slots output m Unit))
 
 -- | The properties that must be supported by the HTML element that acts as a
 -- | selectable "item" in your UI. This should be attached to every item that
@@ -65,10 +65,7 @@ type ItemProps props =
   )
 
 type ItemPropArray slots output m props  =
-  Array (HP.IProp (ItemProps props) (HookAction slots output m Unit))
-
-data HookAction slots output monad a
-  = HookAction (HookM slots output monad a)
+  Array (HP.IProp (ItemProps props) (HookM slots output m Unit))
 
 data Event
   = Searched String
@@ -235,10 +232,10 @@ useSelect inputRec =
       -- | ```
       toggleProps :: TogglePropArray slots output m toggleProps
       toggleProps =
-        [ HE.onFocus \_ -> Just (HookAction (setVisibility On))
-        , HE.onMouseDown \ev -> Just (HookAction (toggleClick ev))
-        , HE.onKeyDown \ev -> Just (HookAction (key ev))
-        , HE.onBlur \ev -> Just (HookAction (setVisibility Off))
+        [ HE.onFocus \_ -> Just (setVisibility On)
+        , HE.onMouseDown \ev -> Just (toggleClick ev)
+        , HE.onKeyDown \ev -> Just (key ev)
+        , HE.onBlur \ev -> Just (setVisibility Off)
         , HP.tabIndex 0
         , HP.ref (H.RefLabel "select-input")
         ]
@@ -257,8 +254,8 @@ useSelect inputRec =
       -- | ```
       itemProps :: Int -> ItemPropArray slots output m itemProps
       itemProps index =
-        [ HE.onMouseDown \ev -> Just (HookAction (select (Index index) (Just ev)))
-        , HE.onMouseOver \_ -> Just $ (HookAction (highlight (Index index)))
+        [ HE.onMouseDown \ev -> Just (select (Index index) (Just ev))
+        , HE.onMouseOver \_ -> Just (highlight (Index index))
         ]
 
       -- | An array of `IProps` with a `MouseDown`
@@ -267,7 +264,7 @@ useSelect inputRec =
       -- | element that contains your items.
       containerProps :: ContainerPropArray slots output m containerProps
       containerProps =
-        [ HE.onMouseDown \ev -> Just (HookAction (preventClick ev)) ]
+        [ HE.onMouseDown \ev -> Just (preventClick ev) ]
 
 
       -- | An array of `IProps` with `InputProps`. It
@@ -280,11 +277,11 @@ useSelect inputRec =
       -- | ```
       inputProps :: InputPropArray slots output m inputProps
       inputProps =
-        [ HE.onFocus \_ -> Just (HookAction (setVisibility On))
-        , HE.onKeyDown \ev -> Just (HookAction (key ev))
-        , HE.onValueInput \str -> Just (HookAction (search str))
-        , HE.onMouseDown \_ -> Just (HookAction (setVisibility On))
-        , HE.onBlur \_ -> Just (HookAction (setVisibility Off))
+        [ HE.onFocus \_ -> Just (setVisibility On)
+        , HE.onKeyDown \ev -> Just (key ev)
+        , HE.onValueInput \str -> Just (search str)
+        , HE.onMouseDown \_ -> Just (setVisibility On)
+        , HE.onBlur \_ -> Just (setVisibility Off)
         , HP.tabIndex 0
         , HP.ref (H.RefLabel "select-input")
         ]
