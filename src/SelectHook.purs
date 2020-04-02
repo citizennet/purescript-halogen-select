@@ -5,14 +5,14 @@ import Prelude
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Newtype (class Newtype)
 import Data.Traversable (for_)
-import Data.Tuple.Nested ((/\), type (/\))
+import Data.Tuple.Nested ((/\))
 import Effect.Aff (Milliseconds)
 import Effect.Aff.Class (class MonadAff)
 import Example.Hooks.UseDebouncer (UseDebouncer, useDebouncer)
 import Halogen as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Halogen.Hooks (Hook, HookM, StateToken, UseState, useState)
+import Halogen.Hooks (Hook, HookM, UseState, useState)
 import Halogen.Hooks as Hooks
 import Web.Event.Event (preventDefault)
 import Web.HTML.HTMLElement as HTMLElement
@@ -33,6 +33,12 @@ type ToggleProps props =
   | props
   )
 
+type TogglePropArray slots output m props  =
+  Array (HP.IProp (ToggleProps props) (HookAction slots output m Unit))
+
+type ContainerPropArray slots output m props =
+  Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (HookAction slots output m Unit))
+
 -- | The properties that must be supported by the HTML element that serves
 -- | as a text input. This should be used with input-driven `Select` components.
 type InputProps props =
@@ -46,6 +52,9 @@ type InputProps props =
   | props
   )
 
+type InputPropArray slots output m props =
+  Array (HP.IProp (InputProps props) (HookAction slots output m Unit))
+
 -- | The properties that must be supported by the HTML element that acts as a
 -- | selectable "item" in your UI. This should be attached to every item that
 -- | can be selected.
@@ -55,16 +64,22 @@ type ItemProps props =
   | props
   )
 
-data Action action
-  = Search String
-  | Highlight Target
-  | Select Target (Maybe ME.MouseEvent)
-  | ToggleClick ME.MouseEvent
-  | Focus Boolean
-  | Key KE.KeyboardEvent
-  | PreventClick ME.MouseEvent
-  | SetVisibility Visibility
-  | Action action
+type ItemPropArray slots output m props  =
+  Array (HP.IProp (ItemProps props) (HookAction slots output m Unit))
+
+data HookAction slots output monad a
+  = HookAction (HookM slots output monad a)
+
+-- data Action action
+--   = Search String
+--   | Highlight Target
+--   | Select Target (Maybe ME.MouseEvent)
+--   | ToggleClick ME.MouseEvent
+--   | Focus Boolean
+--   | Key KE.KeyboardEvent
+--   | PreventClick ME.MouseEvent
+--   | SetVisibility Visibility
+--   | Action action
 
 data Event
   = Searched String
@@ -105,21 +120,29 @@ type SelectState =
   , highlightedIndex :: Maybe Int
   }
 
+type SelectReturn slots output m toggleProps itemProps containerProps inputProps =
+  { selectState :: SelectState
+  , toggleProps :: TogglePropArray slots output m toggleProps
+  , itemProps :: Int -> ItemPropArray slots output m itemProps
+  , containerProps :: ContainerPropArray slots output m containerProps
+  , inputProps :: InputPropArray slots output m inputProps
+  }
+
 newtype UseSelect hooks =
   UseSelect (UseDebouncer String (UseState SelectState hooks))
 
 derive instance newtypeUseSelect :: Newtype (UseSelect hooks) _
 
-useSelect :: forall slots output m
+useSelect :: forall slots output m toggleProps itemProps containerProps inputProps
            . MonadAff m
           => SelectInput slots output m
-          -> Hook slots output m UseSelect ({ select :: SelectState /\ StateToken SelectState, searchDebouncer :: String -> HookM slots output m Unit })
+          -> Hook slots output m UseSelect (SelectReturn slots output m toggleProps itemProps containerProps inputProps)
 useSelect inputRec =
   let
     initialSearchValue = fromMaybe "" inputRec.search
     debounceTime = fromMaybe mempty inputRec.debounceTime
   in Hooks.wrap Hooks.do
-    state /\ stateToken <- useState
+    selectState /\ stateToken <- useState
       { search: fromMaybe "" inputRec.search
       , visibility: Off
       , highlightedIndex: Nothing
@@ -136,6 +159,82 @@ useSelect inputRec =
         _ -> pure unit
 
     let
+      preventClick ev = do
+        H.liftEffect $ preventDefault $ ME.toEvent ev
+
+      getTargetIndex st itemCount = case _ of
+        Index i -> i
+        Prev -> case st.highlightedIndex of
+          Just i | i /= 0 -> i - 1
+          _ -> itemCount - 1
+        Next -> case st.highlightedIndex of
+          Just i | i /= (itemCount - 1) -> i + 1
+          _ -> 0
+
+      setFocus shouldFocus = do
+        inputElement <- Hooks.getHTMLElementRef $ H.RefLabel "select-input"
+        for_ inputElement \el -> H.liftEffect case shouldFocus of
+          true -> HTMLElement.focus el
+          _ -> HTMLElement.blur el
+
+      setVisibility v = do
+        st <- Hooks.get stateToken
+        when (st.visibility /= v) do
+          Hooks.modify_ stateToken (_ { visibility = v, highlightedIndex = Just 0 })
+          inputRec.handleEvent $ VisibilityChanged v
+
+      search str = do
+        Hooks.modify_ stateToken (_ { search = str })
+        void $ Hooks.fork $ setVisibility On
+        searchDebouncer str
+
+      highlight target = do
+        st <- Hooks.get stateToken
+        when (st.visibility == On) do
+          itemCount <- inputRec.getItemCount
+          Hooks.modify_ stateToken (_ { highlightedIndex = Just $ getTargetIndex st itemCount target })
+
+      select target mbEv = do
+        for_ mbEv (H.liftEffect <<< preventDefault <<< ME.toEvent)
+        st <- Hooks.get stateToken
+        when (st.visibility == On) case target of
+          Index ix -> inputRec.handleEvent $ Selected ix
+          Next -> do
+            itemCount <- inputRec.getItemCount
+            inputRec.handleEvent $ Selected $ getTargetIndex st itemCount target
+          Prev -> do
+            itemCount <- inputRec.getItemCount
+            inputRec.handleEvent $ Selected $ getTargetIndex st itemCount target
+
+      toggleClick ev = do
+        H.liftEffect $ preventDefault $ ME.toEvent ev
+        st <- Hooks.get stateToken
+        case st.visibility of
+          On -> do
+            setFocus false
+            setVisibility Off
+          Off -> do
+            setFocus true
+            setVisibility On
+
+      key ev = do
+        void $ Hooks.fork $ setVisibility On
+        let preventIt = H.liftEffect $ preventDefault $ KE.toEvent ev
+        case KE.key ev of
+          x | x == "ArrowUp" || x == "Up" ->
+            preventIt *> highlight Prev
+          x | x == "ArrowDown" || x == "Down" ->
+            preventIt *> highlight Next
+          x | x == "Escape" || x == "Esc" -> do
+            inputElement <- Hooks.getHTMLElementRef $ H.RefLabel "select-input"
+            preventIt
+            for_ inputElement (H.liftEffect <<< HTMLElement.blur)
+          "Enter" -> do
+            st <- Hooks.get stateToken
+            preventIt
+            for_ st.highlightedIndex \ix ->
+              select (Index ix) Nothing
+          otherKey -> pure unit
 
       -- | An array of `IProps` with `ToggleProps`. It
       -- | allows the toggle element to register key events for navigation or highlighting,
@@ -145,15 +244,12 @@ useSelect inputRec =
       -- | ```purescript
       -- | renderToggle = div (setToggleProps [ class "btn-class" ]) [ ...html ]
       -- | ```
-      toggleProps
-        :: forall props act
-         . Array (HP.IProp (ToggleProps props) (Action act))
-        -> Array (HP.IProp (ToggleProps props) (Action act))
-      toggleProps = append
-        [ HE.onFocus \_ -> Just $ SetVisibility On
-        , HE.onMouseDown $ Just <<< ToggleClick
-        , HE.onKeyDown $ Just <<< Key
-        , HE.onBlur \_ -> Just $ SetVisibility Off
+      toggleProps :: TogglePropArray slots output m toggleProps
+      toggleProps =
+        [ HE.onFocus \_ -> Just (HookAction (setVisibility On))
+        , HE.onMouseDown \ev -> Just (HookAction (toggleClick ev))
+        , HE.onKeyDown \ev -> Just (HookAction (key ev))
+        , HE.onBlur \ev -> Just (HookAction (setVisibility Off))
         , HP.tabIndex 0
         , HP.ref (H.RefLabel "select-input")
         ]
@@ -170,24 +266,19 @@ useSelect inputRec =
       -- |
       -- | render = renderItem `mapWithIndex` itemsArray
       -- | ```
-      itemProps
-        :: forall props act
-         . Int
-        -> Array (HP.IProp (ItemProps props) (Action act))
+      itemProps :: Int -> ItemPropArray slots output m itemProps
       itemProps index =
-        [ HE.onMouseDown \ev -> Just (Select (Index index) (Just ev))
-        , HE.onMouseOver \_ -> Just $ Highlight (Index index)
+        [ HE.onMouseDown \ev -> Just (HookAction (select (Index index) (Just ev)))
+        , HE.onMouseOver \_ -> Just $ (HookAction (highlight (Index index)))
         ]
 
       -- | An array of `IProps` with a `MouseDown`
       -- | handler. It prevents clicking on an item within an enclosing HTML element
       -- | from bubbling up a blur event to the DOM. This should be used on the parent
       -- | element that contains your items.
-      containerProps
-        :: forall props act
-         . Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action act))
+      containerProps :: ContainerPropArray slots output m containerProps
       containerProps =
-        [ HE.onMouseDown $ Just <<< PreventClick ]
+        [ HE.onMouseDown \ev -> Just (HookAction (preventClick ev)) ]
 
 
       -- | An array of `IProps` with `InputProps`. It
@@ -198,111 +289,115 @@ useSelect inputRec =
       -- | ```purescript
       -- | renderInput = input_ (setInputProps [ class "my-class" ])
       -- | ```
-      inputProps
-        :: forall props act
-         . Array (HP.IProp (InputProps props) (Action act))
+      inputProps :: InputPropArray slots output m inputProps
       inputProps =
-        [ HE.onFocus \_ -> Just $ SetVisibility On
-        , HE.onKeyDown $ Just <<< Key
-        , HE.onValueInput $ Just <<< Search
-        , HE.onMouseDown \_ -> Just $ SetVisibility On
-        , HE.onBlur \_ -> Just $ SetVisibility Off
+        [ HE.onFocus \_ -> Just (HookAction (setVisibility On))
+        , HE.onKeyDown \ev -> Just (HookAction (key ev))
+        , HE.onValueInput \str -> Just (HookAction (search str))
+        , HE.onMouseDown \_ -> Just (HookAction (setVisibility On))
+        , HE.onBlur \_ -> Just (HookAction (setVisibility Off))
         , HP.tabIndex 0
         , HP.ref (H.RefLabel "select-input")
         ]
 
-    Hooks.pure { select: state /\ stateToken, searchDebouncer }
+    Hooks.pure
+      { selectState
+      , toggleProps
+      , itemProps
+      , containerProps
+      , inputProps
+      }
 
-handleAction :: forall slots output action m
-              . MonadAff m
-             => StateToken SelectState
-             -> (String -> HookM slots output m Unit)
-             -> HookM slots output m Int
-             -> (action -> HookM slots output m Unit)
-             -> (Event -> HookM slots output m Unit)
-             -> Action action
-             -> HookM slots output m Unit
-handleAction stateToken searchDebouncer getItemCount handleAction' handleEvent = case _ of
-  Search str -> do
-    Hooks.modify_ stateToken (_ { search = str })
-    void $ Hooks.fork $ handle $ SetVisibility On
-    searchDebouncer str
-
-  Highlight target -> do
-    st <- Hooks.get stateToken
-    when (st.visibility == On) do
-      itemCount <- getItemCount
-      Hooks.modify_ stateToken (_ { highlightedIndex = Just $ getTargetIndex st itemCount target })
-
-  Select target mbEv -> do
-    for_ mbEv (H.liftEffect <<< preventDefault <<< ME.toEvent)
-    st <- Hooks.get stateToken
-    when (st.visibility == On) case target of
-      Index ix -> handleEvent $ Selected ix
-      Next -> do
-        itemCount <- getItemCount
-        handleEvent $ Selected $ getTargetIndex st itemCount target
-      Prev -> do
-        itemCount <- getItemCount
-        handleEvent $ Selected $ getTargetIndex st itemCount target
-
-  ToggleClick ev -> do
-    H.liftEffect $ preventDefault $ ME.toEvent ev
-    st <- Hooks.get stateToken
-    case st.visibility of
-      On -> do
-        handle $ Focus false
-        handle $ SetVisibility Off
-      Off -> do
-        handle $ Focus true
-        handle $ SetVisibility On
-
-  Focus shouldFocus -> do
-    inputElement <- Hooks.getHTMLElementRef $ H.RefLabel "select-input"
-    for_ inputElement \el -> H.liftEffect case shouldFocus of
-      true -> HTMLElement.focus el
-      _ -> HTMLElement.blur el
-
-  Key ev -> do
-    void $ Hooks.fork $ handle $ SetVisibility On
-    let preventIt = H.liftEffect $ preventDefault $ KE.toEvent ev
-    case KE.key ev of
-      x | x == "ArrowUp" || x == "Up" ->
-        preventIt *> handle (Highlight Prev)
-      x | x == "ArrowDown" || x == "Down" ->
-        preventIt *> handle (Highlight Next)
-      x | x == "Escape" || x == "Esc" -> do
-        inputElement <- Hooks.getHTMLElementRef $ H.RefLabel "select-input"
-        preventIt
-        for_ inputElement (H.liftEffect <<< HTMLElement.blur)
-      "Enter" -> do
-        st <- Hooks.get stateToken
-        preventIt
-        for_ st.highlightedIndex \ix ->
-          handle $ Select (Index ix) Nothing
-      otherKey -> pure unit
-
-  PreventClick ev ->
-    H.liftEffect $ preventDefault $ ME.toEvent ev
-
-  SetVisibility v -> do
-    st <- Hooks.get stateToken
-    when (st.visibility /= v) do
-      Hooks.modify_ stateToken (_ { visibility = v, highlightedIndex = Just 0 })
-      handleEvent $ VisibilityChanged v
-
-  Action act -> handleAction' act
-
-  where
-  -- eta-expansion is necessary to avoid infinite recursion
-  handle :: Action action -> HookM slots output m Unit
-  handle act = handleAction stateToken searchDebouncer getItemCount handleAction' handleEvent act
-
-  getTargetIndex st itemCount = case _ of
-    Index i -> i
-    Prev -> case st.highlightedIndex of
-      Just i | i /= 0 -> i - 1
-      _ -> itemCount - 1
-    Next -> case st.highlightedIndex of
-      Just i | i /= (itemCount - 1) -> i + 1
-      _ -> 0
+-- handleAction :: forall slots output action m
+--               . MonadAff m
+--              => StateToken SelectState
+--              -> (String -> HookM slots output m Unit)
+--              -> HookM slots output m Int
+--              -> (action -> HookM slots output m Unit)
+--              -> (Event -> HookM slots output m Unit)
+--              -> Action action
+--              -> HookM slots output m Unit
+-- handleAction stateToken searchDebouncer getItemCount handleAction' handleEvent = case _ of
+--   Search str -> do
+--     Hooks.modify_ stateToken (_ { search = str })
+--     void $ Hooks.fork $ handle $ SetVisibility On
+--     searchDebouncer str
+--
+--   Highlight target -> do
+--     st <- Hooks.get stateToken
+--     when (st.visibility == On) do
+--       itemCount <- getItemCount
+--       Hooks.modify_ stateToken (_ { highlightedIndex = Just $ getTargetIndex st itemCount target })
+--
+--   Select target mbEv -> do
+--     for_ mbEv (H.liftEffect <<< preventDefault <<< ME.toEvent)
+--     st <- Hooks.get stateToken
+--     when (st.visibility == On) case target of
+--       Index ix -> handleEvent $ Selected ix
+--       Next -> do
+--         itemCount <- getItemCount
+--         handleEvent $ Selected $ getTargetIndex st itemCount target
+--       Prev -> do
+--         itemCount <- getItemCount
+--         handleEvent $ Selected $ getTargetIndex st itemCount target
+--
+--   ToggleClick ev -> do
+--     H.liftEffect $ preventDefault $ ME.toEvent ev
+--     st <- Hooks.get stateToken
+--     case st.visibility of
+--       On -> do
+--         handle $ Focus false
+--         handle $ SetVisibility Off
+--       Off -> do
+--         handle $ Focus true
+--         handle $ SetVisibility On
+--
+--   Focus shouldFocus -> do
+--     inputElement <- Hooks.getHTMLElementRef $ H.RefLabel "select-input"
+--     for_ inputElement \el -> H.liftEffect case shouldFocus of
+--       true -> HTMLElement.focus el
+--       _ -> HTMLElement.blur el
+--
+--   Key ev -> do
+--     void $ Hooks.fork $ handle $ SetVisibility On
+--     let preventIt = H.liftEffect $ preventDefault $ KE.toEvent ev
+--     case KE.key ev of
+--       x | x == "ArrowUp" || x == "Up" ->
+--         preventIt *> handle (Highlight Prev)
+--       x | x == "ArrowDown" || x == "Down" ->
+--         preventIt *> handle (Highlight Next)
+--       x | x == "Escape" || x == "Esc" -> do
+--         inputElement <- Hooks.getHTMLElementRef $ H.RefLabel "select-input"
+--         preventIt
+--         for_ inputElement (H.liftEffect <<< HTMLElement.blur)
+--       "Enter" -> do
+--         st <- Hooks.get stateToken
+--         preventIt
+--         for_ st.highlightedIndex \ix ->
+--           handle $ Select (Index ix) Nothing
+--       otherKey -> pure unit
+--
+--   PreventClick ev ->
+--     H.liftEffect $ preventDefault $ ME.toEvent ev
+--
+--   SetVisibility v -> do
+--     st <- Hooks.get stateToken
+--     when (st.visibility /= v) do
+--       Hooks.modify_ stateToken (_ { visibility = v, highlightedIndex = Just 0 })
+--       handleEvent $ VisibilityChanged v
+--
+--   Action act -> handleAction' act
+--
+--   where
+--   -- eta-expansion is necessary to avoid infinite recursion
+--   handle :: Action action -> HookM slots output m Unit
+--   handle act = handleAction stateToken searchDebouncer getItemCount handleAction' handleEvent act
+--
+--   getTargetIndex st itemCount = case _ of
+--     Index i -> i
+--     Prev -> case st.highlightedIndex of
+--       Just i | i /= 0 -> i - 1
+--       _ -> itemCount - 1
+--     Next -> case st.highlightedIndex of
+--       Just i | i /= (itemCount - 1) -> i + 1
+--       _ -> 0
