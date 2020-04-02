@@ -9,8 +9,8 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Symbol (SProxy(..))
 import Data.Traversable (for_, sequence, traverse)
 import Data.Tuple (Tuple(..))
-import Components.Typeahead as Typeahead
-import Components.Dropdown as Dropdown
+import Components.TypeaheadHook as TypeaheadHook
+import Components.DropdownHook as DropdownHook
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
@@ -87,7 +87,7 @@ dropdown :: forall t0 t1 t2. H.Component HH.HTML t0 t1 t2 Aff
 dropdown = H.mkComponent
   { initialState: const unit
   , render: \_ ->
-      HH.slot label unit Dropdown.component input \_ -> Nothing
+      HH.slot label unit DropdownHook.component input \_ -> Nothing
   , eval: H.mkEval H.defaultEval
   }
   where
@@ -98,7 +98,7 @@ typeahead :: forall t0 t1 t2. H.Component HH.HTML t0 t1 t2 Aff
 typeahead = H.mkComponent
   { initialState: const unit
   , render: \_ ->
-      HH.slot label unit Typeahead.component unit \_ -> Nothing
+      HH.slot label unit TypeaheadHook.component unit \_ -> Nothing
   , eval: H.mkEval H.defaultEval
   }
   where
