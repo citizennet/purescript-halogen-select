@@ -41,11 +41,11 @@ type ToggleProps props =
 -- | ```purescript
 -- | renderToggle = div (setToggleProps [ class "btn-class" ]) [ ...html ]
 -- | ```
-setToggleProps
+toggleProps
   :: forall props act
    . Array (HP.IProp (ToggleProps props) (Action act))
   -> Array (HP.IProp (ToggleProps props) (Action act))
-setToggleProps = append
+toggleProps = append
   [ HE.onFocus \_ -> Just $ SetVisibility On
   , HE.onMouseDown $ Just <<< ToggleClick
   , HE.onKeyDown $ Just <<< Key
