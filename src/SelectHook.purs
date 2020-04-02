@@ -187,26 +187,28 @@ useSelect :: forall slots output m
            . MonadAff m
           => SelectInput slots output m
           -> Hook slots output m UseSelect ({ select :: SelectState /\ StateToken SelectState, searchDebouncer :: String -> HookM slots output m Unit })
-useSelect inputRec = Hooks.wrap Hooks.do
-  state /\ stateToken <- useState
-    { search: fromMaybe "" inputRec.search
-    , visibility: Off
-    , highlightedIndex: Nothing
-    }
+useSelect inputRec =
+  let
+    initialSearchValue = fromMaybe "" inputRec.search
+    debounceTime = fromMaybe mempty inputRec.debounceTime
+  in Hooks.wrap Hooks.do
+    state /\ stateToken <- useState
+      { search: fromMaybe "" inputRec.search
+      , visibility: Off
+      , highlightedIndex: Nothing
+      }
 
-  let debounceTime = fromMaybe mempty inputRec.debounceTime
+    searchDebouncer <- useDebouncer debounceTime \lastSearchState -> Hooks.do
+      case inputRec.inputType of
+        Text -> do
+          Hooks.modify_ stateToken (_ { highlightedIndex = Just 0 })
+          inputRec.handleEvent (Searched lastSearchState)
 
-  searchDebouncer <- useDebouncer debounceTime \lastSearchState -> Hooks.do
-    case inputRec.inputType of
-      Text -> do
-        Hooks.modify_ stateToken (_ { highlightedIndex = Just 0 })
-        inputRec.handleEvent (Searched lastSearchState)
+        -- Key stream is not yet implemented. However, this should capture user
+        -- key events and expire their search after a set number of milliseconds.
+        _ -> pure unit
 
-      -- Key stream is not yet implemented. However, this should capture user
-      -- key events and expire their search after a set number of milliseconds.
-      _ -> pure unit
-
-  Hooks.pure { select: state /\ stateToken, searchDebouncer }
+    Hooks.pure { select: state /\ stateToken, searchDebouncer }
 
 handleAction :: forall slots output action m
               . MonadAff m
