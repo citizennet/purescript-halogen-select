@@ -137,7 +137,6 @@ data Action action
   | Key KE.KeyboardEvent
   | PreventClick ME.MouseEvent
   | SetVisibility Visibility
-  | Initialize (Maybe action)
   | Action action
 
 data Event
@@ -219,9 +218,6 @@ handleAction :: forall slots output action m
              -> Action action
              -> HookM slots output m Unit
 handleAction stateToken searchDebouncer getItemCount handleAction' handleEvent = case _ of
-  Initialize mbAction -> do
-    for_ mbAction handleAction'
-
   Search str -> do
     Hooks.modify_ stateToken (_ { search = str })
     void $ Hooks.fork $ handle $ SetVisibility On
