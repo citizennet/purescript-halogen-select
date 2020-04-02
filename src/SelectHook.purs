@@ -33,27 +33,6 @@ type ToggleProps props =
   | props
   )
 
--- | An array of `IProps` with `ToggleProps`. It
--- | allows the toggle element to register key events for navigation or highlighting,
--- | record open and close events based on focus and blur, and to be focused with
--- | the tab key.
--- |
--- | ```purescript
--- | renderToggle = div (setToggleProps [ class "btn-class" ]) [ ...html ]
--- | ```
-toggleProps
-  :: forall props act
-   . Array (HP.IProp (ToggleProps props) (Action act))
-  -> Array (HP.IProp (ToggleProps props) (Action act))
-toggleProps = append
-  [ HE.onFocus \_ -> Just $ SetVisibility On
-  , HE.onMouseDown $ Just <<< ToggleClick
-  , HE.onKeyDown $ Just <<< Key
-  , HE.onBlur \_ -> Just $ SetVisibility Off
-  , HP.tabIndex 0
-  , HP.ref (H.RefLabel "select-input")
-  ]
-
 -- | The properties that must be supported by the HTML element that serves
 -- | as a text input. This should be used with input-driven `Select` components.
 type InputProps props =
@@ -67,27 +46,6 @@ type InputProps props =
   | props
   )
 
--- | An array of `IProps` with `InputProps`. It
--- | allows the input element to capture string values, register key events for
--- | navigation, record open and close events based on focus and blur, and to be
--- | focused with the tab key.
--- |
--- | ```purescript
--- | renderInput = input_ (setInputProps [ class "my-class" ])
--- | ```
-inputProps
-  :: forall props act
-   . Array (HP.IProp (InputProps props) (Action act))
-inputProps =
-  [ HE.onFocus \_ -> Just $ SetVisibility On
-  , HE.onKeyDown $ Just <<< Key
-  , HE.onValueInput $ Just <<< Search
-  , HE.onMouseDown \_ -> Just $ SetVisibility On
-  , HE.onBlur \_ -> Just $ SetVisibility Off
-  , HP.tabIndex 0
-  , HP.ref (H.RefLabel "select-input")
-  ]
-
 -- | The properties that must be supported by the HTML element that acts as a
 -- | selectable "item" in your UI. This should be attached to every item that
 -- | can be selected.
@@ -96,37 +54,6 @@ type ItemProps props =
   , onMouseOver :: ME.MouseEvent
   | props
   )
-
--- | An array of `IProps` with `ItemProps`. It
--- | allows items to be highlighted and selected.
--- |
--- | This expects an index for use in highlighting. It's useful in combination
--- | with `mapWithIndex`:
--- |
--- | ```purescript
--- | renderItem index itemHTML =
--- |   HH.li (setItemProps index [ props ]) [ itemHTML ]
--- |
--- | render = renderItem `mapWithIndex` itemsArray
--- | ```
-itemProps
-  :: forall props act
-   . Int
-  -> Array (HP.IProp (ItemProps props) (Action act))
-itemProps index =
-  [ HE.onMouseDown \ev -> Just (Select (Index index) (Just ev))
-  , HE.onMouseOver \_ -> Just $ Highlight (Index index)
-  ]
-
--- | An array of `IProps` with a `MouseDown`
--- | handler. It prevents clicking on an item within an enclosing HTML element
--- | from bubbling up a blur event to the DOM. This should be used on the parent
--- | element that contains your items.
-containerProps
-  :: forall props act
-   . Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action act))
-containerProps =
-  [ HE.onMouseDown $ Just <<< PreventClick ]
 
 data Action action
   = Search String
@@ -207,6 +134,82 @@ useSelect inputRec =
         -- Key stream is not yet implemented. However, this should capture user
         -- key events and expire their search after a set number of milliseconds.
         _ -> pure unit
+
+    let
+
+      -- | An array of `IProps` with `ToggleProps`. It
+      -- | allows the toggle element to register key events for navigation or highlighting,
+      -- | record open and close events based on focus and blur, and to be focused with
+      -- | the tab key.
+      -- |
+      -- | ```purescript
+      -- | renderToggle = div (setToggleProps [ class "btn-class" ]) [ ...html ]
+      -- | ```
+      toggleProps
+        :: forall props act
+         . Array (HP.IProp (ToggleProps props) (Action act))
+        -> Array (HP.IProp (ToggleProps props) (Action act))
+      toggleProps = append
+        [ HE.onFocus \_ -> Just $ SetVisibility On
+        , HE.onMouseDown $ Just <<< ToggleClick
+        , HE.onKeyDown $ Just <<< Key
+        , HE.onBlur \_ -> Just $ SetVisibility Off
+        , HP.tabIndex 0
+        , HP.ref (H.RefLabel "select-input")
+        ]
+
+      -- | An array of `IProps` with `ItemProps`. It
+      -- | allows items to be highlighted and selected.
+      -- |
+      -- | This expects an index for use in highlighting. It's useful in combination
+      -- | with `mapWithIndex`:
+      -- |
+      -- | ```purescript
+      -- | renderItem index itemHTML =
+      -- |   HH.li (setItemProps index [ props ]) [ itemHTML ]
+      -- |
+      -- | render = renderItem `mapWithIndex` itemsArray
+      -- | ```
+      itemProps
+        :: forall props act
+         . Int
+        -> Array (HP.IProp (ItemProps props) (Action act))
+      itemProps index =
+        [ HE.onMouseDown \ev -> Just (Select (Index index) (Just ev))
+        , HE.onMouseOver \_ -> Just $ Highlight (Index index)
+        ]
+
+      -- | An array of `IProps` with a `MouseDown`
+      -- | handler. It prevents clicking on an item within an enclosing HTML element
+      -- | from bubbling up a blur event to the DOM. This should be used on the parent
+      -- | element that contains your items.
+      containerProps
+        :: forall props act
+         . Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action act))
+      containerProps =
+        [ HE.onMouseDown $ Just <<< PreventClick ]
+
+
+      -- | An array of `IProps` with `InputProps`. It
+      -- | allows the input element to capture string values, register key events for
+      -- | navigation, record open and close events based on focus and blur, and to be
+      -- | focused with the tab key.
+      -- |
+      -- | ```purescript
+      -- | renderInput = input_ (setInputProps [ class "my-class" ])
+      -- | ```
+      inputProps
+        :: forall props act
+         . Array (HP.IProp (InputProps props) (Action act))
+      inputProps =
+        [ HE.onFocus \_ -> Just $ SetVisibility On
+        , HE.onKeyDown $ Just <<< Key
+        , HE.onValueInput $ Just <<< Search
+        , HE.onMouseDown \_ -> Just $ SetVisibility On
+        , HE.onBlur \_ -> Just $ SetVisibility Off
+        , HP.tabIndex 0
+        , HP.ref (H.RefLabel "select-input")
+        ]
 
     Hooks.pure { select: state /\ stateToken, searchDebouncer }
 
