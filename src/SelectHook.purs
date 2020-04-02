@@ -97,7 +97,7 @@ type SelectInput slots output m =
   , search :: Maybe String
   , debounceTime :: Maybe Milliseconds
   , getItemCount :: HookM slots output m Int
-  , handleEvent :: Event -> HookM slots output m Unit
+  , handleEvent :: StateToken SelectState -> Event -> HookM slots output m Unit
   }
 
 type SelectState =
