@@ -16,6 +16,8 @@ import Internal.CSS (class_, classes_, whenElem)
 import SelectHook (SelectState, useSelect)
 import SelectHook as S
 
+type Slot query = H.Slot query Message
+
 data Message
   = SelectionChanged (Maybe String) (Maybe String)
 

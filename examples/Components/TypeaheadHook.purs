@@ -4,29 +4,30 @@ import Prelude
 
 import Affjax as AX
 import Affjax.ResponseFormat as AR
-import Components.Dropdown as D
+import Components.DropdownHook as D
 import Data.Argonaut.Decode ((.:), decodeJson)
 import Data.Array (mapWithIndex, filter, (:), (!!), length, null, difference)
-import Data.Bifunctor (lmap)
+import Data.Bifunctor (bimap, lmap, rmap)
+import Data.Const (Const(..))
 import Data.Foldable (for_)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Monoid (guard)
 import Data.Symbol (SProxy(..))
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (traverse)
+import Data.Tuple.Nested ((/\))
 import Effect.Aff (Aff)
 import Halogen (liftAff)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Halogen.Hooks (useState)
+import Halogen.Hooks (HookM(..), StateToken(..), useState)
 import Halogen.Hooks as Hooks
 import Internal.CSS (class_, classes_, whenElem)
 import Internal.RemoteData as RD
-import Select as S
-import Select.Setters as SS
-import SelectHook (useSelect)
+import SelectHook (SelectState, useSelect)
+import SelectHook as SH
 
 data Query a
   = GetSelections (Array Location -> a)
@@ -36,54 +37,57 @@ data Message
   | SelectionsChanged (Array Location)
 
 type ChildSlots =
-  ( dropdown :: D.Slot Unit )
+  ( dropdown :: D.Slot (Const Void) Unit )
 
 component :: H.Component HH.HTML Query Unit Message Aff
 component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
   selections /\ tSelections <- useState []
   available /\ tAvailable <- useState RD.NotAsked
 
-  select <- useSelect { inputType: S.Text
+  select <- useSelect { inputType: SH.Text
                       , debounceTime: Just (Milliseconds 300.0)
                       , search: Nothing
-                      , getItemCount: maybe 0 length $ RD.toMaybe available
-                      , selections: []
-                      , available: RD.NotAsked
+                      , getItemCount: pure $ maybe 0 length $ RD.toMaybe available
+                      , handleEvent: handleEvent tAvailable tSelections
                       }
 
   Hooks.useQuery queryToken case _ of
     GetSelections reply -> do
-       st <- H.get
-       pure $ Just $ reply st.selections
+       selections' <- Hooks.get tSelections
+       pure $ Just $ reply selections'
 
   Hooks.pure $
     HH.div
       [ class_ "Typeahead" ]
-      [ renderSelections, renderInput, renderDropdown, renderContainer ]
+      [ renderSelections selections tSelections
+      , renderInput select selections
+      , renderDropdown select tSelections
+      , renderContainer select selections available
+      ]
   where
   handleEvent
     :: StateToken (RD.RemoteData String (Array Location))
     -> StateToken (Array Location)
     -> StateToken SelectState
-    -> S.Event
+    -> SH.Event
     -> HookM ChildSlots Message Aff Unit
   handleEvent tAvailable tSelections tSelectState = case _ of
-    S.Selected ix -> do
+    SH.Selected ix -> do
       available <- Hooks.get tAvailable
       for_ available \arr ->
         for_ (arr !! ix) \item -> do
           selections <- Hooks.get tSelections
           let newSelections = item : selections
-          Hooks.put tAvailable (RD.Success (filter (_ /= items) arr))
+          Hooks.put tAvailable (RD.Success (filter (_ /= item) arr))
           Hooks.put tSelections newSelections
           Hooks.modify_ tSelectState (_ { search = "" })
           Hooks.raise $ SelectionsChanged newSelections
-    S.Searched str -> do
-      st <- Hooks.get tSelections
+    SH.Searched str -> do
+      selections <- Hooks.get tSelections
       -- we'll use an external api to search locations
       Hooks.put tAvailable RD.Loading
       items <- liftAff $ searchLocations str
-      Hooks.put tAvailable $ items <#> \xs -> difference xs st.selections
+      Hooks.put tAvailable $ items <#> \xs -> difference xs selections
     _ -> pure unit
 
   remove tSelections item = do
@@ -92,7 +96,7 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
     Hooks.put tSelections newSelections
     Hooks.raise $ ItemRemoved item
 
-  handleDropdown msg = case msg of
+  handleDropdown tSelections msg = case msg of
     D.SelectionChanged oldSelection newSelection -> do
       selections <- Hooks.get tSelections
       let
@@ -109,15 +113,8 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
       for_ newSelections \selections ->
         Hooks.put tSelections selections
 
-  render :: S.State State -> H.ComponentHTML (HookM ChildSlots Message Aff Unit) ChildSlots Aff
-  render selections available selectState =
-    HH.div
-      [ class_ "Typeahead" ]
-      [ renderSelections, renderInput, renderDropdown, renderContainer ]
-    where
-    hasSelections = length selections > 0
-
-    renderSelections = whenElem hasSelections \_ ->
+  renderSelections selections tSelections =
+    whenElem (length selections > 0) \_ ->
       HH.div
         [ class_ "Typeahead__selections" ]
         (renderSelectedItem <$> selections)
@@ -134,30 +131,32 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
       closeButton item =
         HH.span
           [ class_ "Location__closeButton"
-          , HE.onClick \_ -> Just $ remove item
+          , HE.onClick \_ -> Just $ remove tSelections item
           ]
           [ HH.text "×" ]
 
-    renderInput =
-      HH.input
-        (select.inputProps <>
-          [ classes_
-              [ "Typeahead__input"
-              , "Typeahead__input--selections" # guard hasSelections
-              , "Typeahead__input--active"
-                  # guard (select.state.visibility == S.On)
-              ]
-          , HP.placeholder "Type to search..."
-          ])
+  renderInput select selections =
+    HH.input
+      (select.inputProps <>
+        [ classes_
+            [ "Typeahead__input"
+            , "Typeahead__input--selections" # guard (length selections > 0)
+            , "Typeahead__input--active"
+                # guard (select.state.visibility == SH.On)
+            ]
+        , HP.placeholder "Type to search..."
+        ])
 
-    renderDropdown = whenElem (select.state.visibility == S.On) \_ ->
+  renderDropdown select tSelections =
+    whenElem (select.state.visibility == SH.On) \_ ->
       HH.slot _dropdown unit D.component dropdownInput handler
-      where
-      _dropdown = SProxy :: SProxy "dropdown"
-      handler msg = Just $ S.Action $ HandleDropdown msg
-      dropdownInput = { items: [ "Earth", "Mars" ], buttonLabel: "Human Planets" }
+    where
+    _dropdown = SProxy :: SProxy "dropdown"
+    handler msg = Just $ handleDropdown tSelections msg
+    dropdownInput = { items: [ "Earth", "Mars" ], buttonLabel: "Human Planets" }
 
-    renderContainer = whenElem (select.state.visibility == S.On) \_ ->
+  renderContainer select selections available =
+    whenElem (select.state.visibility == SH.On) \_ ->
       HH.div
         (select.containerProps <>
           [ classes_
@@ -176,7 +175,7 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
           RD.Loading -> renderMsg "Loading..."
           RD.Failure e -> renderMsg e
           RD.Success available
-            | hasItems -> renderItem `mapWithIndex` available
+            | length selections > 0 -> renderItem `mapWithIndex` available
             | otherwise -> renderMsg "No results found"
 
       renderItem index { name, population } =
@@ -204,6 +203,6 @@ type Location =
 
 searchLocations :: String -> Aff (RD.RemoteData String (Array Location))
 searchLocations search = do
-  res <- AX.get AR.json ("https://swapi.co/api/planets/?search=" <> search)
-  let body = lmap AR.printResponseFormatError res.body
+  eitherRes <- AX.get AR.json ("https://swapi.co/api/planets/?search=" <> search)
+  let body = bimap AX.printError (_.body) eitherRes
   pure $ RD.fromEither $ traverse decodeJson =<< (_ .: "results") =<< decodeJson =<< body
