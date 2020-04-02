@@ -107,7 +107,7 @@ type SelectState =
   }
 
 type SelectReturn slots output m toggleProps itemProps containerProps inputProps =
-  { selectState :: SelectState
+  { state :: SelectState
   , toggleProps :: TogglePropArray slots output m toggleProps
   , itemProps :: Int -> ItemPropArray slots output m itemProps
   , containerProps :: ContainerPropArray slots output m containerProps
@@ -128,7 +128,7 @@ useSelect inputRec =
     initialSearchValue = fromMaybe "" inputRec.search
     debounceTime = fromMaybe mempty inputRec.debounceTime
   in Hooks.wrap Hooks.do
-    selectState /\ stateToken <- useState
+    state /\ stateToken <- useState
       { search: fromMaybe "" inputRec.search
       , visibility: Off
       , highlightedIndex: Nothing
@@ -287,7 +287,7 @@ useSelect inputRec =
         ]
 
     Hooks.pure
-      { selectState
+      { state
       , toggleProps
       , itemProps
       , containerProps
