@@ -12,11 +12,11 @@ import Example.Hooks.UseDebouncer (UseDebouncer, useDebouncer)
 import Halogen as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Halogen.Hooks (Hook, HookM, UseState, useState)
+import Halogen.Hooks (Hook, HookM, StateToken, UseState, useState)
 import Halogen.Hooks as Hooks
 import Web.Event.Event (preventDefault)
-import Web.HTML.HTMLElement as HTMLElement
 import Web.Event.Event as E
+import Web.HTML.HTMLElement as HTMLElement
 import Web.UIEvent.FocusEvent as FE
 import Web.UIEvent.KeyboardEvent as KE
 import Web.UIEvent.MouseEvent as ME
@@ -138,7 +138,7 @@ useSelect inputRec =
       case inputRec.inputType of
         Text -> do
           Hooks.modify_ stateToken (_ { highlightedIndex = Just 0 })
-          inputRec.handleEvent (Searched lastSearchState)
+          inputRec.handleEvent stateToken (Searched lastSearchState)
 
         -- Key stream is not yet implemented. However, this should capture user
         -- key events and expire their search after a set number of milliseconds.
@@ -168,7 +168,7 @@ useSelect inputRec =
         st <- Hooks.get stateToken
         when (st.visibility /= v) do
           Hooks.modify_ stateToken (_ { visibility = v, highlightedIndex = Just 0 })
-          inputRec.handleEvent $ VisibilityChanged v
+          inputRec.handleEvent stateToken $ VisibilityChanged v
 
       search str = do
         Hooks.modify_ stateToken (_ { search = str })
@@ -185,13 +185,13 @@ useSelect inputRec =
         for_ mbEv (H.liftEffect <<< preventDefault <<< ME.toEvent)
         st <- Hooks.get stateToken
         when (st.visibility == On) case target of
-          Index ix -> inputRec.handleEvent $ Selected ix
+          Index ix -> inputRec.handleEvent stateToken $ Selected ix
           Next -> do
             itemCount <- inputRec.getItemCount
-            inputRec.handleEvent $ Selected $ getTargetIndex st itemCount target
+            inputRec.handleEvent stateToken $ Selected $ getTargetIndex st itemCount target
           Prev -> do
             itemCount <- inputRec.getItemCount
-            inputRec.handleEvent $ Selected $ getTargetIndex st itemCount target
+            inputRec.handleEvent stateToken $ Selected $ getTargetIndex st itemCount target
 
       toggleClick ev = do
         H.liftEffect $ preventDefault $ ME.toEvent ev
