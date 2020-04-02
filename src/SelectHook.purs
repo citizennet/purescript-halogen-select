@@ -33,7 +33,7 @@ type ToggleProps props =
   | props
   )
 
--- | A helper function that augments an array of `IProps` with `ToggleProps`. It
+-- | An array of `IProps` with `ToggleProps`. It
 -- | allows the toggle element to register key events for navigation or highlighting,
 -- | record open and close events based on focus and blur, and to be focused with
 -- | the tab key.
@@ -67,7 +67,7 @@ type InputProps props =
   | props
   )
 
--- | A helper function that augments an array of `IProps` with `InputProps`. It
+-- | An array of `IProps` with `InputProps`. It
 -- | allows the input element to capture string values, register key events for
 -- | navigation, record open and close events based on focus and blur, and to be
 -- | focused with the tab key.
@@ -75,11 +75,10 @@ type InputProps props =
 -- | ```purescript
 -- | renderInput = input_ (setInputProps [ class "my-class" ])
 -- | ```
-setInputProps
+inputProps
   :: forall props act
    . Array (HP.IProp (InputProps props) (Action act))
-  -> Array (HP.IProp (InputProps props) (Action act))
-setInputProps = append
+inputProps =
   [ HE.onFocus \_ -> Just $ SetVisibility On
   , HE.onKeyDown $ Just <<< Key
   , HE.onValueInput $ Just <<< Search
@@ -98,7 +97,7 @@ type ItemProps props =
   | props
   )
 
--- | A helper function that augments an array of `IProps` with `ItemProps`. It
+-- | An array of `IProps` with `ItemProps`. It
 -- | allows items to be highlighted and selected.
 -- |
 -- | This expects an index for use in highlighting. It's useful in combination
@@ -110,25 +109,23 @@ type ItemProps props =
 -- |
 -- | render = renderItem `mapWithIndex` itemsArray
 -- | ```
-setItemProps
+itemProps
   :: forall props act
    . Int
   -> Array (HP.IProp (ItemProps props) (Action act))
-  -> Array (HP.IProp (ItemProps props) (Action act))
-setItemProps index = append
+itemProps index =
   [ HE.onMouseDown \ev -> Just (Select (Index index) (Just ev))
   , HE.onMouseOver \_ -> Just $ Highlight (Index index)
   ]
 
--- | A helper function that augments an array of `IProps` with a `MouseDown`
+-- | An array of `IProps` with a `MouseDown`
 -- | handler. It prevents clicking on an item within an enclosing HTML element
 -- | from bubbling up a blur event to the DOM. This should be used on the parent
 -- | element that contains your items.
-setContainerProps
+containerProps
   :: forall props act
    . Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action act))
-  -> Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action act))
-setContainerProps = append
+containerProps =
   [ HE.onMouseDown $ Just <<< PreventClick ]
 
 data Action action
