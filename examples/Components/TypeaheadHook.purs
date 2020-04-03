@@ -62,7 +62,7 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
       [ renderSelections selections tSelections
       , renderInput select selections
       , renderDropdown select tSelections
-      -- , renderContainer select selections available
+      , renderContainer select selections available
       ]
   where
   handleEvent
@@ -180,7 +180,8 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
 
       renderItem index { name, population } =
         HH.div
-          (select.itemProps index [ classes_ [ base, highlight, "Location" ] ])
+          ((select.itemProps index) <>
+            [ classes_ [ base, highlight, "Location" ] ])
           [ HH.span
               [ class_ "Location__name" ]
               [ HH.text name ]
