@@ -62,7 +62,7 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
       [ renderSelections selections tSelections
       , renderInput select selections
       , renderDropdown select tSelections
-      , renderContainer select selections available
+      -- , renderContainer select selections available
       ]
   where
   handleEvent
