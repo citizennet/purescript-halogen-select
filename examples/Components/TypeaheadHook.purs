@@ -7,8 +7,8 @@ import Affjax.ResponseFormat as AR
 import Components.DropdownHook as D
 import Data.Argonaut.Decode ((.:), decodeJson)
 import Data.Array (mapWithIndex, filter, (:), (!!), length, null, difference)
-import Data.Bifunctor (bimap, lmap, rmap)
-import Data.Const (Const(..))
+import Data.Bifunctor (bimap)
+import Data.Const (Const)
 import Data.Foldable (for_)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Monoid (guard)
@@ -22,7 +22,7 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Halogen.Hooks (HookM(..), StateToken(..), useState)
+import Halogen.Hooks (HookM, StateToken, useState)
 import Halogen.Hooks as Hooks
 import Internal.CSS (class_, classes_, whenElem)
 import Internal.RemoteData as RD
@@ -110,8 +110,8 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
             Just (filter (_ /= mkLocation str) selections)
           Just old, Just new ->
             Just (mkLocation new : (filter (_ /= mkLocation old) selections))
-      for_ newSelections \selections ->
-        Hooks.put tSelections selections
+      for_ newSelections \selections' ->
+        Hooks.put tSelections selections'
 
   renderSelections selections tSelections =
     whenElem (length selections > 0) \_ ->
@@ -174,8 +174,8 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
           RD.NotAsked -> renderMsg "No search performed..."
           RD.Loading -> renderMsg "Loading..."
           RD.Failure e -> renderMsg e
-          RD.Success available
-            | length selections > 0 -> renderItem `mapWithIndex` available
+          RD.Success available'
+            | length selections > 0 -> renderItem `mapWithIndex` available'
             | otherwise -> renderMsg "No results found"
 
       renderItem index { name, population } =
