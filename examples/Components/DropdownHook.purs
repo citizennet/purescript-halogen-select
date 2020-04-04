@@ -36,15 +36,13 @@ component = Hooks.component \{ items, buttonLabel } -> Hooks.do
                       , debounceTime: Nothing
                       , getItemCount: pure (length items)
                       }
-  Hooks.captures select.onSelectedIdxChanged.deps Hooks.useTickEffect do
-    void $ select.onSelectedIdxChanged.subscribe \ix -> do
+  select.onSelectedIdxChanged.capturesWith (==) Hooks.useTickEffect do
+    Nothing <$ select.onSelectedIdxChanged.subscribe \ix -> do
       oldSelection <- Hooks.get tSelection
       let newSelection = items !! ix
       select.setVisibility S.Off
       Hooks.put tSelection newSelection
       Hooks.raise $ SelectionChanged oldSelection newSelection
-    -- no need to unsubscribe
-    pure Nothing
 
   let
     renderToggle =
