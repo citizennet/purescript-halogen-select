@@ -15,7 +15,7 @@ import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Traversable (for_)
 import Data.Tuple.Nested ((/\))
-import Halogen.Hooks (HookM, Hooked, MemoValues, UseEffect, UseState, useState)
+import Halogen.Hooks (HookM, Hooked, MemoValues, UseEffect, UseState, Hook, useState)
 import Halogen.Hooks as Hooks
 
 newtype UseEvent a hooks = UseEvent (UseState (Maybe a) hooks)
@@ -58,21 +58,13 @@ type EventApi slots output m a hooked =
 -- |   Hooks.put stateToken ("Event occurred: " <> string)
 -- | ```
 useEvent
-  :: forall t2 t26 t27 t28 t3 t32 t39 t4 t40 t41 t45 t46 t5 t7
-   . Newtype t5 (UseState (Maybe t46) t7)
-  => Hooked t4 t3 t2 t7 t5
-      { props :: { capturesWith
-                    :: ( { state :: Maybe t46}
-                      -> { state :: Maybe t46}
-                      -> Boolean
-                       )
-                      -> (MemoValues -> t32)
-                      -> t32
-                 , subscribe
-                    :: (t46 -> HookM t41 t40 t39 t45)
-                    -> HookM t41 t40 t39 Unit
-                 }
-      , push :: t46 -> HookM t28 t27 t26 Unit
+  :: forall output t908 m slots a
+   . Hook slots output m (UseEvent a)
+      { props
+        :: { capturesWith :: EventEqFn a -> (MemoValues -> t908) -> t908
+           , subscribe :: (a -> HookM slots output m Unit) -> HookM slots output m Unit
+           }
+      , push :: a -> HookM slots output m Unit
       }
 useEvent = Hooks.wrap Hooks.do
   state /\ tState <- useState Nothing
