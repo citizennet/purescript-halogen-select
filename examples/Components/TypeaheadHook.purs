@@ -59,7 +59,7 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
           let newSelections = item : selections
           Hooks.put tAvailable (RD.Success (filter (_ /= item) arr))
           Hooks.put tSelections newSelections
-          Hooks.modify_ tSelectState (_ { search = "" })
+          select.clearSearch
           Hooks.raise $ SelectionsChanged newSelections
 
   select.onNewSearch.capturesWith (==) Hooks.useTickEffect do

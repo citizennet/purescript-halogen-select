@@ -114,6 +114,7 @@ type SelectReturn slots output m
   { state :: SelectState
   , setFocus :: Boolean -> HookM slots output m Unit
   , setVisibility :: Visibility -> HookM slots output m Unit
+  , clearSearch :: HookM slots output m Unit
   , onNewSearch :: EventProps slots output m String searchOutput hooked1
   , onVisibilityChanged :: EventProps slots output m Visibility visibilityOutput hooked2
   , onSelectedIdxChanged :: EventProps slots output m Int selectedIdxOutput hooked3
@@ -190,6 +191,9 @@ useSelect inputRec =
         when (st.visibility /= v) do
           Hooks.modify_ stateToken (_ { visibility = v, highlightedIndex = Just 0 })
           onVisibilityChanged.push v
+
+      clearSearch = do
+        Hooks.modify_ stateToken (_ { search = "" })
 
       search str = do
         Hooks.modify_ stateToken (_ { search = str })
@@ -312,6 +316,7 @@ useSelect inputRec =
       { state
       , setFocus
       , setVisibility
+      , clearSearch
       , onNewSearch: onNewSearch.props
       , onVisibilityChanged: onVisibilityChanged.props
       , onSelectedIdxChanged: onSelectedIdxChanged.props
