@@ -93,19 +93,20 @@ useEvent = Hooks.wrap Hooks.do
 -- |   pure Nothing
 -- | ```
 subscribeTo
-  :: forall t63 t64 slots output m t71 t73
-   . Eq t73
+  :: forall slots output m a
+   . Eq a
   => { capturesWith
-        :: (t73 -> t73 -> Boolean)
+        :: EventEqFn a
         -> ( MemoValues
           -> HookM slots output m (Maybe (HookM slots output m Unit))
           -> (forall hooks. Hooked slots output m hooks (UseEffect hooks) Unit)
            )
-        -> HookM slots output m (Maybe t64)
-        -> t63
-     , subscribe :: t71 -> HookM slots output m Unit
+        -> HookM slots output m (Maybe (HookM slots output m Unit))
+        -> (forall hooks. Hooked slots output m hooks (UseEffect hooks) Unit)
+     , subscribe :: (a -> HookM slots output m Unit) -> HookM slots output m Unit
      }
-     -> t71 -> t63
+     -> (a -> HookM slots output m Unit)
+     -> (forall hooks. Hooked slots output m hooks (UseEffect hooks) Unit)
 subscribeTo props cb =
   subscribeTo' props (==) cb
 
@@ -129,20 +130,20 @@ subscribeTo props cb =
 -- |   pure Nothing
 -- | ```
 subscribeTo'
-  :: forall t01 a m output slots t04 t05
+  :: forall a m output slots
    . { capturesWith
-        :: t01
+        :: EventEqFn a
         -> ( MemoValues
           -> HookM slots output m (Maybe (HookM slots output m Unit))
           -> (forall hooks. Hooked slots output m hooks (UseEffect hooks) Unit)
            )
-        -> HookM slots output m (Maybe t04)
-        -> t05
-      , subscribe :: a -> HookM slots output m Unit
+        -> HookM slots output m (Maybe (HookM slots output m Unit))
+        -> (forall hooks. Hooked slots output m hooks (UseEffect hooks) Unit)
+      , subscribe :: (a -> HookM slots output m Unit) -> HookM slots output m Unit
       }
-  -> t01
-  -> a
-  -> t05
+  -> EventEqFn a
+  -> (a -> HookM slots output m Unit)
+  -> (forall hooks. Hooked slots output m hooks (UseEffect hooks) Unit)
 subscribeTo' props eqFn cb =
   props.capturesWith eqFn Hooks.useTickEffect do
     props.subscribe cb
