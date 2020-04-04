@@ -107,14 +107,16 @@ type SelectState =
   }
 
 type SelectReturn slots output m
-                  searchOutput visibilityOutput selectedIdxOutput
+                  searchOutput hooked1
+                  visibilityOutput hooked2
+                  selectedIdxOutput hooked3
                   toggleProps itemProps containerProps inputProps =
   { state :: SelectState
   , setFocus :: Boolean -> HookM slots output m Unit
   , setVisibility :: Visibility -> HookM slots output m Unit
-  , onNewSearch :: EventProps slots output m String searchOutput
-  , onVisibilityChanged :: EventProps slots output m Visibility visibilityOutput
-  , onSelectedIdxChanged :: EventProps slots output m Int selectedIdxOutput
+  , onNewSearch :: EventProps slots output m String searchOutput hooked1
+  , onVisibilityChanged :: EventProps slots output m Visibility visibilityOutput hooked2
+  , onSelectedIdxChanged :: EventProps slots output m Int selectedIdxOutput hooked3
   , toggleProps :: TogglePropArray slots output m toggleProps
   , itemProps :: Int -> ItemPropArray slots output m itemProps
   , containerProps :: ContainerPropArray slots output m containerProps
@@ -127,14 +129,18 @@ newtype UseSelect hooks =
 derive instance newtypeUseSelect :: Newtype (UseSelect hooks) _
 
 useSelect :: forall slots output m
-                    searchOutput visibilityOutput selectedIdxOutput
-                    toggleProps itemProps containerProps inputProps
+                  searchOutput hooked1
+                  visibilityOutput hooked2
+                  selectedIdxOutput hooked3
+                  toggleProps itemProps containerProps inputProps
            . MonadAff m
           => SelectInput slots output m
           -> Hook slots output m UseSelect
               (SelectReturn slots output m
-                            searchOutput visibilityOutput selectedIdxOutput
-                            toggleProps itemProps containerProps inputProps)
+                                searchOutput hooked1
+                                visibilityOutput hooked2
+                                selectedIdxOutput hooked3
+                                toggleProps itemProps containerProps inputProps)
 useSelect inputRec =
   let
     initialSearchValue = fromMaybe "" inputRec.search
