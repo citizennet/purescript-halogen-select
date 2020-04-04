@@ -109,13 +109,12 @@ newtype UseSelect hooks =
 
 derive instance newtypeUseSelect :: Newtype (UseSelect hooks) _
 
-useSelect :: forall slots output m
-              toggleProps itemProps containerProps inputProps
-           . MonadAff m
-          => SelectInput slots output m
-          -> Hook slots output m UseSelect
-              (SelectReturn slots output m
-                            toggleProps itemProps containerProps inputProps)
+useSelect
+  :: forall slots output m toggleProps itemProps containerProps inputProps
+   . MonadAff m
+  => SelectInput slots output m
+  -> Hook slots output m UseSelect
+        (SelectReturn slots output m toggleProps itemProps containerProps inputProps)
 useSelect inputRec =
   let
     initialSearchValue = fromMaybe "" inputRec.search
