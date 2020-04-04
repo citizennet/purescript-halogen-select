@@ -37,7 +37,7 @@ component = Hooks.component \{ items, buttonLabel } -> Hooks.do
                       , getItemCount: pure (length items)
                       }
   select.onSelectedIdxChanged.capturesWith (==) Hooks.useTickEffect do
-    select.onSelectedIdxChanged.subscribe \ix -> do
+    Nothing <$ select.onSelectedIdxChanged.subscribe \ix -> do
       oldSelection <- Hooks.get tSelection
       let newSelection = items !! ix
       select.setVisibility S.Off

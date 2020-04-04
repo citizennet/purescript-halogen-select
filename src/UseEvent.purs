@@ -25,7 +25,7 @@ type EventEqFn a =
 
 type EventProps slots output m a hooked =
   { capturesWith :: EventEqFn a -> (MemoValues -> hooked) -> hooked
-  , subscribe :: (a -> HookM slots output m Unit) -> HookM slots output m (Maybe Unit)
+  , subscribe :: (a -> HookM slots output m Unit) -> HookM slots output m Unit
   }
 
 type EventApi slots output m a hooked =
@@ -42,7 +42,7 @@ useEvent = Hooks.wrap Hooks.do
 
   Hooks.pure { push: \value -> Hooks.put tState (Just value)
              , props: { capturesWith: \eqFn -> Hooks.capturesWith eqFn { state }
-                      , subscribe: \cb -> Nothing <$ do
+                      , subscribe: \cb -> do
                           state' <- Hooks.get tState
                           for_ state' cb
                       }
