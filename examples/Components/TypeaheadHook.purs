@@ -51,7 +51,7 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
                       , getItemCount: pure $ maybe 0 length $ RD.toMaybe available
                       }
 
-  subscribeTo select.onSelectedIdxChanged (==) \ix -> do
+  subscribeTo select.onSelectedIdxChanged \ix -> do
     available' <- Hooks.get tAvailable
     for_ available' \arr ->
       for_ (arr !! ix) \item -> do
@@ -62,7 +62,7 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
         select.clearSearch
         Hooks.raise $ SelectionsChanged newSelections
 
-  subscribeTo select.onNewSearch (==) \str -> do
+  subscribeTo select.onNewSearch \str -> do
     selections' <- Hooks.get tSelections
     -- we'll use an external api to search locations
     Hooks.put tAvailable RD.Loading
