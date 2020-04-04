@@ -1,6 +1,7 @@
 module Example.Hooks.UseEvent
   ( useEvent
   , UseEvent
+  , EventEqFn
   , EventProps
   , EventApi
   )
@@ -12,32 +13,35 @@ import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Traversable (for)
 import Data.Tuple.Nested ((/\))
-import Halogen.Hooks (Hook, HookM, UseState, useState)
+import Halogen.Hooks (Hook, HookM, MemoValues, UseState, useState)
 import Halogen.Hooks as Hooks
 
 newtype UseEvent a hooks = UseEvent (UseState (Maybe a) hooks)
 
 derive instance newtypeUseEvent :: Newtype (UseEvent a hooks) _
 
-type EventProps slots output m a b =
-  { deps :: { state :: Maybe a }
+type EventEqFn a =
+  { state :: Maybe a } -> { state :: Maybe a } -> Boolean
+
+type EventProps slots output m a b hooked =
+  { capturesWith :: EventEqFn a -> (MemoValues -> hooked) -> hooked
   , subscribe :: (a -> HookM slots output m b) -> HookM slots output m (Maybe b)
   }
 
-type EventApi slots output m a b =
+type EventApi slots output m a b hooked =
   { push :: a -> HookM slots output m Unit
-  , props :: EventProps slots output m a b
+  , props :: EventProps slots output m a b hooked
   }
 
 useEvent
-  :: forall slots output m a b
+  :: forall slots output m a b hooked
    . Eq a
-  => Hook slots output m (UseEvent a) (EventApi slots output m a b)
+  => Hook slots output m (UseEvent a) (EventApi slots output m a b hooked)
 useEvent = Hooks.wrap Hooks.do
   state /\ tState <- useState Nothing
 
   Hooks.pure { push: \value -> Hooks.put tState (Just value)
-             , props: { deps: { state }
+             , props: { capturesWith: \eqFn -> Hooks.capturesWith eqFn { state }
                       , subscribe: \cb -> do
                           state' <- Hooks.get tState
                           for state' cb
