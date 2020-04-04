@@ -78,6 +78,7 @@ useEvent = Hooks.wrap Hooks.do
                       , subscribe: \cb -> do
                           state' <- Hooks.get tState
                           for_ state' cb
+                          Hooks.put tState Nothing
                       }
              }
 
