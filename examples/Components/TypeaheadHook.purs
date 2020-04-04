@@ -17,6 +17,7 @@ import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (traverse)
 import Data.Tuple.Nested ((/\))
 import Effect.Aff (Aff)
+import Example.Hooks.UseEvent (subscribeTo)
 import Halogen (liftAff)
 import Halogen as H
 import Halogen.HTML as HH
@@ -50,25 +51,23 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
                       , getItemCount: pure $ maybe 0 length $ RD.toMaybe available
                       }
 
-  select.onSelectedIdxChanged.capturesWith (==) Hooks.useTickEffect do
-    Nothing <$ select.onSelectedIdxChanged.subscribe \ix -> do
-      available' <- Hooks.get tAvailable
-      for_ available' \arr ->
-        for_ (arr !! ix) \item -> do
-          selections' <- Hooks.get tSelections
-          let newSelections = item : selections'
-          Hooks.put tAvailable (RD.Success (filter (_ /= item) arr))
-          Hooks.put tSelections newSelections
-          select.clearSearch
-          Hooks.raise $ SelectionsChanged newSelections
+  subscribeTo select.onSelectedIdxChanged (==) \ix -> do
+    available' <- Hooks.get tAvailable
+    for_ available' \arr ->
+      for_ (arr !! ix) \item -> do
+        selections' <- Hooks.get tSelections
+        let newSelections = item : selections'
+        Hooks.put tAvailable (RD.Success (filter (_ /= item) arr))
+        Hooks.put tSelections newSelections
+        select.clearSearch
+        Hooks.raise $ SelectionsChanged newSelections
 
-  select.onNewSearch.capturesWith (==) Hooks.useTickEffect do
-    Nothing <$ select.onNewSearch.subscribe \str -> do
-      selections' <- Hooks.get tSelections
-      -- we'll use an external api to search locations
-      Hooks.put tAvailable RD.Loading
-      items <- liftAff $ searchLocations str
-      Hooks.put tAvailable $ items <#> \xs -> difference xs selections'
+  subscribeTo select.onNewSearch (==) \str -> do
+    selections' <- Hooks.get tSelections
+    -- we'll use an external api to search locations
+    Hooks.put tAvailable RD.Loading
+    items <- liftAff $ searchLocations str
+    Hooks.put tAvailable $ items <#> \xs -> difference xs selections'
 
   Hooks.useQuery queryToken case _ of
     GetSelections reply -> do

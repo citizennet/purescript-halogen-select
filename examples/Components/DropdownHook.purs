@@ -13,6 +13,7 @@ import Halogen.HTML as HH
 import Halogen.Hooks (useState)
 import Halogen.Hooks as Hooks
 import Internal.CSS (class_, classes_, whenElem)
+import Example.Hooks.UseEvent (subscribeTo)
 import SelectHook (useSelect)
 import SelectHook as S
 
@@ -36,8 +37,7 @@ component = Hooks.component \{ items, buttonLabel } -> Hooks.do
                       , debounceTime: Nothing
                       , getItemCount: pure (length items)
                       }
-  select.onSelectedIdxChanged.capturesWith (==) Hooks.useTickEffect do
-    Nothing <$ select.onSelectedIdxChanged.subscribe \ix -> do
+  subscribeTo onSelectedIdxChanged (==) \ix -> do
       oldSelection <- Hooks.get tSelection
       let newSelection = items !! ix
       select.setVisibility S.Off
