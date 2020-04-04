@@ -92,23 +92,18 @@ useEvent = Hooks.wrap Hooks.do
 -- |      Hooks.put stateToken ("Event occurred: " <> string)
 -- |   pure Nothing
 -- | ```
-
 subscribeTo
-  :: forall t63 t64 t65 t66 t67 t68 t69 t70 t71 t73
-   . Discard t67
-  => Bind t66
-  => Applicative t66
-  => Eq t73
+  :: forall t63 t64 slots output m t71 t73
+   . Eq t73
   => { capturesWith
         :: (t73 -> t73 -> Boolean)
         -> ( MemoValues
-          -> HookM t68 t69 t70 (Maybe (HookM t68 t69 t70 Unit))
-          -> (forall hooks. Hooked t68 t69 t70 hooks (UseEffect hooks) Unit)
+          -> HookM slots output m (Maybe (HookM slots output m Unit))
+          -> (forall hooks. Hooked slots output m hooks (UseEffect hooks) Unit)
            )
-        -> t66 (Maybe t64)
+        -> HookM slots output m (Maybe t64)
         -> t63
-     , subscribe :: t71 -> t66 t67
-     | t65
+     , subscribe :: t71 -> HookM slots output m Unit
      }
      -> t71 -> t63
 subscribeTo props cb =
@@ -134,24 +129,20 @@ subscribeTo props cb =
 -- |   pure Nothing
 -- | ```
 subscribeTo'
-  :: forall t48 t49 t53 t54 t55 t57 t59 t62 t66 t67
-   . Discard t57
-  => Bind t59
-  => Applicative t59
-  => { capturesWith
-        :: t48
+  :: forall t01 a m output slots t04 t05
+   . { capturesWith
+        :: t01
         -> ( MemoValues
-          -> HookM t55 t54 t53 (Maybe (HookM t55 t54 t53 Unit))
-          -> (forall hooks. Hooked t55 t54 t53 hooks (UseEffect hooks) Unit)
+          -> HookM slots output m (Maybe (HookM slots output m Unit))
+          -> (forall hooks. Hooked slots output m hooks (UseEffect hooks) Unit)
            )
-        -> t59 (Maybe t66)
-        -> t67
-      , subscribe :: t49 -> t59 t57
-      | t62
+        -> HookM slots output m (Maybe t04)
+        -> t05
+      , subscribe :: a -> HookM slots output m Unit
       }
-  -> t48
-  -> t49
-  -> t67
+  -> t01
+  -> a
+  -> t05
 subscribeTo' props eqFn cb =
   props.capturesWith eqFn Hooks.useTickEffect do
     props.subscribe cb
