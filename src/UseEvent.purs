@@ -57,19 +57,23 @@ type EventApi slots output m a hooked =
 -- | subscribeTo someLib.onSomeEvent (==) \string -> do
 -- |   Hooks.put stateToken ("Event occurred: " <> string)
 -- | ```
-useEvent :: forall t2 t26 t27 t28 t3 t32 t39 t4 t40 t41 t45 t46 t5 t7.
-  Newtype t5 (UseState (Maybe t46) t7) => Hooked t4 t3 t2 t7 t5
-                                            { props :: { capturesWith :: ({ state :: Maybe t46
-                                                                          }
-                                                                          -> { state :: Maybe t46
-                                                                             }
-                                                                             -> Boolean
-                                                                         )
-                                                                         -> (MemoValues -> t32) -> t32
-                                                       , subscribe :: (t46 -> HookM t41 t40 t39 t45) -> HookM t41 t40 t39 Unit
-                                                       }
-                                            , push :: t46 -> HookM t28 t27 t26 Unit
-                                            }
+useEvent
+  :: forall t2 t26 t27 t28 t3 t32 t39 t4 t40 t41 t45 t46 t5 t7
+   . Newtype t5 (UseState (Maybe t46) t7)
+  => Hooked t4 t3 t2 t7 t5
+      { props :: { capturesWith
+                    :: ( { state :: Maybe t46}
+                      -> { state :: Maybe t46}
+                      -> Boolean
+                       )
+                      -> (MemoValues -> t32)
+                      -> t32
+                 , subscribe
+                    :: (t46 -> HookM t41 t40 t39 t45)
+                    -> HookM t41 t40 t39 Unit
+                 }
+      , push :: t46 -> HookM t28 t27 t26 Unit
+      }
 useEvent = Hooks.wrap Hooks.do
   state /\ tState <- useState Nothing
 
@@ -103,12 +107,24 @@ useEvent = Hooks.wrap Hooks.do
 -- |   pure Nothing
 -- | ```
 
-subscribeTo :: forall t63 t64 t65 t66 t67 t68 t69 t70 t71 t73.
-      Discard t67 => Bind t66 => Applicative t66 => Eq t73 => { capturesWith :: (t73 -> t73 -> Boolean) -> (MemoValues -> HookM t68 t69 t70 (Maybe (HookM t68 t69 t70 Unit)) -> (forall hooks. Hooked t68 t69 t70 hooks (UseEffect hooks) Unit)) -> t66 (Maybe t64) -> t63
-                                                              , subscribe :: t71 -> t66 t67
-                                                              | t65
-                                                              }
-                                                              -> t71 -> t63
+subscribeTo
+  :: forall t63 t64 t65 t66 t67 t68 t69 t70 t71 t73
+   . Discard t67
+  => Bind t66
+  => Applicative t66
+  => Eq t73
+  => { capturesWith
+        :: (t73 -> t73 -> Boolean)
+        -> ( MemoValues
+          -> HookM t68 t69 t70 (Maybe (HookM t68 t69 t70 Unit))
+          -> (forall hooks. Hooked t68 t69 t70 hooks (UseEffect hooks) Unit)
+           )
+        -> t66 (Maybe t64)
+        -> t63
+     , subscribe :: t71 -> t66 t67
+     | t65
+     }
+     -> t71 -> t63
 subscribeTo props cb =
   subscribeTo' props (==) cb
 
@@ -131,12 +147,25 @@ subscribeTo props cb =
 -- |      Hooks.put stateToken ("Event occurred: " <> string)
 -- |   pure Nothing
 -- | ```
-subscribeTo' :: forall t48 t49 t53 t54 t55 t57 t59 t62 t66 t67.
-  Discard t57 => Bind t59 => Applicative t59 => { capturesWith :: t48 -> (MemoValues -> HookM t55 t54 t53 (Maybe (HookM t55 t54 t53 Unit)) -> (forall hooks. Hooked t55 t54 t53 hooks (UseEffect hooks) Unit)) -> t59 (Maybe t66) -> t67
-                                                , subscribe :: t49 -> t59 t57
-                                                | t62
-                                                }
-                                                -> t48 -> t49 -> t67
+subscribeTo'
+  :: forall t48 t49 t53 t54 t55 t57 t59 t62 t66 t67
+   . Discard t57
+  => Bind t59
+  => Applicative t59
+  => { capturesWith
+        :: t48
+        -> ( MemoValues
+          -> HookM t55 t54 t53 (Maybe (HookM t55 t54 t53 Unit))
+          -> (forall hooks. Hooked t55 t54 t53 hooks (UseEffect hooks) Unit)
+           )
+        -> t59 (Maybe t66)
+        -> t67
+      , subscribe :: t49 -> t59 t57
+      | t62
+      }
+  -> t48
+  -> t49
+  -> t67
 subscribeTo' props eqFn cb =
   props.capturesWith eqFn Hooks.useTickEffect do
     props.subscribe cb
