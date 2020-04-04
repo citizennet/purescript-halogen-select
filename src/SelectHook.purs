@@ -106,15 +106,15 @@ type SelectState =
   , highlightedIndex :: Maybe Int
   }
 
-type SelectReturn slots output m hooked1 hooked2 hooked3
+type SelectReturn slots output m
                   toggleProps itemProps containerProps inputProps =
   { state :: SelectState
   , setFocus :: Boolean -> HookM slots output m Unit
   , setVisibility :: Visibility -> HookM slots output m Unit
   , clearSearch :: HookM slots output m Unit
-  , onNewSearch :: EventProps slots output m String hooked1
-  , onVisibilityChanged :: EventProps slots output m Visibility hooked2
-  , onSelectedIdxChanged :: EventProps slots output m Int hooked3
+  , onNewSearch :: EventProps slots output m String
+  , onVisibilityChanged :: EventProps slots output m Visibility
+  , onSelectedIdxChanged :: EventProps slots output m Int
   , toggleProps :: TogglePropArray slots output m toggleProps
   , itemProps :: Int -> ItemPropArray slots output m itemProps
   , containerProps :: ContainerPropArray slots output m containerProps
@@ -126,12 +126,12 @@ newtype UseSelect hooks =
 
 derive instance newtypeUseSelect :: Newtype (UseSelect hooks) _
 
-useSelect :: forall slots output m hooked1 hooked2 hooked3
+useSelect :: forall slots output m
               toggleProps itemProps containerProps inputProps
            . MonadAff m
           => SelectInput slots output m
           -> Hook slots output m UseSelect
-              (SelectReturn slots output m hooked1 hooked2 hooked3
+              (SelectReturn slots output m
                             toggleProps itemProps containerProps inputProps)
 useSelect inputRec =
   let
