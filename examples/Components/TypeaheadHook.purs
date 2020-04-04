@@ -48,8 +48,27 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
                       , debounceTime: Just (Milliseconds 300.0)
                       , search: Nothing
                       , getItemCount: pure $ maybe 0 length $ RD.toMaybe available
-                      , handleEvent: handleEvent tAvailable tSelections
                       }
+
+  select.onSelectedIdxChanged.capturesWith (==) Hooks.useTickEffect do
+    Nothing <$ select.onSelectedIdxChanged.subscribe \ix -> do
+      available <- Hooks.get tAvailable
+      for_ available \arr ->
+        for_ (arr !! ix) \item -> do
+          selections <- Hooks.get tSelections
+          let newSelections = item : selections
+          Hooks.put tAvailable (RD.Success (filter (_ /= item) arr))
+          Hooks.put tSelections newSelections
+          Hooks.modify_ tSelectState (_ { search = "" })
+          Hooks.raise $ SelectionsChanged newSelections
+
+  select.onNewSearch.capturesWith (==) Hooks.useTickEffect do
+    Nothing <$ select.onNewSearch.subscribe \str -> do
+      selections <- Hooks.get tSelections
+      -- we'll use an external api to search locations
+      Hooks.put tAvailable RD.Loading
+      items <- liftAff $ searchLocations str
+      Hooks.put tAvailable $ items <#> \xs -> difference xs selections
 
   Hooks.useQuery queryToken case _ of
     GetSelections reply -> do
@@ -65,31 +84,6 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
       , renderContainer select selections available
       ]
   where
-  handleEvent
-    :: StateToken (RD.RemoteData String (Array Location))
-    -> StateToken (Array Location)
-    -> StateToken SelectState
-    -> SH.Event
-    -> HookM ChildSlots Message Aff Unit
-  handleEvent tAvailable tSelections tSelectState = case _ of
-    SH.Selected ix -> do
-      available <- Hooks.get tAvailable
-      for_ available \arr ->
-        for_ (arr !! ix) \item -> do
-          selections <- Hooks.get tSelections
-          let newSelections = item : selections
-          Hooks.put tAvailable (RD.Success (filter (_ /= item) arr))
-          Hooks.put tSelections newSelections
-          Hooks.modify_ tSelectState (_ { search = "" })
-          Hooks.raise $ SelectionsChanged newSelections
-    SH.Searched str -> do
-      selections <- Hooks.get tSelections
-      -- we'll use an external api to search locations
-      Hooks.put tAvailable RD.Loading
-      items <- liftAff $ searchLocations str
-      Hooks.put tAvailable $ items <#> \xs -> difference xs selections
-    _ -> pure unit
-
   remove tSelections item = do
     selections <- Hooks.get tSelections
     let newSelections = filter (_ /= item) selections
