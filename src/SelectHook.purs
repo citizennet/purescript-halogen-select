@@ -68,11 +68,6 @@ type ItemProps props =
 type ItemPropArray slots output m props  =
   Array (HP.IProp (ItemProps props) (HookM slots output m Unit))
 
-data Event
-  = Searched String
-  | Selected Int
-  | VisibilityChanged Visibility
-
 -- | Represents a way to navigate on `Highlight` events: to the previous
 -- | item, next item, or the item at a particular index.
 data Target = Prev | Next | Index Int
