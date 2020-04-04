@@ -4,16 +4,16 @@ import Prelude
 
 import Data.Array ((!!), mapWithIndex, length)
 import Data.Const (Const)
-import Data.Tuple.Nested ((/\))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Monoid (guard)
+import Data.Tuple.Nested ((/\))
 import Effect.Aff (Aff)
 import Halogen as H
 import Halogen.HTML as HH
-import Halogen.Hooks (HookM, StateToken, useState)
+import Halogen.Hooks (useState)
 import Halogen.Hooks as Hooks
 import Internal.CSS (class_, classes_, whenElem)
-import SelectHook (SelectState, useSelect)
+import SelectHook (useSelect)
 import SelectHook as S
 
 type Slot query = H.Slot query Message
@@ -35,8 +35,16 @@ component = Hooks.component \{ items, buttonLabel } -> Hooks.do
                       , search: Nothing
                       , debounceTime: Nothing
                       , getItemCount: pure (length items)
-                      , handleEvent: handleEvent items tSelection
                       }
+  Hooks.captures select.onSelectedIdxChanged.deps Hooks.useTickEffect do
+    void $ select.onSelectedIdxChanged.subscribe \ix -> do
+      oldSelection <- Hooks.get tSelection
+      let newSelection = items !! ix
+      select.setVisibility S.Off
+      Hooks.put tSelection newSelection
+      Hooks.raise $ SelectionChanged oldSelection newSelection
+    -- no need to unsubscribe
+    pure Nothing
 
   let
     renderToggle =
@@ -65,19 +73,3 @@ component = Hooks.component \{ items, buttonLabel } -> Hooks.do
     HH.div
       [ class_ "Dropdown" ]
       [ renderToggle, renderContainer ]
-  where
-  handleEvent
-    :: Array String
-    -> StateToken (Maybe String)
-    -> StateToken SelectState
-    -> S.Event
-    -> HookM () Message Aff Unit
-  handleEvent items tSelection tSelectState = case _ of
-    S.Selected ix -> do
-      selectState <- Hooks.get tSelectState
-      oldSelection <- Hooks.get tSelection
-      let newSelection = items !! ix
-      Hooks.modify_ tSelectState (_ { visibility = S.Off })
-      Hooks.put tSelection newSelection
-      Hooks.raise $ SelectionChanged oldSelection newSelection
-    _ -> pure unit
