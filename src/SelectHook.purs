@@ -34,12 +34,6 @@ type ToggleProps props =
   | props
   )
 
-type TogglePropArray slots output m props  =
-  Array (HP.IProp (ToggleProps props) (HookM slots output m Unit))
-
-type ContainerPropArray slots output m props =
-  Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (HookM slots output m Unit))
-
 -- | The properties that must be supported by the HTML element that serves
 -- | as a text input. This should be used with input-driven `Select` components.
 type InputProps props =
@@ -53,9 +47,6 @@ type InputProps props =
   | props
   )
 
-type InputPropArray slots output m props =
-  Array (HP.IProp (InputProps props) (HookM slots output m Unit))
-
 -- | The properties that must be supported by the HTML element that acts as a
 -- | selectable "item" in your UI. This should be attached to every item that
 -- | can be selected.
@@ -64,9 +55,6 @@ type ItemProps props =
   , onMouseOver :: ME.MouseEvent
   | props
   )
-
-type ItemPropArray slots output m props  =
-  Array (HP.IProp (ItemProps props) (HookM slots output m Unit))
 
 -- | Represents a way to navigate on `Highlight` events: to the previous
 -- | item, next item, or the item at a particular index.
@@ -110,10 +98,10 @@ type SelectReturn slots output m
   , onNewSearch :: EventProps slots output m String
   , onVisibilityChanged :: EventProps slots output m Visibility
   , onSelectedIdxChanged :: EventProps slots output m Int
-  , toggleProps :: TogglePropArray slots output m toggleProps
-  , itemProps :: Int -> ItemPropArray slots output m itemProps
-  , containerProps :: ContainerPropArray slots output m containerProps
-  , inputProps :: InputPropArray slots output m inputProps
+  , toggleProps :: Array (HP.IProp (ToggleProps toggleProps) (HookM slots output m Unit))
+  , itemProps :: Int -> Array (HP.IProp (ItemProps itemProps) (HookM slots output m Unit))
+  , containerProps :: Array (HP.IProp (onMouseDown :: ME.MouseEvent | containerProps) (HookM slots output m Unit))
+  , inputProps :: Array (HP.IProp (InputProps inputProps) (HookM slots output m Unit))
   }
 
 newtype UseSelect hooks =
@@ -242,7 +230,7 @@ useSelect inputRec =
       -- | ```purescript
       -- | renderToggle = div (setToggleProps [ class "btn-class" ]) [ ...html ]
       -- | ```
-      toggleProps :: TogglePropArray slots output m toggleProps
+      toggleProps :: Array (HP.IProp (ToggleProps toggleProps) (HookM slots output m Unit))
       toggleProps =
         [ HE.onFocus \_ -> Just (setVisibility On)
         , HE.onMouseDown \ev -> Just (toggleClick ev)
@@ -264,7 +252,7 @@ useSelect inputRec =
       -- |
       -- | render = renderItem `mapWithIndex` itemsArray
       -- | ```
-      itemProps :: Int -> ItemPropArray slots output m itemProps
+      itemProps :: Int -> Array (HP.IProp (ItemProps itemProps) (HookM slots output m Unit))
       itemProps index =
         [ HE.onMouseDown \ev -> Just (select (Index index) (Just ev))
         , HE.onMouseOver \_ -> Just (highlight (Index index))
@@ -274,7 +262,7 @@ useSelect inputRec =
       -- | handler. It prevents clicking on an item within an enclosing HTML element
       -- | from bubbling up a blur event to the DOM. This should be used on the parent
       -- | element that contains your items.
-      containerProps :: ContainerPropArray slots output m containerProps
+      containerProps :: Array (HP.IProp (onMouseDown :: ME.MouseEvent | containerProps) (HookM slots output m Unit))
       containerProps =
         [ HE.onMouseDown \ev -> Just (preventClick ev) ]
 
@@ -287,7 +275,7 @@ useSelect inputRec =
       -- | ```purescript
       -- | renderInput = input_ (setInputProps [ class "my-class" ])
       -- | ```
-      inputProps :: InputPropArray slots output m inputProps
+      inputProps :: Array (HP.IProp (InputProps inputProps) (HookM slots output m Unit))
       inputProps =
         [ HE.onFocus \_ -> Just (setVisibility On)
         , HE.onKeyDown \ev -> Just (key ev)
