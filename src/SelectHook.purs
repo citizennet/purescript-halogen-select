@@ -9,10 +9,11 @@ import Data.Tuple.Nested ((/\))
 import Effect.Aff (Milliseconds)
 import Effect.Aff.Class (class MonadAff)
 import Example.Hooks.UseDebouncer (UseDebouncer, useDebouncer)
+import Example.Hooks.UseEvent (EventProps, UseEvent, useEvent)
 import Halogen as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Halogen.Hooks (Hook, HookM, StateToken, UseState, useState)
+import Halogen.Hooks (Hook, HookM, UseState, useState)
 import Halogen.Hooks as Hooks
 import Web.Event.Event (preventDefault)
 import Web.Event.Event as E
@@ -97,7 +98,6 @@ type SelectInput slots output m =
   , search :: Maybe String
   , debounceTime :: Maybe Milliseconds
   , getItemCount :: HookM slots output m Int
-  , handleEvent :: StateToken SelectState -> Event -> HookM slots output m Unit
   }
 
 type SelectState =
@@ -106,8 +106,15 @@ type SelectState =
   , highlightedIndex :: Maybe Int
   }
 
-type SelectReturn slots output m toggleProps itemProps containerProps inputProps =
+type SelectReturn slots output m
+                  searchOutput visibilityOutput selectedIdxOutput
+                  toggleProps itemProps containerProps inputProps =
   { state :: SelectState
+  , setFocus :: Boolean -> HookM slots output m Unit
+  , setVisibility :: Visibility -> HookM slots output m Unit
+  , onNewSearch :: EventProps slots output m String searchOutput
+  , onVisibilityChanged :: EventProps slots output m Visibility visibilityOutput
+  , onSelectedIdxChanged :: EventProps slots output m Int selectedIdxOutput
   , toggleProps :: TogglePropArray slots output m toggleProps
   , itemProps :: Int -> ItemPropArray slots output m itemProps
   , containerProps :: ContainerPropArray slots output m containerProps
@@ -115,14 +122,19 @@ type SelectReturn slots output m toggleProps itemProps containerProps inputProps
   }
 
 newtype UseSelect hooks =
-  UseSelect (UseDebouncer String (UseState SelectState hooks))
+  UseSelect (UseDebouncer String (UseEvent Int (UseEvent Visibility (UseEvent String (UseState SelectState hooks)))))
 
 derive instance newtypeUseSelect :: Newtype (UseSelect hooks) _
 
-useSelect :: forall slots output m toggleProps itemProps containerProps inputProps
+useSelect :: forall slots output m
+                    searchOutput visibilityOutput selectedIdxOutput
+                    toggleProps itemProps containerProps inputProps
            . MonadAff m
           => SelectInput slots output m
-          -> Hook slots output m UseSelect (SelectReturn slots output m toggleProps itemProps containerProps inputProps)
+          -> Hook slots output m UseSelect
+              (SelectReturn slots output m
+                            searchOutput visibilityOutput selectedIdxOutput
+                            toggleProps itemProps containerProps inputProps)
 useSelect inputRec =
   let
     initialSearchValue = fromMaybe "" inputRec.search
@@ -133,12 +145,15 @@ useSelect inputRec =
       , visibility: Off
       , highlightedIndex: Nothing
       }
+    onNewSearch <- useEvent
+    onVisibilityChanged <- useEvent
+    onSelectedIdxChanged <- useEvent
 
     searchDebouncer <- useDebouncer debounceTime \lastSearchState -> Hooks.do
       case inputRec.inputType of
         Text -> do
           Hooks.modify_ stateToken (_ { highlightedIndex = Just 0 })
-          inputRec.handleEvent stateToken (Searched lastSearchState)
+          onNewSearch.push lastSearchState
 
         -- Key stream is not yet implemented. However, this should capture user
         -- key events and expire their search after a set number of milliseconds.
@@ -168,7 +183,7 @@ useSelect inputRec =
         st <- Hooks.get stateToken
         when (st.visibility /= v) do
           Hooks.modify_ stateToken (_ { visibility = v, highlightedIndex = Just 0 })
-          inputRec.handleEvent stateToken $ VisibilityChanged v
+          onVisibilityChanged.push v
 
       search str = do
         Hooks.modify_ stateToken (_ { search = str })
@@ -185,13 +200,13 @@ useSelect inputRec =
         for_ mbEv (H.liftEffect <<< preventDefault <<< ME.toEvent)
         st <- Hooks.get stateToken
         when (st.visibility == On) case target of
-          Index ix -> inputRec.handleEvent stateToken $ Selected ix
+          Index ix -> onSelectedIdxChanged.push ix
           Next -> do
             itemCount <- inputRec.getItemCount
-            inputRec.handleEvent stateToken $ Selected $ getTargetIndex st itemCount target
+            onSelectedIdxChanged.push $ getTargetIndex st itemCount target
           Prev -> do
             itemCount <- inputRec.getItemCount
-            inputRec.handleEvent stateToken $ Selected $ getTargetIndex st itemCount target
+            onSelectedIdxChanged.push $ getTargetIndex st itemCount target
 
       toggleClick ev = do
         H.liftEffect $ preventDefault $ ME.toEvent ev
@@ -289,6 +304,11 @@ useSelect inputRec =
 
     Hooks.pure
       { state
+      , setFocus
+      , setVisibility
+      , onNewSearch: onNewSearch.props
+      , onVisibilityChanged: onVisibilityChanged.props
+      , onSelectedIdxChanged: onSelectedIdxChanged.props
       , toggleProps
       , itemProps
       , containerProps
