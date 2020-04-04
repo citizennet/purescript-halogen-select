@@ -22,11 +22,11 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Halogen.Hooks (HookM, StateToken, useState)
+import Halogen.Hooks (useState)
 import Halogen.Hooks as Hooks
 import Internal.CSS (class_, classes_, whenElem)
 import Internal.RemoteData as RD
-import SelectHook (SelectState, useSelect)
+import SelectHook (useSelect)
 import SelectHook as SH
 
 data Query a
@@ -52,11 +52,11 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
 
   select.onSelectedIdxChanged.capturesWith (==) Hooks.useTickEffect do
     Nothing <$ select.onSelectedIdxChanged.subscribe \ix -> do
-      available <- Hooks.get tAvailable
-      for_ available \arr ->
+      available' <- Hooks.get tAvailable
+      for_ available' \arr ->
         for_ (arr !! ix) \item -> do
-          selections <- Hooks.get tSelections
-          let newSelections = item : selections
+          selections' <- Hooks.get tSelections
+          let newSelections = item : selections'
           Hooks.put tAvailable (RD.Success (filter (_ /= item) arr))
           Hooks.put tSelections newSelections
           select.clearSearch
@@ -64,11 +64,11 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
 
   select.onNewSearch.capturesWith (==) Hooks.useTickEffect do
     Nothing <$ select.onNewSearch.subscribe \str -> do
-      selections <- Hooks.get tSelections
+      selections' <- Hooks.get tSelections
       -- we'll use an external api to search locations
       Hooks.put tAvailable RD.Loading
       items <- liftAff $ searchLocations str
-      Hooks.put tAvailable $ items <#> \xs -> difference xs selections
+      Hooks.put tAvailable $ items <#> \xs -> difference xs selections'
 
   Hooks.useQuery queryToken case _ of
     GetSelections reply -> do
