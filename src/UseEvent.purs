@@ -5,6 +5,8 @@ module Example.Hooks.UseEvent
   , UseEvent
   , EventEqFn
   , EventProps
+  , CapturesWith_TypeSignature
+  , UseTickEffect_TypeSignature
   , EventApi
   )
   where
@@ -22,17 +24,26 @@ newtype UseEvent a hooks = UseEvent (UseState (Maybe a) hooks)
 
 derive instance newtypeUseEvent :: Newtype (UseEvent a hooks) _
 
+type UseTickEffect_TypeSignature slots output m =
+  HookM slots output m (Maybe (HookM slots output m Unit))
+  -> (forall hooks. Hooked slots output m hooks (UseEffect hooks) Unit)
+
+type CapturesWith_TypeSignature slots output m a =
+  EventEqFn a
+    -> (MemoValues -> UseTickEffect_TypeSignature slots output m)
+    -> UseTickEffect_TypeSignature slots output m
+
 type EventEqFn a =
   { state :: Maybe a } -> { state :: Maybe a } -> Boolean
 
-type EventProps slots output m a hooked =
-  { capturesWith :: EventEqFn a -> (MemoValues -> hooked) -> hooked
+type EventProps slots output m a =
+  { capturesWith :: CapturesWith_TypeSignature slots output m a
   , subscribe :: (a -> HookM slots output m Unit) -> HookM slots output m Unit
   }
 
-type EventApi slots output m a hooked =
+type EventApi slots output m a =
   { push :: a -> HookM slots output m Unit
-  , props :: EventProps slots output m a hooked
+  , props :: EventProps slots output m a
   }
 
 
@@ -58,8 +69,8 @@ type EventApi slots output m a hooked =
 -- |   Hooks.raise ("Event occurred: " <> string)
 -- | ```
 useEvent
-  :: forall output hookMToHooked m slots a
-   . Hook slots output m (UseEvent a) (EventApi slots output m a hookMToHooked)
+  :: forall output m slots a
+   . Hook slots output m (UseEvent a) (EventApi slots output m a)
 useEvent = Hooks.wrap Hooks.do
   state /\ tState <- useState Nothing
 
@@ -95,18 +106,9 @@ useEvent = Hooks.wrap Hooks.do
 subscribeTo
   :: forall slots output m a
    . Eq a
-  => { capturesWith
-        :: EventEqFn a
-        -> ( MemoValues
-          -> HookM slots output m (Maybe (HookM slots output m Unit))
-          -> (forall hooks. Hooked slots output m hooks (UseEffect hooks) Unit)
-           )
-        -> HookM slots output m (Maybe (HookM slots output m Unit))
-        -> (forall hooks. Hooked slots output m hooks (UseEffect hooks) Unit)
-     , subscribe :: (a -> HookM slots output m Unit) -> HookM slots output m Unit
-     }
-     -> (a -> HookM slots output m Unit)
-     -> (forall hooks. Hooked slots output m hooks (UseEffect hooks) Unit)
+  => EventProps slots output m a
+  -> (a -> HookM slots output m Unit)
+  -> Hook slots output m UseEffect Unit
 subscribeTo props cb =
   subscribeTo' props (==) cb
 
@@ -131,19 +133,10 @@ subscribeTo props cb =
 -- | ```
 subscribeTo'
   :: forall a m output slots
-   . { capturesWith
-        :: EventEqFn a
-        -> ( MemoValues
-          -> HookM slots output m (Maybe (HookM slots output m Unit))
-          -> (forall hooks. Hooked slots output m hooks (UseEffect hooks) Unit)
-           )
-        -> HookM slots output m (Maybe (HookM slots output m Unit))
-        -> (forall hooks. Hooked slots output m hooks (UseEffect hooks) Unit)
-      , subscribe :: (a -> HookM slots output m Unit) -> HookM slots output m Unit
-      }
+   . EventProps slots output m a
   -> EventEqFn a
   -> (a -> HookM slots output m Unit)
-  -> (forall hooks. Hooked slots output m hooks (UseEffect hooks) Unit)
+  -> Hook slots output m UseEffect Unit
 subscribeTo' props eqFn cb =
   props.capturesWith eqFn Hooks.useTickEffect do
     props.subscribe cb
