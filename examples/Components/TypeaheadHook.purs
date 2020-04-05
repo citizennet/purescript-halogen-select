@@ -135,13 +135,13 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
             [ "Typeahead__input"
             , "Typeahead__input--selections" # guard (length selections > 0)
             , "Typeahead__input--active"
-                # guard (select.state.visibility == SH.On)
+                # guard (select.visibility == SH.On)
             ]
         , HP.placeholder "Type to search..."
         ])
 
   renderDropdown select tSelections =
-    whenElem (select.state.visibility == SH.On) \_ ->
+    whenElem (select.visibility == SH.On) \_ ->
       HH.slot _dropdown unit D.component dropdownInput handler
     where
     _dropdown = SProxy :: SProxy "dropdown"
@@ -149,7 +149,7 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
     dropdownInput = { items: [ "Earth", "Mars" ], buttonLabel: "Human Planets" }
 
   renderContainer select selections available =
-    whenElem (select.state.visibility == SH.On) \_ ->
+    whenElem (select.visibility == SH.On) \_ ->
       HH.div
         (select.containerProps <>
           [ classes_
@@ -185,7 +185,7 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
         where
         base = "Typeahead__item"
         highlight = "Typeahead__item--highlighted"
-                      # guard (select.state.highlightedIndex == Just index)
+                      # guard (select.highlightedIndex == Just index)
 
 
 -- Let's make this typeahead async.

@@ -50,7 +50,7 @@ component = Hooks.component \{ items, buttonLabel } -> Hooks.do
         ( select.toggleProps <> [ class_ "Dropdown__toggle" ] )
         [ HH.text (fromMaybe buttonLabel selection) ]
 
-    renderContainer = whenElem (select.state.visibility == S.On) \_ ->
+    renderContainer = whenElem (select.visibility == S.On) \_ ->
       HH.div
         ( select.containerProps <> [ class_ "Dropdown__container" ] )
         ( renderItem `mapWithIndex` items )
@@ -61,7 +61,7 @@ component = Hooks.component \{ items, buttonLabel } -> Hooks.do
             [ classes_
                 [ "Dropdown__item"
                 , "Dropdown__item--highlighted"
-                    # guard (select.state.highlightedIndex == Just index)
+                    # guard (select.highlightedIndex == Just index)
                 ]
             ]
         )
