@@ -44,18 +44,25 @@ component = Hooks.component \{ items, buttonLabel } -> Hooks.do
       Hooks.put tSelection newSelection
       Hooks.raise $ SelectionChanged oldSelection newSelection
 
-  let
-    renderToggle =
+  Hooks.pure $
+    HH.div
+      [ class_ "Dropdown" ]
+      [ renderToggle select buttonLabel selection
+      , renderContainer select items
+      ]
+  where
+    renderToggle select buttonLabel selection =
       HH.button
         ( select.toggleProps <> [ class_ "Dropdown__toggle" ] )
         [ HH.text (fromMaybe buttonLabel selection) ]
 
-    renderContainer = whenElem (select.visibility == S.On) \_ ->
-      HH.div
-        ( select.containerProps <> [ class_ "Dropdown__container" ] )
-        ( renderItem `mapWithIndex` items )
+    renderContainer select items =
+      whenElem (select.visibility == S.On) \_ ->
+        HH.div
+          ( select.containerProps <> [ class_ "Dropdown__container" ] )
+          ( mapWithIndex (renderItem select) items )
 
-    renderItem index item =
+    renderItem select index item =
       HH.div
         ( (select.itemProps index) <>
             [ classes_
@@ -66,8 +73,3 @@ component = Hooks.component \{ items, buttonLabel } -> Hooks.do
             ]
         )
         [ HH.text item ]
-
-  Hooks.pure $
-    HH.div
-      [ class_ "Dropdown" ]
-      [ renderToggle, renderContainer ]
