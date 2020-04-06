@@ -1,4 +1,4 @@
-module SelectHook where
+module Select where
 
 import Prelude
 
