@@ -27,8 +27,8 @@ import Halogen.Hooks as Hooks
 import Halogen.Hooks.Extra.Hooks.UseEvent (subscribeTo)
 import Internal.CSS (class_, classes_, whenElem)
 import Internal.RemoteData as RD
-import SelectHook (useSelect)
-import SelectHook as SH
+import Select (useSelect)
+import Select as S
 
 data Query a
   = GetSelections (Array Location -> a)
@@ -45,7 +45,7 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
   selections /\ tSelections <- useState []
   available /\ tAvailable <- useState RD.NotAsked
 
-  select <- useSelect { inputType: SH.Text
+  select <- useSelect { inputType: S.Text
                       , debounceTime: Just (Milliseconds 300.0)
                       , search: Nothing
                       , getItemCount: pure $ maybe 0 length $ RD.toMaybe available
@@ -135,13 +135,13 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
             [ "Typeahead__input"
             , "Typeahead__input--selections" # guard (length selections > 0)
             , "Typeahead__input--active"
-                # guard (select.visibility == SH.On)
+                # guard (select.visibility == S.On)
             ]
         , HP.placeholder "Type to search..."
         ])
 
   renderDropdown select tSelections =
-    whenElem (select.visibility == SH.On) \_ ->
+    whenElem (select.visibility == S.On) \_ ->
       HH.slot _dropdown unit D.component dropdownInput handler
     where
     _dropdown = SProxy :: SProxy "dropdown"
@@ -149,7 +149,7 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
     dropdownInput = { items: [ "Earth", "Mars" ], buttonLabel: "Human Planets" }
 
   renderContainer select selections available =
-    whenElem (select.visibility == SH.On) \_ ->
+    whenElem (select.visibility == S.On) \_ ->
       HH.div
         (select.containerProps <>
           [ classes_

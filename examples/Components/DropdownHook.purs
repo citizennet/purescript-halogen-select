@@ -14,7 +14,7 @@ import Halogen.Hooks (useState)
 import Halogen.Hooks as Hooks
 import Halogen.Hooks.Extra.Hooks.UseEvent (subscribeTo)
 import Internal.CSS (class_, classes_, whenElem)
-import SelectHook (useSelect)
+import Select (useSelect)
 import SelectHook as S
 
 type Slot query = H.Slot query Message
