@@ -13,9 +13,9 @@ import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.Hooks (Hook, HookM, UseState, useState)
 import Halogen.Hooks as Hooks
+import Halogen.Hooks.Extra.Actions.Events (preventKeyEvent, preventMouseEvent)
 import Halogen.Hooks.Extra.Hooks.UseDebouncer (UseDebouncer, useDebouncer)
 import Halogen.Hooks.Extra.Hooks.UseEvent (EventProps, UseEvent, useEvent)
-import Web.Event.Event (preventDefault)
 import Web.Event.Event as E
 import Web.HTML.HTMLElement as HTMLElement
 import Web.UIEvent.FocusEvent as FE
@@ -203,7 +203,7 @@ useSelect inputRec =
       -- | element that contains your items.
       containerProps :: Array (HP.IProp (onMouseDown :: ME.MouseEvent | containerProps) (HookM slots output m Unit))
       containerProps =
-        [ HE.onMouseDown \ev -> Just (preventClick ev) ]
+        [ HE.onMouseDown \ev -> Just (preventMouseEvent ev) ]
 
 
       -- | An array of `IProps` with `InputProps`. It
@@ -224,9 +224,6 @@ useSelect inputRec =
         , HP.tabIndex 0
         , HP.ref (H.RefLabel "select-input")
         ]
-
-      preventClick ev = do
-        H.liftEffect $ preventDefault $ ME.toEvent ev
 
       getTargetIndex highlightedIndex itemCount = case _ of
         Index i -> i
@@ -265,7 +262,7 @@ useSelect inputRec =
           Hooks.modify_ tHighlightedIndex \highlightedIndex -> Just (getTargetIndex highlightedIndex itemCount target)
 
       select tVisibility tHighlightedIndex onSelectedIdxChanged target mbEv = do
-        for_ mbEv (H.liftEffect <<< preventDefault <<< ME.toEvent)
+        for_ mbEv preventMouseEvent
         visibility <- Hooks.get tVisibility
         when (visibility == On) case target of
           Index ix -> onSelectedIdxChanged.push ix
@@ -279,7 +276,7 @@ useSelect inputRec =
             onSelectedIdxChanged.push $ getTargetIndex highlightedIndex itemCount target
 
       toggleClick tVisibility tHighlightedIndex onVisibilityChanged ev = do
-        H.liftEffect $ preventDefault $ ME.toEvent ev
+        preventMouseEvent ev
         visibility <- Hooks.get tVisibility
         case visibility of
           On -> do
@@ -291,7 +288,7 @@ useSelect inputRec =
 
       key tVisibility tHighlightedIndex onVisibilityChanged onSelectedIdxChanged ev = do
         void $ Hooks.fork $ setVisibility tVisibility tHighlightedIndex onVisibilityChanged On
-        let preventIt = H.liftEffect $ preventDefault $ KE.toEvent ev
+        let preventIt = preventKeyEvent ev
         case KE.key ev of
           x | x == "ArrowUp" || x == "Up" ->
             preventIt *> highlight tVisibility tHighlightedIndex Prev
