@@ -1,4 +1,4 @@
-module Components.DropdownHook where
+module Components.Dropdown where
 
 import Prelude
 
@@ -15,7 +15,7 @@ import Halogen.Hooks as Hooks
 import Halogen.Hooks.Extra.Hooks.UseEvent (subscribeTo)
 import Internal.CSS (class_, classes_, whenElem)
 import Select (useSelect)
-import SelectHook as S
+import Select as S
 
 type Slot query = H.Slot query Message
 

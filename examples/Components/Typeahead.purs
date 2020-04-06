@@ -1,10 +1,10 @@
-module Components.TypeaheadHook where
+module Components.Typeahead where
 
 import Prelude
 
 import Affjax as AX
 import Affjax.ResponseFormat as AR
-import Components.DropdownHook as D
+import Components.Dropdown as D
 import Data.Argonaut.Decode ((.:), decodeJson)
 import Data.Array (mapWithIndex, filter, (:), (!!), length, null, difference)
 import Data.Bifunctor (bimap)
