@@ -119,21 +119,17 @@ let additions =
 
 
 let upstream =
-      https://github.com/purescript/package-sets/releases/download/psc-0.13.6-20200309/packages.dhall sha256:9221987b4e7ea99ccd0efbe056f7bebc872cd92e0058efe5baa181d73359e7b3
+      https://github.com/purescript/package-sets/releases/download/psc-0.13.6-20200404/packages.dhall sha256:f239f2e215d0cbd5c203307701748581938f74c4c78f4aeffa32c11c131ef7b6
 
 let overrides = {=}
 
 let additions =
-  { halogen-hooks =
-    { dependencies = [ "halogen", "indexed-monad" ]
-    , repo = "https://github.com/thomashoneyman/purescript-halogen-hooks.git"
-    , version = "v0.1.0"
-    }
-  , halogen-hooks-extra =
-    { dependencies = [ "halogen-hooks" ]
-    , repo = "https://github.com/JordanMartinez/purescript-halogen-hooks-extra.git"
-    , version = "v0.1.0"
-    }
-  }
+      { halogen-hooks-extra =
+          { dependencies = [ "halogen-hooks" ]
+          , repo =
+              "https://github.com/JordanMartinez/purescript-halogen-hooks-extra.git"
+          , version = "v0.1.0"
+          }
+      }
 
 in  upstream // overrides // additions
