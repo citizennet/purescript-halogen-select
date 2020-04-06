@@ -10,6 +10,7 @@ You can edit this file as you like.
   , "effect"
   , "halogen"
   , "halogen-hooks"
+  , "halogen-hooks-extra"
   , "psci-support"
   , "record"
   ]

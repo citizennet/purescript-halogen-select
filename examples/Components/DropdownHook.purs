@@ -12,8 +12,8 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.Hooks (useState)
 import Halogen.Hooks as Hooks
+import Halogen.Hooks.Extra.Hooks.UseEvent (subscribeTo)
 import Internal.CSS (class_, classes_, whenElem)
-import Example.Hooks.UseEvent (subscribeTo)
 import SelectHook (useSelect)
 import SelectHook as S
 

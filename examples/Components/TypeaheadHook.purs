@@ -17,7 +17,6 @@ import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (traverse)
 import Data.Tuple.Nested ((/\))
 import Effect.Aff (Aff)
-import Example.Hooks.UseEvent (subscribeTo)
 import Halogen (liftAff)
 import Halogen as H
 import Halogen.HTML as HH
@@ -25,6 +24,7 @@ import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.Hooks (useState)
 import Halogen.Hooks as Hooks
+import Halogen.Hooks.Extra.Hooks.UseEvent (subscribeTo)
 import Internal.CSS (class_, classes_, whenElem)
 import Internal.RemoteData as RD
 import SelectHook (useSelect)

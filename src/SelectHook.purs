@@ -8,13 +8,13 @@ import Data.Traversable (for_)
 import Data.Tuple.Nested ((/\))
 import Effect.Aff (Milliseconds)
 import Effect.Aff.Class (class MonadAff)
-import Example.Hooks.UseDebouncer (UseDebouncer, useDebouncer)
-import Example.Hooks.UseEvent (EventProps, UseEvent, useEvent)
 import Halogen as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.Hooks (Hook, HookM, UseState, useState)
 import Halogen.Hooks as Hooks
+import Halogen.Hooks.Extra.Hooks.UseDebouncer (UseDebouncer, useDebouncer)
+import Halogen.Hooks.Extra.Hooks.UseEvent (EventProps, UseEvent, useEvent)
 import Web.Event.Event (preventDefault)
 import Web.Event.Event as E
 import Web.HTML.HTMLElement as HTMLElement
