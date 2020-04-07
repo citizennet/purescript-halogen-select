@@ -128,7 +128,7 @@ let additions =
           { dependencies = [ "halogen-hooks" ]
           , repo =
               "https://github.com/JordanMartinez/purescript-halogen-hooks-extra.git"
-          , version = "v0.1.0"
+          , version = "v0.1.1"
           }
       }
 
