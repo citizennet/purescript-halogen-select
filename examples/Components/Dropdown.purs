@@ -12,9 +12,9 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.Hooks (useLifecycleEffect, useState)
 import Halogen.Hooks as Hooks
-import Halogen.Hooks.Extra.Hooks.UseEvent (subscribeTo)
+import Halogen.Hooks.Extra.Hooks.UseEvent (useEvent)
 import Internal.CSS (class_, classes_, whenElem)
-import Select (useSelect)
+import Select (selectInput, useSelect)
 import Select as S
 
 type Slot query = H.Slot query Message
@@ -32,14 +32,14 @@ type Input =
 component :: H.Component HH.HTML (Const Void) Input Message Aff
 component = Hooks.component \{ items, buttonLabel } -> Hooks.do
   selection /\ tSelection <- useState Nothing
-  select <- useSelect { inputType: S.Toggle
-                      , search: Nothing
-                      , debounceTime: Nothing
-                      , getItemCount: pure (length items)
-                      }
+  selectedIndexChanges <- useEvent
+  select <- useSelect $ selectInput
+    { getItemCount = pure (length items)
+    , pushSelectedIdxChanged = selectedIndexChanges.push
+    }
 
   useLifecycleEffect do
-    subscribeTo select.onSelectedIdxChanged \ix -> do
+    selectedIndexChanges.setCallback $ Just \ix -> do
       oldSelection <- Hooks.get tSelection
       let newSelection = items !! ix
       select.setVisibility S.Off

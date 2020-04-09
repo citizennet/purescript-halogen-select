@@ -27,7 +27,7 @@ import Halogen.Hooks as Hooks
 import Halogen.Hooks.Extra.Hooks.UseEvent (subscribeTo)
 import Internal.CSS (class_, classes_, whenElem)
 import Internal.RemoteData as RD
-import Select (useSelect)
+import Select (Event(..), useSelect)
 import Select as S
 
 data Query a
@@ -45,30 +45,37 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
   selections /\ tSelections <- useState []
   available /\ tAvailable <- useState RD.NotAsked
 
-  select <- useSelect { inputType: S.Text
-                      , debounceTime: Just (Milliseconds 300.0)
-                      , search: Nothing
-                      , getItemCount: pure $ maybe 0 length $ RD.toMaybe available
-                      }
+  selectEvents <- useEvent
+
+  select <- useSelect $ selectInput
+    { inputType = S.Text
+    , debounceTime = Just (Milliseconds 300.0)
+    , getItemCount = pure $ maybe 0 length $ RD.toMaybe available
+    , pushSelectedIdxChanged = selectEvents.push <<< SelectedIndex
+    , pushNewSearch = selectEvents.push <<< NewSearch
+    }
 
   useLifecycleEffect do
-    subscribeTo select.onSelectedIdxChanged \ix -> do
-      available' <- Hooks.get tAvailable
-      for_ available' \arr ->
-        for_ (arr !! ix) \item -> do
-          selections' <- Hooks.get tSelections
-          let newSelections = item : selections'
-          Hooks.put tAvailable (RD.Success (filter (_ /= item) arr))
-          Hooks.put tSelections newSelections
-          select.clearSearch
-          Hooks.raise $ SelectionsChanged newSelections
+    selectEvents.setCallback case _ of
+      SelectedIndex ix -> do
+        available' <- Hooks.get tAvailable
+        for_ available' \arr ->
+          for_ (arr !! ix) \item -> do
+            selections' <- Hooks.get tSelections
+            let newSelections = item : selections'
+            Hooks.put tAvailable (RD.Success (filter (_ /= item) arr))
+            Hooks.put tSelections newSelections
+            select.clearSearch
+            Hooks.raise $ SelectionsChanged newSelections
 
-    subscribeTo select.onNewSearch \str -> do
-      selections' <- Hooks.get tSelections
-      -- we'll use an external api to search locations
-      Hooks.put tAvailable RD.Loading
-      items <- liftAff $ searchLocations str
-      Hooks.put tAvailable $ items <#> \xs -> difference xs selections'
+      NewSearch str -> do
+        selections' <- Hooks.get tSelections
+        -- we'll use an external api to search locations
+        Hooks.put tAvailable RD.Loading
+        items <- liftAff $ searchLocations str
+        Hooks.put tAvailable $ items <#> \xs -> difference xs selections'
+
+      _ -> pure unit
 
     pure Nothing
 
