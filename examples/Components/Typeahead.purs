@@ -51,23 +51,26 @@ component = Hooks.componentWithQuery \queryToken _ -> Hooks.do
                       , getItemCount: pure $ maybe 0 length $ RD.toMaybe available
                       }
 
-  subscribeTo select.onSelectedIdxChanged \ix -> do
-    available' <- Hooks.get tAvailable
-    for_ available' \arr ->
-      for_ (arr !! ix) \item -> do
-        selections' <- Hooks.get tSelections
-        let newSelections = item : selections'
-        Hooks.put tAvailable (RD.Success (filter (_ /= item) arr))
-        Hooks.put tSelections newSelections
-        select.clearSearch
-        Hooks.raise $ SelectionsChanged newSelections
+  useLifecycleEffect do
+    subscribeTo select.onSelectedIdxChanged \ix -> do
+      available' <- Hooks.get tAvailable
+      for_ available' \arr ->
+        for_ (arr !! ix) \item -> do
+          selections' <- Hooks.get tSelections
+          let newSelections = item : selections'
+          Hooks.put tAvailable (RD.Success (filter (_ /= item) arr))
+          Hooks.put tSelections newSelections
+          select.clearSearch
+          Hooks.raise $ SelectionsChanged newSelections
 
-  subscribeTo select.onNewSearch \str -> do
-    selections' <- Hooks.get tSelections
-    -- we'll use an external api to search locations
-    Hooks.put tAvailable RD.Loading
-    items <- liftAff $ searchLocations str
-    Hooks.put tAvailable $ items <#> \xs -> difference xs selections'
+    subscribeTo select.onNewSearch \str -> do
+      selections' <- Hooks.get tSelections
+      -- we'll use an external api to search locations
+      Hooks.put tAvailable RD.Loading
+      items <- liftAff $ searchLocations str
+      Hooks.put tAvailable $ items <#> \xs -> difference xs selections'
+
+    pure Nothing
 
   Hooks.useQuery queryToken case _ of
     GetSelections reply -> do

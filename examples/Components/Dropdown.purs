@@ -10,7 +10,7 @@ import Data.Tuple.Nested ((/\))
 import Effect.Aff (Aff)
 import Halogen as H
 import Halogen.HTML as HH
-import Halogen.Hooks (useState)
+import Halogen.Hooks (useLifecycleEffect, useState)
 import Halogen.Hooks as Hooks
 import Halogen.Hooks.Extra.Hooks.UseEvent (subscribeTo)
 import Internal.CSS (class_, classes_, whenElem)
@@ -37,12 +37,16 @@ component = Hooks.component \{ items, buttonLabel } -> Hooks.do
                       , debounceTime: Nothing
                       , getItemCount: pure (length items)
                       }
-  subscribeTo select.onSelectedIdxChanged \ix -> do
+
+  useLifecycleEffect do
+    subscribeTo select.onSelectedIdxChanged \ix -> do
       oldSelection <- Hooks.get tSelection
       let newSelection = items !! ix
       select.setVisibility S.Off
       Hooks.put tSelection newSelection
       Hooks.raise $ SelectionChanged oldSelection newSelection
+
+    pure Nothing
 
   Hooks.pure $
     HH.div

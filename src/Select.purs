@@ -8,6 +8,7 @@ import Data.Traversable (for_)
 import Data.Tuple.Nested ((/\))
 import Effect.Aff (Milliseconds)
 import Effect.Aff.Class (class MonadAff)
+import Effect.Ref (Ref)
 import Halogen as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
@@ -15,7 +16,7 @@ import Halogen.Hooks (Hook, HookM, UseState, useState)
 import Halogen.Hooks as Hooks
 import Halogen.Hooks.Extra.Actions.Events (preventKeyEvent, preventMouseEvent)
 import Halogen.Hooks.Extra.Hooks.UseDebouncer (UseDebouncer, useDebouncer)
-import Halogen.Hooks.Extra.Hooks.UseEvent (EventProps, UseEvent, useEvent)
+import Halogen.Hooks.Extra.Hooks.UseEvent (UseEvent, useEvent)
 import Web.Event.Event as E
 import Web.HTML.HTMLElement as HTMLElement
 import Web.UIEvent.FocusEvent as FE
@@ -99,9 +100,9 @@ type SelectReturn slots output m
   , setVisibility :: Visibility -> HookM slots output m Unit
   , clearSearch :: HookM slots output m Unit
 
-  , onNewSearch :: EventProps slots output m String
-  , onVisibilityChanged :: EventProps slots output m Visibility
-  , onSelectedIdxChanged :: EventProps slots output m Int
+  , onNewSearch :: Ref (Maybe (String -> HookM slots output m Unit))
+  , onVisibilityChanged :: Ref (Maybe (Visibility -> HookM slots output m Unit))
+  , onSelectedIdxChanged :: Ref (Maybe (Int -> HookM slots output m Unit))
 
   , toggleProps :: Array (HP.IProp (ToggleProps toggleProps) (HookM slots output m Unit))
   , itemProps :: Int -> Array (HP.IProp (ItemProps itemProps) (HookM slots output m Unit))
@@ -109,17 +110,20 @@ type SelectReturn slots output m
   , inputProps :: Array (HP.IProp (InputProps inputProps) (HookM slots output m Unit))
   }
 
-newtype UseSelect hooks =
-  UseSelect (UseDebouncer String (UseEvent Int (UseEvent Visibility (UseEvent String
-    (UseState SelectState hooks)))))
+newtype UseSelect slots output m hooks = UseSelect
+  (UseDebouncer String
+  (UseEvent slots output m Int
+  (UseEvent slots output m Visibility
+  (UseEvent slots output m String
+  (UseState SelectState hooks)))))
 
-derive instance newtypeUseSelect :: Newtype (UseSelect hooks) _
+derive instance newtypeUseSelect :: Newtype (UseSelect slots output m hooks) _
 
 useSelect
   :: forall slots output m toggleProps itemProps containerProps inputProps
    . MonadAff m
   => SelectInput slots output m
-  -> Hook slots output m UseSelect
+  -> Hook slots output m (UseSelect slots output m)
         (SelectReturn slots output m toggleProps itemProps containerProps inputProps)
 useSelect inputRec =
   let
@@ -158,9 +162,9 @@ useSelect inputRec =
       , clearSearch: clearSearch tState
 
       -- events
-      , onNewSearch: onNewSearch.props
-      , onVisibilityChanged: onVisibilityChanged.props
-      , onSelectedIdxChanged: onSelectedIdxChanged.props
+      , onNewSearch: onNewSearch.callbackRef
+      , onVisibilityChanged: onVisibilityChanged.callbackRef
+      , onSelectedIdxChanged: onSelectedIdxChanged.callbackRef
 
       -- props
       , toggleProps: toggleProps tState onVisibilityChanged onSelectedIdxChanged
