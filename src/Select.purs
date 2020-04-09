@@ -8,7 +8,6 @@ import Data.Traversable (for_)
 import Data.Tuple.Nested ((/\))
 import Effect.Aff (Milliseconds)
 import Effect.Aff.Class (class MonadAff)
-import Effect.Ref (Ref)
 import Halogen as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
@@ -16,7 +15,6 @@ import Halogen.Hooks (Hook, HookM, UseState, useState)
 import Halogen.Hooks as Hooks
 import Halogen.Hooks.Extra.Actions.Events (preventKeyEvent, preventMouseEvent)
 import Halogen.Hooks.Extra.Hooks.UseDebouncer (UseDebouncer, useDebouncer)
-import Halogen.Hooks.Extra.Hooks.UseEvent (UseEvent, useEvent)
 import Web.Event.Event as E
 import Web.HTML.HTMLElement as HTMLElement
 import Web.UIEvent.FocusEvent as FE
@@ -82,6 +80,9 @@ type SelectInput slots output m =
   , search :: Maybe String
   , debounceTime :: Maybe Milliseconds
   , getItemCount :: HookM slots output m Int
+  , pushNewSearch  :: String -> HookM slots output m Unit
+  , pushVisibilityChanged :: Visibility -> HookM slots output m Unit
+  , pushSelectedIdxChanged :: Int -> HookM slots output m Unit
   }
 
 type SelectState =
@@ -90,8 +91,8 @@ type SelectState =
   , highlightedIndex :: Maybe Int
   }
 
-type SelectReturn slots output m
-                  toggleProps itemProps containerProps inputProps =
+type SelectReturn
+      slots output m toggleProps itemProps containerProps inputProps =
   { search :: String
   , visibility :: Visibility
   , highlightedIndex :: Maybe Int
@@ -100,30 +101,68 @@ type SelectReturn slots output m
   , setVisibility :: Visibility -> HookM slots output m Unit
   , clearSearch :: HookM slots output m Unit
 
-  , onNewSearch :: Ref (Maybe (String -> HookM slots output m Unit))
-  , onVisibilityChanged :: Ref (Maybe (Visibility -> HookM slots output m Unit))
-  , onSelectedIdxChanged :: Ref (Maybe (Int -> HookM slots output m Unit))
-
   , toggleProps :: Array (HP.IProp (ToggleProps toggleProps) (HookM slots output m Unit))
   , itemProps :: Int -> Array (HP.IProp (ItemProps itemProps) (HookM slots output m Unit))
   , containerProps :: Array (HP.IProp (onMouseDown :: ME.MouseEvent | containerProps) (HookM slots output m Unit))
   , inputProps :: Array (HP.IProp (InputProps inputProps) (HookM slots output m Unit))
   }
 
-newtype UseSelect slots output m hooks = UseSelect
-  (UseDebouncer String
-  (UseEvent slots output m Int
-  (UseEvent slots output m Visibility
-  (UseEvent slots output m String
-  (UseState SelectState hooks)))))
+-- | When pushing all Select events into the same handler, this data type
+-- | distinguishes one event type from another.
+data Event
+  = NewSearch String
+  | VisibilityChangedTo Boolean
+  | SelectedIndex Int
 
-derive instance newtypeUseSelect :: Newtype (UseSelect slots output m hooks) _
+newtype UseSelect hooks = UseSelect
+  (UseDebouncer String
+  (UseState SelectState hooks))
+
+derive instance newtypeUseSelect :: Newtype (UseSelect hooks) _
+
+-- | A `SelectInput` value whose defaults can be overrided. **Note**:
+-- | `getItemCount` must be overrided:
+-- |
+-- | Default values are:
+-- | ```
+-- | { inputType: Toggle
+-- | , search: Nothing
+-- | , debounceTime: Nothing
+-- | , getItemCount: pure 0 -- this must be overrided!
+-- | , pushNewSearch: \_ -> pure unit
+-- | , pushVisibilityChanged: \_ -> pure unit
+-- | , pushSelectedIdxChanged: \_ -> pure unit
+-- | }
+-- | ```
+-- |
+-- | Example:
+-- | ```
+-- | events <- useEvent
+-- | select <- useSelect $ selectInput
+-- |   { getItemCount = pure (length items)
+-- |   , pushNewSearch = events.push
+-- |   }
+-- | ```
+selectInput :: forall slots output m. SelectInput slots output m
+selectInput = do
+  let
+    ignoreEvent :: forall a. a -> HookM slots output m Unit
+    ignoreEvent = \_ -> pure unit
+
+  { inputType: Toggle
+  , search: Nothing
+  , debounceTime: Nothing
+  , getItemCount: pure 0
+  , pushNewSearch: ignoreEvent
+  , pushVisibilityChanged: ignoreEvent
+  , pushSelectedIdxChanged: ignoreEvent
+  }
 
 useSelect
   :: forall slots output m toggleProps itemProps containerProps inputProps
    . MonadAff m
   => SelectInput slots output m
-  -> Hook slots output m (UseSelect slots output m)
+  -> Hook slots output m UseSelect
         (SelectReturn slots output m toggleProps itemProps containerProps inputProps)
 useSelect inputRec =
   let
@@ -136,15 +175,11 @@ useSelect inputRec =
       , highlightedIndex: Nothing
       }
 
-    onNewSearch <- useEvent
-    onVisibilityChanged <- useEvent
-    onSelectedIdxChanged <- useEvent
-
     searchDebouncer <- useDebouncer debounceTime \lastSearchState -> Hooks.do
       case inputRec.inputType of
         Text -> do
           Hooks.modify_ tState (_ { highlightedIndex = (Just 0) })
-          onNewSearch.push lastSearchState
+          inputRec.pushNewSearch lastSearchState
 
         -- Key stream is not yet implemented. However, this should capture user
         -- key events and expire their search after a set number of milliseconds.
@@ -158,19 +193,14 @@ useSelect inputRec =
 
       -- actions
       , setFocus
-      , setVisibility: setVisibility tState onVisibilityChanged.push
+      , setVisibility: setVisibility tState inputRec.pushVisibilityChanged
       , clearSearch: clearSearch tState
 
-      -- events
-      , onNewSearch: onNewSearch.callbackRef
-      , onVisibilityChanged: onVisibilityChanged.callbackRef
-      , onSelectedIdxChanged: onSelectedIdxChanged.callbackRef
-
       -- props
-      , toggleProps: toggleProps tState onVisibilityChanged.push onSelectedIdxChanged.push
-      , itemProps: itemProps tState onSelectedIdxChanged.push
+      , toggleProps: toggleProps tState inputRec.pushVisibilityChanged inputRec.pushSelectedIdxChanged
+      , itemProps: itemProps tState inputRec.pushSelectedIdxChanged
       , containerProps
-      , inputProps: inputProps tState searchDebouncer onVisibilityChanged.push onSelectedIdxChanged.push
+      , inputProps: inputProps tState searchDebouncer inputRec.pushVisibilityChanged inputRec.pushSelectedIdxChanged
       }
     where
       -- | An array of `IProps` with `ToggleProps`. It
