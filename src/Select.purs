@@ -158,7 +158,7 @@ useSelect inputRec =
 
       -- actions
       , setFocus
-      , setVisibility: setVisibility tState onVisibilityChanged
+      , setVisibility: setVisibility tState onVisibilityChanged.push
       , clearSearch: clearSearch tState
 
       -- events
@@ -167,10 +167,10 @@ useSelect inputRec =
       , onSelectedIdxChanged: onSelectedIdxChanged.callbackRef
 
       -- props
-      , toggleProps: toggleProps tState onVisibilityChanged onSelectedIdxChanged
-      , itemProps: itemProps tState onSelectedIdxChanged
+      , toggleProps: toggleProps tState onVisibilityChanged.push onSelectedIdxChanged.push
+      , itemProps: itemProps tState onSelectedIdxChanged.push
       , containerProps
-      , inputProps: inputProps tState searchDebouncer onVisibilityChanged onSelectedIdxChanged
+      , inputProps: inputProps tState searchDebouncer onVisibilityChanged.push onSelectedIdxChanged.push
       }
     where
       -- | An array of `IProps` with `ToggleProps`. It
@@ -182,11 +182,11 @@ useSelect inputRec =
       -- | renderToggle = div (setToggleProps [ class "btn-class" ]) [ ...html ]
       -- | ```
       toggleProps :: _ -> _ -> _ -> Array (HP.IProp (ToggleProps toggleProps) (HookM slots output m Unit))
-      toggleProps tState onVisibilityChanged onSelectedIdxChanged =
-        [ HE.onFocus \_ -> Just (setVisibility tState onVisibilityChanged On)
-        , HE.onMouseDown \ev -> Just (toggleClick tState onVisibilityChanged ev)
-        , HE.onKeyDown \ev -> Just (key tState onVisibilityChanged onSelectedIdxChanged ev)
-        , HE.onBlur \ev -> Just (setVisibility tState onVisibilityChanged Off)
+      toggleProps tState pushVisibilityChanged pushSelectedIdxChanged =
+        [ HE.onFocus \_ -> Just (setVisibility tState pushVisibilityChanged On)
+        , HE.onMouseDown \ev -> Just (toggleClick tState pushVisibilityChanged ev)
+        , HE.onKeyDown \ev -> Just (key tState pushVisibilityChanged pushSelectedIdxChanged ev)
+        , HE.onBlur \ev -> Just (setVisibility tState pushVisibilityChanged Off)
         , HP.tabIndex 0
         , HP.ref (H.RefLabel "select-input")
         ]
@@ -204,8 +204,8 @@ useSelect inputRec =
       -- | render = renderItem `mapWithIndex` itemsArray
       -- | ```
       itemProps :: _ -> _ -> Int -> Array (HP.IProp (ItemProps itemProps) (HookM slots output m Unit))
-      itemProps tState onSelectedIdxChanged index =
-        [ HE.onMouseDown \ev -> Just (select tState onSelectedIdxChanged (Index index) (Just ev))
+      itemProps tState pushSelectedIdxChanged index =
+        [ HE.onMouseDown \ev -> Just (select tState pushSelectedIdxChanged (Index index) (Just ev))
         , HE.onMouseOver \_ -> Just (highlight tState (Index index))
         ]
 
@@ -227,12 +227,12 @@ useSelect inputRec =
       -- | renderInput = input_ (setInputProps [ class "my-class" ])
       -- | ```
       inputProps :: _ -> _ -> _ -> _ -> Array (HP.IProp (InputProps inputProps) (HookM slots output m Unit))
-      inputProps tState searchDebouncer onVisibilityChanged onSelectedIdxChanged =
-        [ HE.onFocus \_ -> Just (setVisibility tState onVisibilityChanged On)
-        , HE.onKeyDown \ev -> Just (key tState onVisibilityChanged onSelectedIdxChanged ev)
-        , HE.onValueInput \str -> Just (handleSearch tState searchDebouncer onVisibilityChanged str)
-        , HE.onMouseDown \_ -> Just (setVisibility tState onVisibilityChanged On)
-        , HE.onBlur \_ -> Just (setVisibility tState onVisibilityChanged Off)
+      inputProps tState searchDebouncer pushVisibilityChanged pushSelectedIdxChanged =
+        [ HE.onFocus \_ -> Just (setVisibility tState pushVisibilityChanged On)
+        , HE.onKeyDown \ev -> Just (key tState pushVisibilityChanged pushSelectedIdxChanged ev)
+        , HE.onValueInput \str -> Just (handleSearch tState searchDebouncer pushVisibilityChanged str)
+        , HE.onMouseDown \_ -> Just (setVisibility tState pushVisibilityChanged On)
+        , HE.onBlur \_ -> Just (setVisibility tState pushVisibilityChanged Off)
         , HP.tabIndex 0
         , HP.ref (H.RefLabel "select-input")
         ]
@@ -252,18 +252,18 @@ useSelect inputRec =
           true -> HTMLElement.focus el
           _ -> HTMLElement.blur el
 
-      setVisibility tState onVisibilityChanged v = do
+      setVisibility tState pushVisibilityChanged v = do
         st <- Hooks.get tState
         when (st.visibility /= v) do
           Hooks.put tState (st { visibility = v, highlightedIndex = Just 0 })
-          onVisibilityChanged.push v
+          pushVisibilityChanged v
 
       clearSearch tState = do
         Hooks.modify_ tState (_ { search = "" })
 
-      handleSearch tState searchDebouncer onVisibilityChanged str = do
+      handleSearch tState searchDebouncer pushVisibilityChanged str = do
         Hooks.modify_ tState (_ { search = str })
-        void $ Hooks.fork $ setVisibility tState onVisibilityChanged On
+        void $ Hooks.fork $ setVisibility tState pushVisibilityChanged On
         searchDebouncer str
 
       highlight tState target = do
@@ -273,31 +273,31 @@ useSelect inputRec =
           let newIndex = Just (getTargetIndex st.highlightedIndex itemCount target)
           Hooks.put tState (st { highlightedIndex = newIndex })
 
-      select tState onSelectedIdxChanged target mbEv = do
+      select tState pushSelectedIdxChanged target mbEv = do
         for_ mbEv preventMouseEvent
         st <- Hooks.get tState
         when (st.visibility == On) case target of
-          Index ix -> onSelectedIdxChanged.push ix
+          Index ix -> pushSelectedIdxChanged ix
           Next -> do
             itemCount <- inputRec.getItemCount
-            onSelectedIdxChanged.push $ getTargetIndex st.highlightedIndex itemCount target
+            pushSelectedIdxChanged $ getTargetIndex st.highlightedIndex itemCount target
           Prev -> do
             itemCount <- inputRec.getItemCount
-            onSelectedIdxChanged.push $ getTargetIndex st.highlightedIndex itemCount target
+            pushSelectedIdxChanged $ getTargetIndex st.highlightedIndex itemCount target
 
-      toggleClick tState onVisibilityChanged ev = do
+      toggleClick tState pushVisibilityChanged ev = do
         preventMouseEvent ev
         st <- Hooks.get tState
         case st.visibility of
           On -> do
             setFocus false
-            setVisibility tState onVisibilityChanged Off
+            setVisibility tState pushVisibilityChanged Off
           Off -> do
             setFocus true
-            setVisibility tState onVisibilityChanged On
+            setVisibility tState pushVisibilityChanged On
 
-      key tState onVisibilityChanged onSelectedIdxChanged ev = do
-        void $ Hooks.fork $ setVisibility tState onVisibilityChanged On
+      key tState pushVisibilityChanged pushSelectedIdxChanged ev = do
+        void $ Hooks.fork $ setVisibility tState pushVisibilityChanged On
         let preventIt = preventKeyEvent ev
         case KE.key ev of
           x | x == "ArrowUp" || x == "Up" ->
@@ -312,5 +312,5 @@ useSelect inputRec =
             st <- Hooks.get tState
             preventIt
             for_ st.highlightedIndex \ix ->
-              select tState onSelectedIdxChanged (Index ix) Nothing
+              select tState pushSelectedIdxChanged (Index ix) Nothing
           otherKey -> pure unit
