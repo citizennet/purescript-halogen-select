@@ -1,74 +1,59 @@
--- | This module exposes a component that can be used to build accessible selection
--- | user interfaces. You are responsible for providing all rendering, with the help
--- | of the `Select.Setters` module, but this component provides the relevant
--- | behaviors for dropdowns, autocompletes, typeaheads, keyboard-navigable calendars,
--- | and other selection UIs.
 module Select where
 
 import Prelude
 
-import Control.Monad.Free (liftF)
-import Data.Const (Const)
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Symbol (SProxy(..))
-import Data.Time.Duration (Milliseconds)
-import Data.Traversable (for_, traverse, traverse_)
-import Effect.Aff (Fiber, delay, error, forkAff, killFiber)
-import Effect.Aff.AVar (AVar)
-import Effect.Aff.AVar as AVar
+import Data.Newtype (class Newtype)
+import Data.Traversable (for_)
+import Data.Tuple.Nested ((/\))
+import Effect.Aff (Milliseconds)
 import Effect.Aff.Class (class MonadAff)
-import Effect.Ref (Ref)
-import Effect.Ref as Ref
 import Halogen as H
-import Halogen.HTML as HH
-import Halogen.Query.ChildQuery (ChildQueryBox)
-import Prim.Row as Row
-import Record.Builder as Builder
-import Unsafe.Coerce (unsafeCoerce)
-import Web.Event.Event (preventDefault)
+import Halogen.HTML.Events as HE
+import Halogen.HTML.Properties as HP
+import Halogen.Hooks (Hook, HookM, UseState, useState)
+import Halogen.Hooks as Hooks
+import Halogen.Hooks.Extra.Actions.Events (preventKeyEvent, preventMouseEvent)
+import Halogen.Hooks.Extra.Hooks.UseDebouncer (UseDebouncer, useDebouncer)
+import Web.Event.Event as E
 import Web.HTML.HTMLElement as HTMLElement
+import Web.UIEvent.FocusEvent as FE
 import Web.UIEvent.KeyboardEvent as KE
 import Web.UIEvent.MouseEvent as ME
 
-data Action action
-  = Search String
-  | Highlight Target
-  | Select Target (Maybe ME.MouseEvent)
-  | ToggleClick ME.MouseEvent
-  | Focus Boolean
-  | Key KE.KeyboardEvent
-  | PreventClick ME.MouseEvent
-  | SetVisibility Visibility
-  | Initialize (Maybe action)
-  | Action action
+-- | The properties that must be supported by the HTML element that serves
+-- | as a menu toggle. This should be used with toggle-driven `Select` components.
+type ToggleProps props =
+  ( onFocus :: FE.FocusEvent
+  , onKeyDown :: KE.KeyboardEvent
+  , onMouseDown :: ME.MouseEvent
+  , onClick :: ME.MouseEvent
+  , onBlur :: FE.FocusEvent
+  , tabIndex :: Int
+  | props
+  )
 
-type Action' = Action Void
+-- | The properties that must be supported by the HTML element that serves
+-- | as a text input. This should be used with input-driven `Select` components.
+type InputProps props =
+  ( onFocus :: FE.FocusEvent
+  , onKeyDown :: KE.KeyboardEvent
+  , onInput :: E.Event
+  , value :: String
+  , onMouseDown :: ME.MouseEvent
+  , onBlur :: FE.FocusEvent
+  , tabIndex :: Int
+  | props
+  )
 
------
--- QUERIES
-
-data Query query slots a
-  = Send (ChildQueryBox slots (Maybe a))
-  | Query (query a)
-
-type Query' = Query (Const Void) ()
-
------
--- Event
-
-data Event
-  = Searched String
-  | Selected Int
-  | VisibilityChanged Visibility
-
------
--- HELPER TYPES
-
--- | The component slot type for easy use in a parent component
-type Slot query slots msg = H.Slot (Query query slots) msg
-
--- | The component slot type when there is no extension
-type Slot' = Slot (Const Void) () Void
+-- | The properties that must be supported by the HTML element that acts as a
+-- | selectable "item" in your UI. This should be attached to every item that
+-- | can be selected.
+type ItemProps props =
+  ( onMouseDown :: ME.MouseEvent
+  , onMouseOver :: ME.MouseEvent
+  | props
+  )
 
 -- | Represents a way to navigate on `Highlight` events: to the previous
 -- | item, next item, or the item at a particular index.
@@ -90,266 +75,272 @@ derive instance ordVisibility :: Ord Visibility
 -- | about searches when time has expired).
 data InputType = Text | Toggle
 
--- | The component state
-type State st =
-  { inputType :: InputType
-  , search :: String
-  , debounceTime :: Milliseconds
-  , debounceRef :: Maybe (Ref (Maybe Debouncer))
-  , visibility :: Visibility
-  , highlightedIndex :: Maybe Int
-  , getItemCount :: {| st } -> Int
-  | st
-  }
-
-type Debouncer =
-  { var :: AVar Unit
-  , fiber :: Fiber Unit
-  }
-
-type Input st =
+type SelectInput m =
   { inputType :: InputType
   , search :: Maybe String
   , debounceTime :: Maybe Milliseconds
-  , getItemCount :: {| st } -> Int
-  | st
+  , getItemCount :: HookM m Int
+  , pushNewSearch  :: String -> HookM m Unit
+  , pushVisibilityChanged :: Visibility -> HookM m Unit
+  , pushSelectedIdxChanged :: Int -> HookM m Unit
   }
 
-type Component query slots input msg m =
-  H.Component HH.HTML (Query query slots) input msg m
-
-type ComponentHTML action slots m =
-  H.ComponentHTML (Action action) slots m
-
-type HalogenM st action slots msg m a =
-  H.HalogenM (State st) (Action action) slots msg m a
-
-type Spec st query action slots input msg m =
-  { -- usual Halogen component spec
-    render
-      :: State st
-      -> ComponentHTML action slots m
-
-    -- handle additional actions provided to the component
-  , handleAction
-      :: action
-      -> HalogenM st action slots msg m Unit
-
-    -- handle additional queries provided to the component
-  , handleQuery
-      :: forall a
-       . query a
-      -> HalogenM st action slots msg m (Maybe a)
-
-    -- handle messages emitted by the component; provide H.raise to simply
-    -- raise the Select messages to the parent.
-  , handleEvent
-      :: Event
-      -> HalogenM st action slots msg m Unit
-
-    -- optionally handle input on parent re-renders
-  , receive
-      :: input
-      -> Maybe action
-
-    -- perform some action when the component initializes.
-  , initialize
-      :: Maybe action
-
-    -- optionally perform some action on initialization. disabled by default.
-  , finalize
-      :: Maybe action
+type SelectState =
+  { search :: String
+  , visibility :: Visibility
+  , highlightedIndex :: Maybe Int
   }
 
-type Spec' st input m = Spec st (Const Void) Void () input Void m
+type SelectReturn
+      m toggleProps itemProps containerProps inputProps =
+  { search :: String
+  , visibility :: Visibility
+  , highlightedIndex :: Maybe Int
 
-defaultSpec
-  :: forall st query action slots input msg m
-   . Spec st query action slots input msg m
-defaultSpec =
-  { render: const (HH.text mempty)
-  , handleAction: const (pure unit)
-  , handleQuery: const (pure Nothing)
-  , handleEvent: const (pure unit)
-  , receive: const Nothing
-  , initialize: Nothing
-  , finalize: Nothing
+  , setFocus :: Boolean -> HookM m Unit
+  , setVisibility :: Visibility -> HookM m Unit
+  , clearSearch :: HookM m Unit
+
+  , toggleProps :: Array (HP.IProp (ToggleProps toggleProps) (HookM m Unit))
+  , itemProps :: Int -> Array (HP.IProp (ItemProps itemProps) (HookM m Unit))
+  , containerProps :: Array (HP.IProp (onMouseDown :: ME.MouseEvent | containerProps) (HookM m Unit))
+  , inputProps :: Array (HP.IProp (InputProps inputProps) (HookM m Unit))
   }
 
-component
-  :: forall st query action slots input msg m
+-- | When pushing all Select events into the same handler, this data type
+-- | distinguishes one event type from another.
+data Event
+  = NewSearch String
+  | VisibilityChangedTo Boolean
+  | SelectedIndex Int
+
+newtype UseSelect hooks = UseSelect
+  (UseDebouncer String
+  (UseState SelectState hooks))
+
+derive instance newtypeUseSelect :: Newtype (UseSelect hooks) _
+
+-- | A `SelectInput` value whose defaults can be overrided. **Note**:
+-- | `getItemCount` must be overrided:
+-- |
+-- | Default values are:
+-- | ```
+-- | { inputType: Toggle
+-- | , search: Nothing
+-- | , debounceTime: Nothing
+-- | , getItemCount: pure 0 -- this must be overrided!
+-- | , pushNewSearch: \_ -> pure unit
+-- | , pushVisibilityChanged: \_ -> pure unit
+-- | , pushSelectedIdxChanged: \_ -> pure unit
+-- | }
+-- | ```
+-- |
+-- | Example:
+-- | ```
+-- | events <- useEvent
+-- | select <- useSelect $ selectInput
+-- |   { getItemCount = pure (length items)
+-- |   , pushNewSearch = events.push
+-- |   }
+-- | ```
+selectInput :: forall m. SelectInput m
+selectInput = do
+  let
+    ignoreEvent :: forall a. a -> HookM m Unit
+    ignoreEvent = \_ -> pure unit
+
+  { inputType: Toggle
+  , search: Nothing
+  , debounceTime: Nothing
+  , getItemCount: pure 0
+  , pushNewSearch: ignoreEvent
+  , pushVisibilityChanged: ignoreEvent
+  , pushSelectedIdxChanged: ignoreEvent
+  }
+
+useSelect
+  :: forall m toggleProps itemProps containerProps inputProps
    . MonadAff m
-  => Row.Lacks "debounceRef" st
-  => Row.Lacks "visibility" st
-  => Row.Lacks "highlightedIndex" st
-  => (input -> Input st)
-  -> Spec st query action slots input msg m
-  -> H.Component HH.HTML (Query query slots) input msg m
-component mkInput spec = H.mkComponent
-  { initialState: initialState <<< mkInput
-  , render: spec.render
-  , eval: H.mkEval
-      { handleQuery: handleQuery spec.handleQuery
-      , handleAction: handleAction spec.handleAction spec.handleEvent
-      , initialize: Just (Initialize spec.initialize)
-      , receive: map Action <<< spec.receive
-      , finalize: map Action spec.finalize
+  => SelectInput m
+  -> Hook m UseSelect
+        (SelectReturn m toggleProps itemProps containerProps inputProps)
+useSelect inputRec =
+  let
+    initialSearchValue = fromMaybe "" inputRec.search
+    debounceTime = fromMaybe mempty inputRec.debounceTime
+  in Hooks.wrap Hooks.do
+    state /\ tState <- useState
+      { search: initialSearchValue
+      , visibility: Off
+      , highlightedIndex: Nothing
       }
-  }
-  where
-  initialState :: Input st -> State st
-  initialState = Builder.build pipeline
+
+    searchDebouncer <- useDebouncer debounceTime \lastSearchState -> Hooks.do
+      case inputRec.inputType of
+        Text -> do
+          Hooks.modify_ tState (_ { highlightedIndex = (Just 0) })
+          inputRec.pushNewSearch lastSearchState
+
+        -- Key stream is not yet implemented. However, this should capture user
+        -- key events and expire their search after a set number of milliseconds.
+        _ -> pure unit
+
+    Hooks.pure
+      -- state
+      { search: state.search
+      , visibility: state.visibility
+      , highlightedIndex: state.highlightedIndex
+
+      -- actions
+      , setFocus
+      , setVisibility: setVisibility tState inputRec.pushVisibilityChanged
+      , clearSearch: clearSearch tState
+
+      -- props
+      , toggleProps: toggleProps tState inputRec.pushVisibilityChanged inputRec.pushSelectedIdxChanged
+      , itemProps: itemProps tState inputRec.pushSelectedIdxChanged
+      , containerProps
+      , inputProps: inputProps tState searchDebouncer inputRec.pushVisibilityChanged inputRec.pushSelectedIdxChanged
+      }
     where
-    pipeline =
-      Builder.modify (SProxy :: _ "search") (fromMaybe "")
-        >>> Builder.modify (SProxy :: _ "debounceTime") (fromMaybe mempty)
-        >>> Builder.insert (SProxy :: _ "debounceRef") Nothing
-        >>> Builder.insert (SProxy :: _ "visibility") Off
-        >>> Builder.insert (SProxy :: _ "highlightedIndex") Nothing
+      -- | An array of `IProps` with `ToggleProps`. It
+      -- | allows the toggle element to register key events for navigation or highlighting,
+      -- | record open and close events based on focus and blur, and to be focused with
+      -- | the tab key.
+      -- |
+      -- | ```purescript
+      -- | renderToggle = div (setToggleProps [ class "btn-class" ]) [ ...html ]
+      -- | ```
+      toggleProps :: _ -> _ -> _ -> Array (HP.IProp (ToggleProps toggleProps) (HookM m Unit))
+      toggleProps tState pushVisibilityChanged pushSelectedIdxChanged =
+        [ HE.onFocus \_ -> Just (setVisibility tState pushVisibilityChanged On)
+        , HE.onMouseDown \ev -> Just (toggleClick tState pushVisibilityChanged ev)
+        , HE.onKeyDown \ev -> Just (key tState pushVisibilityChanged pushSelectedIdxChanged ev)
+        , HE.onBlur \ev -> Just (setVisibility tState pushVisibilityChanged Off)
+        , HP.tabIndex 0
+        , HP.ref (H.RefLabel "select-input")
+        ]
 
-handleQuery
-  :: forall st query action slots msg m a
-   . MonadAff m
-  => (query a -> HalogenM st action slots msg m (Maybe a))
-  -> Query query slots a
-  -> HalogenM st action slots msg m (Maybe a)
-handleQuery handleQuery' = case _ of
-  Send box ->
-    H.HalogenM $ liftF $ H.ChildQuery box
+      -- | An array of `IProps` with `ItemProps`. It
+      -- | allows items to be highlighted and selected.
+      -- |
+      -- | This expects an index for use in highlighting. It's useful in combination
+      -- | with `mapWithIndex`:
+      -- |
+      -- | ```purescript
+      -- | renderItem index itemHTML =
+      -- |   HH.li (setItemProps index [ props ]) [ itemHTML ]
+      -- |
+      -- | render = renderItem `mapWithIndex` itemsArray
+      -- | ```
+      itemProps :: _ -> _ -> Int -> Array (HP.IProp (ItemProps itemProps) (HookM m Unit))
+      itemProps tState pushSelectedIdxChanged index =
+        [ HE.onMouseDown \ev -> Just (select tState pushSelectedIdxChanged (Index index) (Just ev))
+        , HE.onMouseOver \_ -> Just (highlight tState (Index index))
+        ]
 
-  Query query ->
-    handleQuery' query
+      -- | An array of `IProps` with a `MouseDown`
+      -- | handler. It prevents clicking on an item within an enclosing HTML element
+      -- | from bubbling up a blur event to the DOM. This should be used on the parent
+      -- | element that contains your items.
+      containerProps :: Array (HP.IProp (onMouseDown :: ME.MouseEvent | containerProps) (HookM m Unit))
+      containerProps =
+        [ HE.onMouseDown \ev -> Just (preventMouseEvent ev) ]
 
-handleAction
-  :: forall st action slots msg m
-   . MonadAff m
-  => Row.Lacks "debounceRef" st
-  => Row.Lacks "visibility" st
-  => Row.Lacks "highlightedIndex" st
-  => (action -> HalogenM st action slots msg m Unit)
-  -> (Event -> HalogenM st action slots msg m Unit)
-  -> Action action
-  -> HalogenM st action slots msg m Unit
-handleAction handleAction' handleEvent = case _ of
-  Initialize mbAction -> do
-    ref <- H.liftEffect $ Ref.new Nothing
-    H.modify_ _ { debounceRef = Just ref }
-    for_ mbAction handleAction'
 
-  Search str -> do
-    st <- H.get
-    ref <- H.liftEffect $ map join $ traverse Ref.read st.debounceRef
-    H.modify_ _ { search = str }
-    void $ H.fork $ handle $ SetVisibility On
+      -- | An array of `IProps` with `InputProps`. It
+      -- | allows the input element to capture string values, register key events for
+      -- | navigation, record open and close events based on focus and blur, and to be
+      -- | focused with the tab key.
+      -- |
+      -- | ```purescript
+      -- | renderInput = input_ (setInputProps [ class "my-class" ])
+      -- | ```
+      inputProps :: _ -> _ -> _ -> _ -> Array (HP.IProp (InputProps inputProps) (HookM m Unit))
+      inputProps tState searchDebouncer pushVisibilityChanged pushSelectedIdxChanged =
+        [ HE.onFocus \_ -> Just (setVisibility tState pushVisibilityChanged On)
+        , HE.onKeyDown \ev -> Just (key tState pushVisibilityChanged pushSelectedIdxChanged ev)
+        , HE.onValueInput \str -> Just (handleSearch tState searchDebouncer pushVisibilityChanged str)
+        , HE.onMouseDown \_ -> Just (setVisibility tState pushVisibilityChanged On)
+        , HE.onBlur \_ -> Just (setVisibility tState pushVisibilityChanged Off)
+        , HP.tabIndex 0
+        , HP.ref (H.RefLabel "select-input")
+        ]
 
-    case st.inputType, ref of
-      Text, Nothing -> unit <$ do
-        var   <- H.liftAff AVar.empty
-        fiber <- H.liftAff $ forkAff do
-          delay st.debounceTime
-          AVar.put unit var
+      getTargetIndex highlightedIndex itemCount = case _ of
+        Index i -> i
+        Prev -> case highlightedIndex of
+          Just i | i /= 0 -> i - 1
+          _ -> itemCount - 1
+        Next -> case highlightedIndex of
+          Just i | i /= (itemCount - 1) -> i + 1
+          _ -> 0
 
-        -- This compututation will fork and run in the background. When the
-        -- var is finally filled, the action will run
-        void $ H.fork do
-          void $ H.liftAff $ AVar.take var
-          void $ H.liftEffect $ traverse_ (Ref.write Nothing) st.debounceRef
-          H.modify_ _ { highlightedIndex = Just 0 }
-          newState <- H.get
-          handleEvent $ Searched newState.search
+      setFocus shouldFocus = do
+        inputElement <- Hooks.getHTMLElementRef $ H.RefLabel "select-input"
+        for_ inputElement \el -> H.liftEffect case shouldFocus of
+          true -> HTMLElement.focus el
+          _ -> HTMLElement.blur el
 
-        void $ H.liftEffect $ traverse_ (Ref.write $ Just { var, fiber }) st.debounceRef
+      setVisibility tState pushVisibilityChanged v = do
+        st <- Hooks.get tState
+        when (st.visibility /= v) do
+          Hooks.put tState (st { visibility = v, highlightedIndex = Just 0 })
+          pushVisibilityChanged v
 
-      Text, Just debouncer -> do
-        let var = debouncer.var
-        void $ H.liftAff $ killFiber (error "Time's up!") debouncer.fiber
-        fiber <- H.liftAff $ forkAff do
-          delay st.debounceTime
-          AVar.put unit var
-        void $ H.liftEffect $ traverse_ (Ref.write $ Just { var, fiber }) st.debounceRef
+      clearSearch tState = do
+        Hooks.modify_ tState (_ { search = "" })
 
-      -- Key stream is not yet implemented. However, this should capture user
-      -- key events and expire their search after a set number of milliseconds.
-      _, _ -> pure unit
+      handleSearch tState searchDebouncer pushVisibilityChanged str = do
+        Hooks.modify_ tState (_ { search = str })
+        void $ Hooks.fork $ setVisibility tState pushVisibilityChanged On
+        searchDebouncer str
 
-  Highlight target -> do
-    st <- H.get
-    when (st.visibility == On) do
-      H.modify_ _ { highlightedIndex = Just $ getTargetIndex st target }
+      highlight tState target = do
+        st <- Hooks.get tState
+        when (st.visibility == On) do
+          itemCount <- inputRec.getItemCount
+          let newIndex = Just (getTargetIndex st.highlightedIndex itemCount target)
+          Hooks.put tState (st { highlightedIndex = newIndex })
 
-  Select target mbEv -> do
-    for_ mbEv (H.liftEffect <<< preventDefault <<< ME.toEvent)
-    st <- H.get
-    when (st.visibility == On) case target of
-      Index ix -> handleEvent $ Selected ix
-      Next -> handleEvent $ Selected $ getTargetIndex st target
-      Prev -> handleEvent $ Selected $ getTargetIndex st target
+      select tState pushSelectedIdxChanged target mbEv = do
+        for_ mbEv preventMouseEvent
+        st <- Hooks.get tState
+        when (st.visibility == On) case target of
+          Index ix -> pushSelectedIdxChanged ix
+          Next -> do
+            itemCount <- inputRec.getItemCount
+            pushSelectedIdxChanged $ getTargetIndex st.highlightedIndex itemCount target
+          Prev -> do
+            itemCount <- inputRec.getItemCount
+            pushSelectedIdxChanged $ getTargetIndex st.highlightedIndex itemCount target
 
-  ToggleClick ev -> do
-    H.liftEffect $ preventDefault $ ME.toEvent ev
-    st <- H.get
-    case st.visibility of
-      On -> do
-        handle $ Focus false
-        handle $ SetVisibility Off
-      Off -> do
-        handle $ Focus true
-        handle $ SetVisibility On
+      toggleClick tState pushVisibilityChanged ev = do
+        preventMouseEvent ev
+        st <- Hooks.get tState
+        case st.visibility of
+          On -> do
+            setFocus false
+            setVisibility tState pushVisibilityChanged Off
+          Off -> do
+            setFocus true
+            setVisibility tState pushVisibilityChanged On
 
-  Focus shouldFocus -> do
-    inputElement <- H.getHTMLElementRef $ H.RefLabel "select-input"
-    for_ inputElement \el -> H.liftEffect case shouldFocus of
-      true -> HTMLElement.focus el
-      _ -> HTMLElement.blur el
-
-  Key ev -> do
-    void $ H.fork $ handle $ SetVisibility On
-    let preventIt = H.liftEffect $ preventDefault $ KE.toEvent ev
-    case KE.key ev of
-      x | x == "ArrowUp" || x == "Up" ->
-        preventIt *> handle (Highlight Prev)
-      x | x == "ArrowDown" || x == "Down" ->
-        preventIt *> handle (Highlight Next)
-      x | x == "Escape" || x == "Esc" -> do
-        inputElement <- H.getHTMLElementRef $ H.RefLabel "select-input"
-        preventIt
-        for_ inputElement (H.liftEffect <<< HTMLElement.blur)
-      "Enter" -> do
-        st <- H.get
-        preventIt
-        for_ st.highlightedIndex \ix ->
-          handle $ Select (Index ix) Nothing
-      otherKey -> pure unit
-
-  PreventClick ev ->
-    H.liftEffect $ preventDefault $ ME.toEvent ev
-
-  SetVisibility v -> do
-    st <- H.get
-    when (st.visibility /= v) do
-      H.modify_ _ { visibility = v, highlightedIndex = Just 0 }
-      handleEvent $ VisibilityChanged v
-
-  Action act -> handleAction' act
-
-  where
-  -- eta-expansion is necessary to avoid infinite recursion
-  handle act = handleAction handleAction' handleEvent act
-
-  getTargetIndex st = case _ of
-    Index i -> i
-    Prev -> case st.highlightedIndex of
-      Just i | i /= 0 -> i - 1
-      _ -> lastIndex st
-    Next -> case st.highlightedIndex of
-      Just i | i /= lastIndex st -> i + 1
-      _ -> 0
-    where
-    -- we know that the getItemCount function will only touch user fields,
-    -- and that the state record contains *at least* the user fields, so
-    -- this saves us from a set of unnecessary record deletions / modifications
-    userState :: State st -> {| st }
-    userState = unsafeCoerce
-
-    lastIndex :: State st -> Int
-    lastIndex = (_ - 1) <<< st.getItemCount <<< userState
+      key tState pushVisibilityChanged pushSelectedIdxChanged ev = do
+        void $ Hooks.fork $ setVisibility tState pushVisibilityChanged On
+        let preventIt = preventKeyEvent ev
+        case KE.key ev of
+          x | x == "ArrowUp" || x == "Up" ->
+            preventIt *> highlight tState Prev
+          x | x == "ArrowDown" || x == "Down" ->
+            preventIt *> highlight tState Next
+          x | x == "Escape" || x == "Esc" -> do
+            inputElement <- Hooks.getHTMLElementRef $ H.RefLabel "select-input"
+            preventIt
+            for_ inputElement (H.liftEffect <<< HTMLElement.blur)
+          "Enter" -> do
+            st <- Hooks.get tState
+            preventIt
+            for_ st.highlightedIndex \ix ->
+              select tState pushSelectedIdxChanged (Index ix) Nothing
+          otherKey -> pure unit
