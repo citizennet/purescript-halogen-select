@@ -2,10 +2,12 @@
 .psci_modules
 bower_components
 node_modules
+.spago
 
 # Generated files
 .psci
 .psc-ide-port
+.purs-repl
 output
 package-lock.json
 generated-docs
