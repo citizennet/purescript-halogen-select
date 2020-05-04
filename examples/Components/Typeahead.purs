@@ -7,34 +7,28 @@ import Affjax.ResponseFormat as AR
 import Components.Dropdown as D
 import Data.Argonaut.Decode ((.:), decodeJson)
 import Data.Array (mapWithIndex, filter, (:), (!!), length, null, difference)
+import Data.Bifunctor (bimap)
+import Data.Const (Const)
 import Data.Foldable (for_)
-import Data.Bifunctor (lmap)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Monoid (guard)
 import Data.Symbol (SProxy(..))
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (traverse)
+import Data.Tuple.Nested ((/\))
 import Effect.Aff (Aff)
+import Halogen (liftAff)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
+import Halogen.Hooks (useLifecycleEffect, useState)
+import Halogen.Hooks as Hooks
+import Halogen.Hooks.Extra.Hooks.UseEvent (useEvent)
 import Internal.CSS (class_, classes_, whenElem)
 import Internal.RemoteData as RD
+import Select (Event(..), selectInput, useSelect)
 import Select as S
-import Select.Setters as SS
-
-type Slot =
-  S.Slot Query ChildSlots Message
-
-type State =
-  ( selections :: Array Location
-  , available :: RD.RemoteData String (Array Location)
-  )
-
-data Action
-  = Remove Location
-  | HandleDropdown D.Message
 
 data Query a
   = GetSelections (Array Location -> a)
@@ -44,97 +38,89 @@ data Message
   | SelectionsChanged (Array Location)
 
 type ChildSlots =
-  ( dropdown :: D.Slot Unit )
+  ( dropdown :: D.Slot (Const Void) Unit )
 
-component :: H.Component HH.HTML (S.Query Query ChildSlots) Unit Message Aff
-component = S.component (const input) $ S.defaultSpec
-  { render = render
-  , handleAction = handleAction
-  , handleQuery = handleQuery
-  , handleEvent = handleEvent
-  }
-  where
-  -- this typeahead will be opaque; users can just use this pre-built
-  -- input instead of the usual select one.
-  input :: S.Input State
-  input =
-    { inputType: S.Text
-    , debounceTime: Just (Milliseconds 300.0)
-    , search: Nothing
-    , getItemCount: maybe 0 length <<< RD.toMaybe <<< _.available
-    , selections: []
-    , available: RD.NotAsked
+component :: H.Component HH.HTML Query Unit Message Aff
+component = Hooks.component \tokens _ -> Hooks.do
+  selections /\ tSelections <- useState []
+  available /\ tAvailable <- useState RD.NotAsked
+
+  selectEvents <- useEvent
+
+  select <- useSelect $ selectInput
+    { inputType = S.Text
+    , debounceTime = Just (Milliseconds 300.0)
+    , getItemCount = pure $ maybe 0 length $ RD.toMaybe available
+    , pushSelectedIdxChanged = selectEvents.push <<< SelectedIndex
+    , pushNewSearch = selectEvents.push <<< NewSearch
     }
 
-  handleEvent
-    :: S.Event
-    -> H.HalogenM (S.State State) (S.Action Action) ChildSlots Message Aff Unit
-  handleEvent = case _ of
-    S.Selected ix -> do
-      st <- H.get
-      for_ st.available \arr ->
-        for_ (arr !! ix) \item -> do
-          let newSelections = item : st.selections
-          H.modify_ _
-            { selections = item : st.selections
-            , available = RD.Success (filter (_ /= item) arr)
-            , search = ""
-            }
-          H.raise $ SelectionsChanged newSelections
-    S.Searched str -> do
-      st <- H.get
-      -- we'll use an external api to search locations
-      H.modify_ _ { available = RD.Loading }
-      items <- H.liftAff $ searchLocations str
-      H.modify_ _ { available = items <#> \xs -> difference xs st.selections }
-    _ -> pure unit
+  useLifecycleEffect do
+    void $ selectEvents.setCallback $ Just \_ val -> case val of
+      SelectedIndex ix -> do
+        available' <- Hooks.get tAvailable
+        for_ available' \arr ->
+          for_ (arr !! ix) \item -> do
+            selections' <- Hooks.get tSelections
+            let newSelections = item : selections'
+            Hooks.put tAvailable (RD.Success (filter (_ /= item) arr))
+            Hooks.put tSelections newSelections
+            select.clearSearch
+            Hooks.raise tokens.outputToken $ SelectionsChanged newSelections
 
-  -- You can remove all type signatures except for this one; we need to tell the
-  -- compiler about the `a` type variable. The minimal necessary signature is below.
-  handleQuery :: forall a. Query a -> H.HalogenM _ _ _ _ _ (Maybe a)
-  handleQuery = case _ of
+      NewSearch str -> do
+        selections' <- Hooks.get tSelections
+        -- we'll use an external api to search locations
+        Hooks.put tAvailable RD.Loading
+        items <- liftAff $ searchLocations str
+        Hooks.put tAvailable $ items <#> \xs -> difference xs selections'
+
+      _ -> pure unit
+
+    pure Nothing
+
+  Hooks.useQuery tokens.queryToken case _ of
     GetSelections reply -> do
-       st <- H.get
-       pure $ Just $ reply st.selections
+       selections' <- Hooks.get tSelections
+       pure $ Just $ reply selections'
 
-  handleAction
-    :: Action
-    -> H.HalogenM (S.State State) (S.Action Action) ChildSlots Message Aff Unit
-  handleAction = case _ of
-    Remove item -> do
-      st <- H.get
-      let newSelections = filter (_ /= item) st.selections
-      H.modify_ _ { selections = newSelections }
-      H.raise $ ItemRemoved item
-    HandleDropdown msg -> case msg of
-      D.SelectionChanged oldSelection newSelection -> do
-        st <- H.get
-        let
-          mkLocation str = { name: "User Added: " <> str, population: "1" }
-          newSelections = case oldSelection, newSelection of
-            Nothing, Nothing ->
-              Nothing
-            Nothing, Just str ->
-              Just (mkLocation str : st.selections)
-            Just str, Nothing ->
-              Just (filter (_ /= mkLocation str) st.selections)
-            Just old, Just new ->
-              Just (mkLocation new : (filter (_ /= mkLocation old) st.selections))
-        for_ newSelections \selections ->
-          H.modify_ _ { selections = selections }
-
-  render :: S.State State -> H.ComponentHTML (S.Action Action) ChildSlots Aff
-  render st =
+  Hooks.pure $
     HH.div
       [ class_ "Typeahead" ]
-      [ renderSelections, renderInput, renderDropdown, renderContainer ]
-    where
-    hasSelections = length st.selections > 0
+      [ renderSelections selections tokens.outputToken tSelections
+      , renderInput select selections
+      , renderDropdown select tSelections
+      , renderContainer select selections available
+      ]
+  where
+  remove tOutput tSelections item = do
+    selections <- Hooks.get tSelections
+    let newSelections = filter (_ /= item) selections
+    Hooks.put tSelections newSelections
+    Hooks.raise tOutput $ ItemRemoved item
 
-    renderSelections = whenElem hasSelections \_ ->
+  handleDropdown tSelections msg = case msg of
+    D.SelectionChanged oldSelection newSelection -> do
+      selections <- Hooks.get tSelections
+      let
+        mkLocation str = { name: "User Added: " <> str, population: "1" }
+        newSelections = case oldSelection, newSelection of
+          Nothing, Nothing ->
+            Nothing
+          Nothing, Just str ->
+            Just (mkLocation str : selections)
+          Just str, Nothing ->
+            Just (filter (_ /= mkLocation str) selections)
+          Just old, Just new ->
+            Just (mkLocation new : (filter (_ /= mkLocation old) selections))
+      for_ newSelections \selections' ->
+        Hooks.put tSelections selections'
+
+  renderSelections selections tOutput tSelections =
+    whenElem (length selections > 0) \_ ->
       HH.div
         [ class_ "Typeahead__selections" ]
-        (renderSelectedItem <$> st.selections)
+        (renderSelectedItem <$> selections)
       where
       renderSelectedItem item =
         HH.div
@@ -148,29 +134,34 @@ component = S.component (const input) $ S.defaultSpec
       closeButton item =
         HH.span
           [ class_ "Location__closeButton"
-          , HE.onClick \_ -> Just $ S.Action $ Remove item
+          , HE.onClick \_ -> Just $ remove tOutput tSelections item
           ]
           [ HH.text "×" ]
 
-    renderInput = HH.input $ SS.setInputProps
-      [ classes_
-          [ "Typeahead__input"
-          , "Typeahead__input--selections" # guard hasSelections
-          , "Typeahead__input--active" # guard (st.visibility == S.On)
-          ]
-      , HP.placeholder "Type to search..."
-      ]
+  renderInput select selections =
+    HH.input
+      (select.inputProps <>
+        [ classes_
+            [ "Typeahead__input"
+            , "Typeahead__input--selections" # guard (length selections > 0)
+            , "Typeahead__input--active"
+                # guard (select.visibility == S.On)
+            ]
+        , HP.placeholder "Type to search..."
+        ])
 
-    renderDropdown = whenElem (st.visibility == S.On) \_ ->
+  renderDropdown select tSelections =
+    whenElem (select.visibility == S.On) \_ ->
       HH.slot _dropdown unit D.component dropdownInput handler
-      where
-      _dropdown = SProxy :: SProxy "dropdown"
-      handler msg = Just $ S.Action $ HandleDropdown msg
-      dropdownInput = { items: [ "Earth", "Mars" ], buttonLabel: "Human Planets" }
+    where
+    _dropdown = SProxy :: SProxy "dropdown"
+    handler msg = Just $ handleDropdown tSelections msg
+    dropdownInput = { items: [ "Earth", "Mars" ], buttonLabel: "Human Planets" }
 
-    renderContainer = whenElem (st.visibility == S.On) \_ ->
+  renderContainer select selections available =
+    whenElem (select.visibility == S.On) \_ ->
       HH.div
-        (SS.setContainerProps
+        (select.containerProps <>
           [ classes_
               [ "Typeahead__container"
               , "Typeahead__container--hasItems" # guard hasItems
@@ -179,20 +170,21 @@ component = S.component (const input) $ S.defaultSpec
         )
         renderItems
       where
-      hasItems = maybe false (not <<< null) (RD.toMaybe st.available)
+      hasItems = maybe false (not <<< null) (RD.toMaybe available)
       renderItems = do
         let renderMsg msg = [ HH.span_ [ HH.text msg ] ]
-        case st.available of
+        case available of
           RD.NotAsked -> renderMsg "No search performed..."
           RD.Loading -> renderMsg "Loading..."
           RD.Failure e -> renderMsg e
-          RD.Success available
-            | hasItems -> renderItem `mapWithIndex` available
+          RD.Success available'
+            | length selections > 0 -> renderItem `mapWithIndex` available'
             | otherwise -> renderMsg "No results found"
 
       renderItem index { name, population } =
         HH.div
-          (SS.setItemProps index [ classes_ [ base, highlight, "Location" ] ])
+          ((select.itemProps index) <>
+            [ classes_ [ base, highlight, "Location" ] ])
           [ HH.span
               [ class_ "Location__name" ]
               [ HH.text name ]
@@ -202,7 +194,8 @@ component = S.component (const input) $ S.defaultSpec
           ]
         where
         base = "Typeahead__item"
-        highlight = "Typeahead__item--highlighted" # guard (st.highlightedIndex == Just index)
+        highlight = "Typeahead__item--highlighted"
+                      # guard (select.highlightedIndex == Just index)
 
 
 -- Let's make this typeahead async.
@@ -214,6 +207,6 @@ type Location =
 
 searchLocations :: String -> Aff (RD.RemoteData String (Array Location))
 searchLocations search = do
-  res <- AX.get AR.json ("https://swapi.co/api/planets/?search=" <> search)
-  let body = lmap AR.printResponseFormatError res.body
+  eitherRes <- AX.get AR.json ("https://swapi.co/api/planets/?search=" <> search)
+  let body = bimap AX.printError (_.body) eitherRes
   pure $ RD.fromEither $ traverse decodeJson =<< (_ .: "results") =<< decodeJson =<< body
