@@ -24,6 +24,7 @@ import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.Hooks (useLifecycleEffect, useState)
 import Halogen.Hooks as Hooks
+import Halogen.Hooks.Extra.Hooks (useGet)
 import Halogen.Hooks.Extra.Hooks.UseEvent (useEvent)
 import Internal.CSS (class_, classes_, whenElem)
 import Internal.RemoteData as RD
@@ -42,8 +43,11 @@ type ChildSlots =
 
 component :: H.Component HH.HTML Query Unit Message Aff
 component = Hooks.component \tokens _ -> Hooks.do
-  selections /\ tSelections <- useState []
-  available /\ tAvailable <- useState RD.NotAsked
+  selections /\ modifySelections <- useState []
+  getSelections <- useGet selections
+
+  available /\ modifyAvailable <- useState RD.NotAsked
+  getAvailable <- useGet available
 
   selectEvents <- useEvent
 
@@ -58,22 +62,22 @@ component = Hooks.component \tokens _ -> Hooks.do
   useLifecycleEffect do
     void $ selectEvents.setCallback $ Just \_ val -> case val of
       SelectedIndex ix -> do
-        available' <- Hooks.get tAvailable
+        available' <- getAvailable
         for_ available' \arr ->
           for_ (arr !! ix) \item -> do
-            selections' <- Hooks.get tSelections
+            selections' <- getSelections
             let newSelections = item : selections'
-            Hooks.put tAvailable (RD.Success (filter (_ /= item) arr))
-            Hooks.put tSelections newSelections
+            modifyAvailable $ const (RD.Success (filter (_ /= item) arr))
+            modifySelections $ const newSelections
             select.clearSearch
             Hooks.raise tokens.outputToken $ SelectionsChanged newSelections
 
       NewSearch str -> do
-        selections' <- Hooks.get tSelections
+        selections' <- getSelections
         -- we'll use an external api to search locations
-        Hooks.put tAvailable RD.Loading
+        modifyAvailable $ const RD.Loading
         items <- liftAff $ searchLocations str
-        Hooks.put tAvailable $ items <#> \xs -> difference xs selections'
+        modifyAvailable $ const $ items <#> \xs -> difference xs selections'
 
       _ -> pure unit
 
@@ -81,27 +85,27 @@ component = Hooks.component \tokens _ -> Hooks.do
 
   Hooks.useQuery tokens.queryToken case _ of
     GetSelections reply -> do
-       selections' <- Hooks.get tSelections
+       selections' <- getSelections
        pure $ Just $ reply selections'
 
   Hooks.pure $
     HH.div
       [ class_ "Typeahead" ]
-      [ renderSelections selections tokens.outputToken tSelections
+      [ renderSelections selections tokens.outputToken getSelections modifySelections
       , renderInput select selections
-      , renderDropdown select tSelections
+      , renderDropdown select getSelections modifySelections
       , renderContainer select selections available
       ]
   where
-  remove tOutput tSelections item = do
-    selections <- Hooks.get tSelections
+  remove tOutput getSelections modifySelections item = do
+    selections <- getSelections
     let newSelections = filter (_ /= item) selections
-    Hooks.put tSelections newSelections
+    modifySelections $ const newSelections
     Hooks.raise tOutput $ ItemRemoved item
 
-  handleDropdown tSelections msg = case msg of
+  handleDropdown getSelections modifySelections msg = case msg of
     D.SelectionChanged oldSelection newSelection -> do
-      selections <- Hooks.get tSelections
+      selections <- getSelections
       let
         mkLocation str = { name: "User Added: " <> str, population: "1" }
         newSelections = case oldSelection, newSelection of
@@ -114,9 +118,9 @@ component = Hooks.component \tokens _ -> Hooks.do
           Just old, Just new ->
             Just (mkLocation new : (filter (_ /= mkLocation old) selections))
       for_ newSelections \selections' ->
-        Hooks.put tSelections selections'
+        modifySelections $ const selections'
 
-  renderSelections selections tOutput tSelections =
+  renderSelections selections tOutput getSelections modifySelections =
     whenElem (length selections > 0) \_ ->
       HH.div
         [ class_ "Typeahead__selections" ]
@@ -134,7 +138,7 @@ component = Hooks.component \tokens _ -> Hooks.do
       closeButton item =
         HH.span
           [ class_ "Location__closeButton"
-          , HE.onClick \_ -> Just $ remove tOutput tSelections item
+          , HE.onClick \_ -> Just $ remove tOutput getSelections modifySelections item
           ]
           [ HH.text "×" ]
 
@@ -150,12 +154,12 @@ component = Hooks.component \tokens _ -> Hooks.do
         , HP.placeholder "Type to search..."
         ])
 
-  renderDropdown select tSelections =
+  renderDropdown select getSelections modifySelections =
     whenElem (select.visibility == S.On) \_ ->
       HH.slot _dropdown unit D.component dropdownInput handler
     where
     _dropdown = SProxy :: SProxy "dropdown"
-    handler msg = Just $ handleDropdown tSelections msg
+    handler msg = Just $ handleDropdown getSelections modifySelections msg
     dropdownInput = { items: [ "Earth", "Mars" ], buttonLabel: "Human Planets" }
 
   renderContainer select selections available =

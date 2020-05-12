@@ -12,6 +12,7 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.Hooks (useLifecycleEffect, useState)
 import Halogen.Hooks as Hooks
+import Halogen.Hooks.Extra.Hooks (useGet)
 import Halogen.Hooks.Extra.Hooks.UseEvent (useEvent)
 import Internal.CSS (class_, classes_, whenElem)
 import Select (selectInput, useSelect)
@@ -31,7 +32,8 @@ type Input =
 
 component :: H.Component HH.HTML (Const Void) Input Message Aff
 component = Hooks.component \tokens { items, buttonLabel } -> Hooks.do
-  selection /\ tSelection <- useState Nothing
+  selection /\ modifySelection <- useState Nothing
+  getSelection <- useGet selection
   selectedIndexChanges <- useEvent
   select <- useSelect $ selectInput
     { getItemCount = pure (length items)
@@ -40,10 +42,10 @@ component = Hooks.component \tokens { items, buttonLabel } -> Hooks.do
 
   useLifecycleEffect do
     void $ selectedIndexChanges.setCallback $ Just \_ ix -> do
-      oldSelection <- Hooks.get tSelection
+      oldSelection <- getSelection
       let newSelection = items !! ix
       select.setVisibility S.Off
-      Hooks.put tSelection newSelection
+      modifySelection $ const newSelection
       Hooks.raise tokens.outputToken $ SelectionChanged oldSelection newSelection
 
     pure Nothing
