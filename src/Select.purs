@@ -195,7 +195,7 @@ useSelect inputRec =
       -- actions
       , setFocus
       , setVisibility: setVisibility getState modifyState inputRec.pushVisibilityChanged
-      , clearSearch: clearSearch modifyState
+      , clearSearch: modifyState (_ { search = "" })
 
       -- props
       , toggleProps: toggleProps getState modifyState inputRec.pushVisibilityChanged inputRec.pushSelectedIdxChanged
@@ -296,12 +296,6 @@ useSelect inputRec =
         when (st.visibility /= v) do
           modifyState (_ { visibility = v, highlightedIndex = Just 0 })
           pushVisibilityChanged v
-
-      clearSearch
-        :: ((SelectState -> SelectState) -> HookM m Unit)
-        -> HookM m Unit
-      clearSearch modifyState = do
-        modifyState (_ { search = "" })
 
       handleSearch
         :: HookM m SelectState
