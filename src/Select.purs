@@ -148,18 +148,14 @@ derive instance newtypeUseSelect :: Newtype (UseSelect hooks) _
 -- |   }
 -- | ```
 selectInput :: forall m. SelectInput m
-selectInput = do
-  let
-    ignoreEvent :: forall a. a -> HookM m Unit
-    ignoreEvent = \_ -> pure unit
-
+selectInput =
   { inputType: Toggle
   , search: Nothing
   , debounceTime: Nothing
   , getItemCount: pure 0
-  , pushNewSearch: ignoreEvent
-  , pushVisibilityChanged: ignoreEvent
-  , pushSelectedIdxChanged: ignoreEvent
+  , pushNewSearch: mempty
+  , pushVisibilityChanged: mempty
+  , pushSelectedIdxChanged: mempty
   }
 
 useSelect
