@@ -93,8 +93,7 @@ type SelectState =
   , highlightedIndex :: Maybe Int
   }
 
-type SelectReturn
-      m toggleProps itemProps containerProps inputProps =
+newtype SelectReturn m = SelectReturn
   { search :: String
   , visibility :: Visibility
   , highlightedIndex :: Maybe Int
@@ -103,10 +102,19 @@ type SelectReturn
   , setVisibility :: Visibility -> HookM m Unit
   , clearSearch :: HookM m Unit
 
-  , toggleProps :: Array (HP.IProp (ToggleProps toggleProps) (HookM m Unit))
-  , itemProps :: Int -> Array (HP.IProp (ItemProps itemProps) (HookM m Unit))
-  , containerProps :: Array (HP.IProp (onMouseDown :: ME.MouseEvent | containerProps) (HookM m Unit))
-  , inputProps :: Array (HP.IProp (InputProps inputProps) (HookM m Unit))
+  , toggleProps
+      :: forall toggleProps
+       . Array (HP.IProp (ToggleProps toggleProps) (HookM m Unit))
+  , itemProps
+      :: forall itemProps
+       . Int
+      -> Array (HP.IProp (ItemProps itemProps) (HookM m Unit))
+  , containerProps
+      :: forall containerProps
+       . Array (HP.IProp (onMouseDown :: ME.MouseEvent | containerProps) (HookM m Unit))
+  , inputProps
+      :: forall inputProps
+       . Array (HP.IProp (InputProps inputProps) (HookM m Unit))
   }
 
 -- | When pushing all Select events into the same handler, this data type
@@ -140,7 +148,7 @@ derive instance newtypeUseSelect :: Newtype (UseSelect hooks) _
 -- | Example:
 -- | ```
 -- | events <- useEvent
--- | select <- useSelect $ selectInput
+-- | SelectReturn select <- useSelect $ selectInput
 -- |   { getItemCount = pure (length items)
 -- |   , pushNewSearch = events.push
 -- |   }
@@ -157,11 +165,10 @@ selectInput =
   }
 
 useSelect
-  :: forall m toggleProps itemProps containerProps inputProps
+  :: forall m
    . MonadAff m
   => SelectInput m
-  -> Hook m UseSelect
-        (SelectReturn m toggleProps itemProps containerProps inputProps)
+  -> Hook m UseSelect (SelectReturn m)
 useSelect inputRec =
   let
     initialSearchValue = fromMaybe "" inputRec.search
@@ -183,7 +190,7 @@ useSelect inputRec =
         -- key events and expire their search after a set number of milliseconds.
         _ -> pure unit
 
-    Hooks.pure
+    Hooks.pure $ SelectReturn
       -- state
       { search: state.search
       , visibility: state.visibility
@@ -209,7 +216,7 @@ useSelect inputRec =
       -- | ```purescript
       -- | renderToggle = div (setToggleProps [ class "btn-class" ]) [ ...html ]
       -- | ```
-      toggleProps :: _ -> Array (HP.IProp (ToggleProps toggleProps) (HookM m Unit))
+      toggleProps :: forall toggleProps. _ -> Array (HP.IProp (ToggleProps toggleProps) (HookM m Unit))
       toggleProps stateId =
         [ HE.onFocus \_ -> Just (setVisibility stateId On)
         , HE.onMouseDown \ev -> Just (toggleClick stateId ev)
@@ -231,7 +238,7 @@ useSelect inputRec =
       -- |
       -- | render = renderItem `mapWithIndex` itemsArray
       -- | ```
-      itemProps :: _ -> Int -> Array (HP.IProp (ItemProps itemProps) (HookM m Unit))
+      itemProps :: forall itemProps. _ -> Int -> Array (HP.IProp (ItemProps itemProps) (HookM m Unit))
       itemProps stateId index =
         [ HE.onMouseDown \ev -> Just (select stateId (Index index) (Just ev))
         , HE.onMouseOver \_ -> Just (highlight stateId (Index index))
@@ -241,7 +248,7 @@ useSelect inputRec =
       -- | handler. It prevents clicking on an item within an enclosing HTML element
       -- | from bubbling up a blur event to the DOM. This should be used on the parent
       -- | element that contains your items.
-      containerProps :: Array (HP.IProp (onMouseDown :: ME.MouseEvent | containerProps) (HookM m Unit))
+      containerProps :: forall containerProps. Array (HP.IProp (onMouseDown :: ME.MouseEvent | containerProps) (HookM m Unit))
       containerProps =
         [ HE.onMouseDown \ev -> Just (preventMouseEvent ev) ]
 
@@ -254,7 +261,7 @@ useSelect inputRec =
       -- | ```purescript
       -- | renderInput = input_ (setInputProps [ class "my-class" ])
       -- | ```
-      inputProps :: _ -> _ -> Array (HP.IProp (InputProps inputProps) (HookM m Unit))
+      inputProps :: forall inputProps. _ -> _ -> Array (HP.IProp (InputProps inputProps) (HookM m Unit))
       inputProps stateId searchDebouncer =
         [ HE.onFocus \_ -> Just (setVisibility stateId On)
         , HE.onKeyDown \ev -> Just (key stateId ev)
