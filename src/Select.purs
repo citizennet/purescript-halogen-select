@@ -119,7 +119,7 @@ newtype SelectReturn m = SelectReturn
 
 -- | When pushing all Select events into the same handler, this data type
 -- | distinguishes one event type from another.
-data Event
+data SelectEvent
   = NewSearch String
   | VisibilityChangedTo Boolean
   | SelectedIndex Int

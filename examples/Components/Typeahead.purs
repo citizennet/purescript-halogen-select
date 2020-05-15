@@ -27,7 +27,7 @@ import Halogen.Hooks as Hooks
 import Halogen.Hooks.Extra.Hooks (useEvent)
 import Internal.CSS (class_, classes_, whenElem)
 import Internal.RemoteData as RD
-import Select (Event(..), SelectReturn(..), selectInput, useSelect)
+import Select (SelectEvent(..), SelectReturn(..), selectInput, useSelect)
 import Select as S
 
 data Query a
