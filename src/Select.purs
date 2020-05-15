@@ -102,19 +102,23 @@ newtype SelectReturn m = SelectReturn
   , setVisibility :: Visibility -> HookM m Unit
   , clearSearch :: HookM m Unit
 
-  , toggleProps
+  , setToggleProps
       :: forall toggleProps
        . Array (HP.IProp (ToggleProps toggleProps) (HookM m Unit))
-  , itemProps
+      -> Array (HP.IProp (ToggleProps toggleProps) (HookM m Unit))
+  , setItemProps
       :: forall itemProps
        . Int
       -> Array (HP.IProp (ItemProps itemProps) (HookM m Unit))
-  , containerProps
+      -> Array (HP.IProp (ItemProps itemProps) (HookM m Unit))
+  , setContainerProps
       :: forall containerProps
        . Array (HP.IProp (onMouseDown :: ME.MouseEvent | containerProps) (HookM m Unit))
-  , inputProps
+      -> Array (HP.IProp (onMouseDown :: ME.MouseEvent | containerProps) (HookM m Unit))
+  , setInputProps
       :: forall inputProps
        . Array (HP.IProp (InputProps inputProps) (HookM m Unit))
+      -> Array (HP.IProp (InputProps inputProps) (HookM m Unit))
   }
 
 -- | When pushing all Select events into the same handler, this data type
@@ -202,10 +206,10 @@ useSelect inputRec =
       , clearSearch: Hooks.modify_ stateId (_ { search = "" })
 
       -- props
-      , toggleProps: toggleProps stateId
-      , itemProps: itemProps stateId
-      , containerProps
-      , inputProps: inputProps stateId searchDebouncer
+      , setToggleProps: append (toggleProps stateId)
+      , setItemProps: \i -> append (itemProps stateId i)
+      , setContainerProps: append containerProps
+      , setInputProps: append (inputProps stateId searchDebouncer)
       }
     where
       -- | An array of `IProps` with `ToggleProps`. It
