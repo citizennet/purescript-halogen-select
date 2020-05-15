@@ -121,7 +121,7 @@ newtype SelectReturn m = SelectReturn
 -- | distinguishes one event type from another.
 data SelectEvent
   = NewSearch String
-  | VisibilityChangedTo Boolean
+  | VisibilityChangedTo Visibility
   | SelectedIndex Int
 
 newtype UseSelect hooks = UseSelect
