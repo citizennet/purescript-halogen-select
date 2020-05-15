@@ -183,7 +183,7 @@ useSelect inputRec =
     searchDebouncer <- useDebouncer debounceTime \lastSearchState -> Hooks.do
       case inputRec.inputType of
         Text -> do
-          -- modifyState (_ { highlightedIndex = (Just 0) })
+          Hooks.modify_ stateId (_ { highlightedIndex = (Just 0) })
           inputRec.pushNewSearch lastSearchState
 
         -- Key stream is not yet implemented. However, this should capture user
