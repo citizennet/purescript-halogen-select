@@ -57,18 +57,18 @@ component = Hooks.component \tokens { items, buttonLabel } -> Hooks.do
   where
     renderToggle select buttonLabel selection =
       HH.button
-        ( select.toggleProps <> [ class_ "Dropdown__toggle" ] )
+        ( select.setToggleProps [ class_ "Dropdown__toggle" ] )
         [ HH.text (fromMaybe buttonLabel selection) ]
 
     renderContainer select items =
       whenElem (select.visibility == S.On) \_ ->
         HH.div
-          ( select.containerProps <> [ class_ "Dropdown__container" ] )
+          ( select.setContainerProps [ class_ "Dropdown__container" ] )
           ( mapWithIndex (renderItem select) items )
 
     renderItem select index item =
       HH.div
-        ( (select.itemProps index) <>
+        ( select.setItemProps index
             [ classes_
                 [ "Dropdown__item"
                 , "Dropdown__item--highlighted"

@@ -141,7 +141,7 @@ component = Hooks.component \tokens _ -> Hooks.do
 
   renderInput select selections =
     HH.input
-      (select.inputProps <>
+      (select.setInputProps
         [ classes_
             [ "Typeahead__input"
             , "Typeahead__input--selections" # guard (length selections > 0)
@@ -162,7 +162,7 @@ component = Hooks.component \tokens _ -> Hooks.do
   renderContainer select selections available =
     whenElem (select.visibility == S.On) \_ ->
       HH.div
-        (select.containerProps <>
+        (select.setContainerProps
           [ classes_
               [ "Typeahead__container"
               , "Typeahead__container--hasItems" # guard hasItems
@@ -184,7 +184,7 @@ component = Hooks.component \tokens _ -> Hooks.do
 
       renderItem index { name, population } =
         HH.div
-          ((select.itemProps index) <>
+          (select.setItemProps index
             [ classes_ [ base, highlight, "Location" ] ])
           [ HH.span
               [ class_ "Location__name" ]
