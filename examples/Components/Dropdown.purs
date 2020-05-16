@@ -17,7 +17,7 @@ import Internal.CSS (class_, classes_, whenElem)
 import Select (SelectReturn(..), selectInput, useSelect)
 import Select as S
 
-type Slot query = H.Slot query Message
+type Slot = H.Slot (Const Void) Message
 
 data Message
   = SelectionChanged (Maybe String) (Maybe String)

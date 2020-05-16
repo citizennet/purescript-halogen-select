@@ -8,7 +8,6 @@ import Components.Dropdown as D
 import Data.Argonaut.Decode ((.:), decodeJson)
 import Data.Array (mapWithIndex, filter, (:), (!!), length, null, difference)
 import Data.Bifunctor (bimap)
-import Data.Const (Const)
 import Data.Foldable (for_)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Monoid (guard)
@@ -38,7 +37,7 @@ data Message
   | SelectionsChanged (Array Location)
 
 type ChildSlots =
-  ( dropdown :: D.Slot (Const Void) Unit )
+  ( dropdown :: D.Slot Unit )
 
 component :: H.Component HH.HTML Query Unit Message Aff
 component = Hooks.component \tokens _ -> Hooks.do
