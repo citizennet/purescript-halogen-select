@@ -81,8 +81,7 @@ component = Hooks.component \tokens _ -> Hooks.do
 
   Hooks.useQuery tokens.queryToken case _ of
     GetSelections reply -> do
-       selections' <- Hooks.get selectionsId
-       pure $ Just $ reply selections'
+       pure $ Just $ reply selections
 
   Hooks.pure $
     HH.div
