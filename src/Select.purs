@@ -25,6 +25,14 @@ import Web.UIEvent.MouseEvent as ME
 
 -- | The properties that must be supported by the HTML element that serves
 -- | as a menu toggle. This should be used with toggle-driven `Select` components.
+-- |
+-- | It allows the toggle element to register key events for navigation or
+-- | highlighting, record open and close events based on focus and blur,
+-- | and to be focused with the tab key.
+-- |
+-- | ```purescript
+-- | renderToggle = div (setToggleProps [ class "btn-class" ]) [ ...html ]
+-- | ```
 type ToggleProps props =
   ( onFocus :: FE.FocusEvent
   , onKeyDown :: KE.KeyboardEvent
@@ -37,6 +45,14 @@ type ToggleProps props =
 
 -- | The properties that must be supported by the HTML element that serves
 -- | as a text input. This should be used with input-driven `Select` components.
+-- |
+-- | It allows the input element to capture string values, register key events
+-- | for navigation, record open and close events based on focus and blur,
+-- | and to be focused with the tab key.
+-- |
+-- | ```purescript
+-- | renderInput = input_ (setInputProps [ class "my-class" ])
+-- | ```
 type InputProps props =
   ( onFocus :: FE.FocusEvent
   , onKeyDown :: KE.KeyboardEvent
@@ -50,10 +66,28 @@ type InputProps props =
 
 -- | The properties that must be supported by the HTML element that acts as a
 -- | selectable "item" in your UI. This should be attached to every item that
--- | can be selected.
+-- | can be selected. It allows items to be highlighted and selected.
+-- |
+-- | This expects an index for use in highlighting. It's useful in combination
+-- | with `mapWithIndex`:
+-- |
+-- | ```purescript
+-- | renderItem index itemHTML =
+-- |   HH.li (setItemProps index [ props ]) [ itemHTML ]
+-- |
+-- | render = renderItem `mapWithIndex` itemsArray
+-- | ```
 type ItemProps props =
   ( onMouseDown :: ME.MouseEvent
   , onMouseOver :: ME.MouseEvent
+  | props
+  )
+
+-- | This should be used on the parent element that contains your items.
+-- | It prevents clicking on an item within an enclosing HTML element
+-- | from bubbling up a blur event to the DOM.
+type ContainerProps props =
+  ( onMouseDown :: ME.MouseEvent
   | props
   )
 
@@ -113,8 +147,8 @@ newtype SelectReturn m = SelectReturn
       -> Array (HP.IProp (ItemProps itemProps) (HookM m Unit))
   , setContainerProps
       :: forall containerProps
-       . Array (HP.IProp (onMouseDown :: ME.MouseEvent | containerProps) (HookM m Unit))
-      -> Array (HP.IProp (onMouseDown :: ME.MouseEvent | containerProps) (HookM m Unit))
+       . Array (HP.IProp (ContainerProps containerProps) (HookM m Unit))
+      -> Array (HP.IProp (ContainerProps containerProps) (HookM m Unit))
   , setInputProps
       :: forall inputProps
        . Array (HP.IProp (InputProps inputProps) (HookM m Unit))
@@ -212,14 +246,7 @@ useSelect inputRec =
       , setInputProps: append (inputProps stateId searchDebouncer)
       }
     where
-      -- | An array of `IProps` with `ToggleProps`. It
-      -- | allows the toggle element to register key events for navigation or highlighting,
-      -- | record open and close events based on focus and blur, and to be focused with
-      -- | the tab key.
-      -- |
-      -- | ```purescript
-      -- | renderToggle = div (setToggleProps [ class "btn-class" ]) [ ...html ]
-      -- | ```
+      -- | See `ToggleProps` for docs.
       toggleProps :: forall toggleProps. _ -> Array (HP.IProp (ToggleProps toggleProps) (HookM m Unit))
       toggleProps stateId =
         [ HE.onFocus \_ -> Just (setVisibility stateId On)
@@ -230,41 +257,19 @@ useSelect inputRec =
         , HP.ref (H.RefLabel "select-input")
         ]
 
-      -- | An array of `IProps` with `ItemProps`. It
-      -- | allows items to be highlighted and selected.
-      -- |
-      -- | This expects an index for use in highlighting. It's useful in combination
-      -- | with `mapWithIndex`:
-      -- |
-      -- | ```purescript
-      -- | renderItem index itemHTML =
-      -- |   HH.li (setItemProps index [ props ]) [ itemHTML ]
-      -- |
-      -- | render = renderItem `mapWithIndex` itemsArray
-      -- | ```
+      -- | See `ItemProps` for docs.
       itemProps :: forall itemProps. _ -> Int -> Array (HP.IProp (ItemProps itemProps) (HookM m Unit))
       itemProps stateId index =
         [ HE.onMouseDown \ev -> Just (select stateId (Index index) (Just ev))
         , HE.onMouseOver \_ -> Just (highlight stateId (Index index))
         ]
 
-      -- | An array of `IProps` with a `MouseDown`
-      -- | handler. It prevents clicking on an item within an enclosing HTML element
-      -- | from bubbling up a blur event to the DOM. This should be used on the parent
-      -- | element that contains your items.
-      containerProps :: forall containerProps. Array (HP.IProp (onMouseDown :: ME.MouseEvent | containerProps) (HookM m Unit))
+      -- | See `ContainerProps` for docs.
+      containerProps :: forall containerProps. Array (HP.IProp (ContainerProps containerProps) (HookM m Unit))
       containerProps =
         [ HE.onMouseDown \ev -> Just (preventMouseEvent ev) ]
 
-
-      -- | An array of `IProps` with `InputProps`. It
-      -- | allows the input element to capture string values, register key events for
-      -- | navigation, record open and close events based on focus and blur, and to be
-      -- | focused with the tab key.
-      -- |
-      -- | ```purescript
-      -- | renderInput = input_ (setInputProps [ class "my-class" ])
-      -- | ```
+      -- | See `InputProps` for docs.
       inputProps :: forall inputProps. _ -> _ -> Array (HP.IProp (InputProps inputProps) (HookM m Unit))
       inputProps stateId searchDebouncer =
         [ HE.onFocus \_ -> Just (setVisibility stateId On)
