@@ -3,11 +3,12 @@
 [![CircleCI](https://circleci.com/gh/citizennet/purescript-halogen-select/tree/master.svg?style=shield)](https://circleci.com/gh/citizennet/purescript-halogen-select/tree/master)
 [![Maintainer: thomashoneyman](https://img.shields.io/badge/maintainer-thomashoneyman-lightgrey.svg)](http://github.com/thomashoneyman)
 
-`Select` provides flexible building blocks for selection interfaces in Halogen. If you need a dropdown menu, typeahead, autocomplete, multi-select, calendar, image picker, or other selection interface, and you want it to be accessible, and you also want complete visual control over the component, then you're in the right place.
+`Select` is a Hook which provides flexible building blocks for selection interfaces in Halogen. If you need a dropdown menu, typeahead, autocomplete, multi-select, calendar, image picker, or other selection interface, and you want it to be accessible, and you also want complete visual control over the component, then you're in the right place.
 
-- [Official Documentation / Tutorials / Getting Started](https://citizennet.github.io/purescript-halogen-select)
 - [Module Documentation on Pursuit](https://pursuit.purescript.org/packages/purescript-halogen-select)
-- [Learn About & Build Your Own Renderless Components](https://github.com/thomashoneyman/purescript-halogen-renderless)
+- [Learn About Halogen Hooks](https://github.com/thomashoneyman/purescript-halogen-hooks)
+
+:warning: You are looking at the pre-release branch for the Hooks version of Select. If you want the latest published version, please [browse the repository at the `v5.0.0` release](https://github.com/citizennet/purescript-halogen-select/tree/v5.0.0).
 
 # Get Started / Learn More
 
@@ -60,7 +61,6 @@ For example, you can make your container compatible with the component with the 
 , ... your HTML ...
 ]
 ```
-
 
 > Warning: If you provide any of the same events that we use for our behaviors, only yours will trigger, preventing that behavior from being applied. E.g., if you provide your own `HE.onValueInput` event on the element you're applying `setInputProps` to, you will end up overriding our search functionality for that input.
 
