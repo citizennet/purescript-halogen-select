@@ -31,12 +31,13 @@
     "generated-docs"
   ],
   "dependencies": {
-    "purescript-halogen": "^5.0.0-rc.4",
-    "purescript-record": "^2.0.0"
+    "purescript-halogen": "^5.0.0-rc.9",
+    "purescript-halogen-hooks": "https://github.com/thomashoneyman/purescript-halogen-hooks.git#v0.4.0",
+    "purescript-halogen-hooks-extra": "https://github.com/JordanMartinez/purescript-halogen-hooks-extra.git#v0.6.0"
   },
   "devDependencies": {
-    "purescript-debug": "^4.0.0",
-    "purescript-affjax": "^9.0.0",
-    "purescript-argonaut": "^6.0.0"
+    "purescript-affjax": "^10.0.0",
+    "purescript-argonaut": "^6.0.0",
+    "purescript-psci-support": "v4.0.0"
   }
 }

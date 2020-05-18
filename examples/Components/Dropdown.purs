@@ -2,24 +2,22 @@ module Components.Dropdown where
 
 import Prelude
 
-import Effect.Aff (Aff)
 import Data.Array ((!!), mapWithIndex, length)
+import Data.Const (Const)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Monoid (guard)
+import Data.Tuple.Nested ((/\))
+import Effect.Aff (Aff)
 import Halogen as H
 import Halogen.HTML as HH
+import Halogen.Hooks (useLifecycleEffect, useState)
+import Halogen.Hooks as Hooks
+import Halogen.Hooks.Extra.Hooks (useEvent)
 import Internal.CSS (class_, classes_, whenElem)
+import Select (SelectReturn(..), selectInput, useSelect)
 import Select as S
-import Select.Setters as SS
 
-type Slot =
-  H.Slot S.Query' Message
-
-type State =
-  ( items :: Array String
-  , selection :: Maybe String
-  , buttonLabel :: String
-  )
+type Slot = H.Slot (Const Void) Message
 
 data Message
   = SelectionChanged (Maybe String) (Maybe String)
@@ -31,55 +29,51 @@ type Input =
   , buttonLabel :: String
   }
 
-component :: H.Component HH.HTML S.Query' Input Message Aff
-component = S.component input $ S.defaultSpec
-  { render = render
-  , handleEvent = handleEvent
-  }
-  where
-  input :: Input -> S.Input State
-  input { items, buttonLabel } =
-    { inputType: S.Toggle
-    , search: Nothing
-    , debounceTime: Nothing
-    , getItemCount: length <<< _.items
-    , items
-    , buttonLabel
-    , selection: Nothing
+component :: H.Component HH.HTML (Const Void) Input Message Aff
+component = Hooks.component \tokens { items, buttonLabel } -> Hooks.do
+  selection /\ selectionId <- useState Nothing
+  selectedIndexChanges <- useEvent
+  SelectReturn select <- useSelect $ selectInput
+    { getItemCount = pure (length items)
+    , pushSelectedIdxChanged = selectedIndexChanges.push
     }
 
-  handleEvent :: S.Event -> H.HalogenM (S.State State) S.Action' () Message Aff Unit
-  handleEvent = case _ of
-    S.Selected ix -> do
-      st <- H.get
-      let selection = st.items !! ix
-      H.modify_ _ { selection = selection, visibility = S.Off }
-      H.raise $ SelectionChanged st.selection selection
-    _ -> pure unit
+  useLifecycleEffect do
+    void $ selectedIndexChanges.setCallback $ Just \_ ix -> do
+      oldSelection <- Hooks.get selectionId
+      let newSelection = items !! ix
+      select.setVisibility S.Off
+      Hooks.put selectionId newSelection
+      Hooks.raise tokens.outputToken $ SelectionChanged oldSelection newSelection
 
-  render :: S.State State -> H.ComponentHTML S.Action' () Aff
-  render st =
+    pure Nothing
+
+  Hooks.pure $
     HH.div
       [ class_ "Dropdown" ]
-      [ renderToggle, renderContainer ]
-    where
-    renderToggle =
+      [ renderToggle select buttonLabel selection
+      , renderContainer select items
+      ]
+  where
+    renderToggle select buttonLabel selection =
       HH.button
-        ( SS.setToggleProps [ class_ "Dropdown__toggle" ] )
-        [ HH.text (fromMaybe st.buttonLabel st.selection) ]
+        ( select.setToggleProps [ class_ "Dropdown__toggle" ] )
+        [ HH.text (fromMaybe buttonLabel selection) ]
 
-    renderContainer = whenElem (st.visibility == S.On) \_ ->
-      HH.div
-        ( SS.setContainerProps [ class_ "Dropdown__container" ] )
-        ( renderItem `mapWithIndex` st.items )
-      where
-      renderItem index item =
+    renderContainer select items =
+      whenElem (select.visibility == S.On) \_ ->
         HH.div
-          ( SS.setItemProps index
-              [ classes_
-                  [ "Dropdown__item"
-                  , "Dropdown__item--highlighted" # guard (st.highlightedIndex == Just index)
-                  ]
-              ]
-          )
-          [ HH.text item ]
+          ( select.setContainerProps [ class_ "Dropdown__container" ] )
+          ( mapWithIndex (renderItem select) items )
+
+    renderItem select index item =
+      HH.div
+        ( select.setItemProps index
+            [ classes_
+                [ "Dropdown__item"
+                , "Dropdown__item--highlighted"
+                    # guard (select.highlightedIndex == Just index)
+                ]
+            ]
+        )
+        [ HH.text item ]
