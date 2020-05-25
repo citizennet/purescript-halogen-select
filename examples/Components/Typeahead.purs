@@ -177,7 +177,7 @@ component = Hooks.component \tokens _ -> Hooks.do
           RD.Loading -> renderMsg "Loading..."
           RD.Failure e -> renderMsg e
           RD.Success available'
-            | length selections > 0 -> renderItem `mapWithIndex` available'
+            | length available' > 0 -> renderItem `mapWithIndex` available'
             | otherwise -> renderMsg "No results found"
 
       renderItem index { name, population } =
