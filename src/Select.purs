@@ -249,10 +249,10 @@ useSelect inputRec =
       -- | See `ToggleProps` for docs.
       toggleProps :: forall toggleProps. _ -> Array (HP.IProp (ToggleProps toggleProps) (HookM m Unit))
       toggleProps stateId =
-        [ HE.onFocus \_ -> Just (setVisibility stateId On)
-        , HE.onMouseDown \ev -> Just (toggleClick stateId ev)
-        , HE.onKeyDown \ev -> Just (key stateId ev)
-        , HE.onBlur \ev -> Just (setVisibility stateId Off)
+        [ HE.onFocus \_ -> setVisibility stateId On
+        , HE.onMouseDown \ev -> toggleClick stateId ev
+        , HE.onKeyDown \ev -> key stateId ev
+        , HE.onBlur \ev -> setVisibility stateId Off
         , HP.tabIndex 0
         , HP.ref (H.RefLabel "select-input")
         ]
@@ -260,23 +260,23 @@ useSelect inputRec =
       -- | See `ItemProps` for docs.
       itemProps :: forall itemProps. _ -> Int -> Array (HP.IProp (ItemProps itemProps) (HookM m Unit))
       itemProps stateId index =
-        [ HE.onMouseDown \ev -> Just (select stateId (Index index) (Just ev))
-        , HE.onMouseOver \_ -> Just (highlight stateId (Index index))
+        [ HE.onMouseDown \ev -> select stateId (Index index) (Just ev)
+        , HE.onMouseOver \_ -> highlight stateId (Index index)
         ]
 
       -- | See `ContainerProps` for docs.
       containerProps :: forall containerProps. Array (HP.IProp (ContainerProps containerProps) (HookM m Unit))
       containerProps =
-        [ HE.onMouseDown \ev -> Just (preventMouseEvent ev) ]
+        [ HE.onMouseDown \ev -> preventMouseEvent ev ]
 
       -- | See `InputProps` for docs.
       inputProps :: forall inputProps. _ -> _ -> Array (HP.IProp (InputProps inputProps) (HookM m Unit))
       inputProps stateId searchDebouncer =
-        [ HE.onFocus \_ -> Just (setVisibility stateId On)
-        , HE.onKeyDown \ev -> Just (key stateId ev)
-        , HE.onValueInput \str -> Just (handleSearch stateId searchDebouncer str)
-        , HE.onMouseDown \_ -> Just (setVisibility stateId On)
-        , HE.onBlur \_ -> Just (setVisibility stateId Off)
+        [ HE.onFocus \_ -> setVisibility stateId On
+        , HE.onKeyDown \ev -> key stateId ev
+        , HE.onValueInput \str -> handleSearch stateId searchDebouncer str
+        , HE.onMouseDown \_ -> setVisibility stateId On
+        , HE.onBlur \_ -> setVisibility stateId Off
         , HP.tabIndex 0
         , HP.ref (H.RefLabel "select-input")
         ]
