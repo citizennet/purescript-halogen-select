@@ -1,7 +1,6 @@
 # Select 
 
 [![CircleCI](https://circleci.com/gh/citizennet/purescript-halogen-select/tree/master.svg?style=shield)](https://circleci.com/gh/citizennet/purescript-halogen-select/tree/master)
-[![Maintainer: thomashoneyman](https://img.shields.io/badge/maintainer-thomashoneyman-lightgrey.svg)](http://github.com/thomashoneyman)
 
 `Select` is a Hook which provides flexible building blocks for selection interfaces in Halogen. If you need a dropdown menu, typeahead, autocomplete, multi-select, calendar, image picker, or other selection interface, and you want it to be accessible, and you also want complete visual control over the component, then you're in the right place.
 
@@ -16,14 +15,10 @@ There are a few ways to get started with the `Select` library.
 
 **Installation**
 
-`Select` is available on Bower and Pursuit:
+Install `Select` with Spago:
 
 ```sh
-# Using psc-package
-psc-package install halogen-select
-
-# Using bower
-bower i --save purescript-halogen-select
+spago install halogen-select
 ```
 
 For more information, try the [official documentation](https://citizennet.github.io/purescript-halogen-select).
