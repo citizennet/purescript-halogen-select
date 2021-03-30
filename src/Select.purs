@@ -170,8 +170,7 @@ type UseSelect' =
     <> Hooks.Pure
 
 instance newtypeUseDebouncer
-  :: HookEquals UseSelect' h
-  => HookNewtype UseSelect h
+  => HookNewtype UseSelect UseSelect'
 
 -- | A `SelectInput` value whose defaults can be overrided. **Note**:
 -- | `getItemCount` must be overrided:
