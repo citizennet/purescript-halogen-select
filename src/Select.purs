@@ -3,7 +3,6 @@ module Select where
 import Prelude
 
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Newtype (class Newtype)
 import Data.Traversable (for_)
 import Data.Tuple.Nested ((/\))
 import Effect.Aff (Milliseconds)
@@ -11,7 +10,7 @@ import Effect.Aff.Class (class MonadAff)
 import Halogen as H
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Halogen.Hooks (Hook, HookM, StateId, UseState, useState)
+import Halogen.Hooks (class HookEquals, class HookNewtype, type (<>), Hook, HookM, StateId, UseEffect, UseState)
 import Halogen.Hooks as Hooks
 import Halogen.Hooks.Extra.Actions.Events (preventKeyEvent, preventMouseEvent)
 import Halogen.Hooks.Extra.Hooks (UseDebouncer, useDebouncer)
@@ -162,11 +161,16 @@ data SelectEvent
   | VisibilityChangedTo Visibility
   | SelectedIndex Int
 
-newtype UseSelect hooks = UseSelect
-  (UseDebouncer String
-  (UseState SelectState hooks))
+foreign import data UseSelect :: Hooks.HookType
 
-derive instance newtypeUseSelect :: Newtype (UseSelect hooks) _
+type UseSelect' =
+  UseState SelectState
+    <> UseDebouncer String
+    <> UseEffect
+    <> Hooks.Pure
+
+instance newtypeUseDebouncer
+  => HookNewtype UseSelect UseSelect'
 
 -- | A `SelectInput` value whose defaults can be overrided. **Note**:
 -- | `getItemCount` must be overrided:
@@ -211,48 +215,51 @@ useSelect inputRec =
   let
     initialSearchValue = fromMaybe "" inputRec.search
     debounceTime = fromMaybe mempty inputRec.debounceTime
-  in Hooks.wrap Hooks.do
-    state /\ stateId <- useState
-      { search: initialSearchValue
-      , visibility: Off
-      , highlightedIndex: Nothing
-      }
 
-    searchDebouncer <- useDebouncer debounceTime \lastSearchState -> Hooks.do
-      case inputRec.inputType of
-        Text -> do
-          Hooks.modify_ stateId (_ { highlightedIndex = (Just 0) })
-          inputRec.pushNewSearch lastSearchState
+    hook :: Hook m UseSelect' (SelectReturn m)
+    hook = Hooks.do
+      state /\ stateId <- Hooks.useState
+        { search: initialSearchValue
+        , visibility: Off
+        , highlightedIndex: Nothing
+        }
 
-        -- Key stream is not yet implemented. However, this should capture user
-        -- key events and expire their search after a set number of milliseconds.
-        _ -> pure unit
+      searchDebouncer <- useDebouncer debounceTime \lastSearchState -> Hooks.do
+        case inputRec.inputType of
+          Text -> do
+            Hooks.modify_ stateId (_ { highlightedIndex = (Just 0) })
+            inputRec.pushNewSearch lastSearchState
 
-    Hooks.pure $ SelectReturn
-      -- state
-      { search: state.search
-      , visibility: state.visibility
-      , highlightedIndex: state.highlightedIndex
+          -- Key stream is not yet implemented. However, this should capture user
+          -- key events and expire their search after a set number of milliseconds.
+          _ -> pure unit
 
-      -- actions
-      , setFocus
-      , setVisibility: setVisibility stateId
-      , clearSearch: Hooks.modify_ stateId (_ { search = "" })
+      Hooks.pure $ SelectReturn
+        -- state
+        { search: state.search
+        , visibility: state.visibility
+        , highlightedIndex: state.highlightedIndex
 
-      -- props
-      , setToggleProps: append (toggleProps stateId)
-      , setItemProps: \i -> append (itemProps stateId i)
-      , setContainerProps: append containerProps
-      , setInputProps: append (inputProps stateId searchDebouncer)
-      }
+        -- actions
+        , setFocus
+        , setVisibility: setVisibility stateId
+        , clearSearch: Hooks.modify_ stateId (_ { search = "" })
+
+        -- props
+        , setToggleProps: append (toggleProps stateId)
+        , setItemProps: \i -> append (itemProps stateId i)
+        , setContainerProps: append containerProps
+        , setInputProps: append (inputProps stateId searchDebouncer)
+        }
+  in Hooks.wrap hook
     where
       -- | See `ToggleProps` for docs.
       toggleProps :: forall toggleProps. _ -> Array (HP.IProp (ToggleProps toggleProps) (HookM m Unit))
       toggleProps stateId =
-        [ HE.onFocus \_ -> Just (setVisibility stateId On)
-        , HE.onMouseDown \ev -> Just (toggleClick stateId ev)
-        , HE.onKeyDown \ev -> Just (key stateId ev)
-        , HE.onBlur \ev -> Just (setVisibility stateId Off)
+        [ HE.onFocus \_ -> setVisibility stateId On
+        , HE.onMouseDown \ev -> toggleClick stateId ev
+        , HE.onKeyDown \ev -> key stateId ev
+        , HE.onBlur \ev -> setVisibility stateId Off
         , HP.tabIndex 0
         , HP.ref (H.RefLabel "select-input")
         ]
@@ -260,23 +267,23 @@ useSelect inputRec =
       -- | See `ItemProps` for docs.
       itemProps :: forall itemProps. _ -> Int -> Array (HP.IProp (ItemProps itemProps) (HookM m Unit))
       itemProps stateId index =
-        [ HE.onMouseDown \ev -> Just (select stateId (Index index) (Just ev))
-        , HE.onMouseOver \_ -> Just (highlight stateId (Index index))
+        [ HE.onMouseDown \ev -> select stateId (Index index) (Just ev)
+        , HE.onMouseOver \_ -> highlight stateId (Index index)
         ]
 
       -- | See `ContainerProps` for docs.
       containerProps :: forall containerProps. Array (HP.IProp (ContainerProps containerProps) (HookM m Unit))
       containerProps =
-        [ HE.onMouseDown \ev -> Just (preventMouseEvent ev) ]
+        [ HE.onMouseDown \ev -> preventMouseEvent ev ]
 
       -- | See `InputProps` for docs.
       inputProps :: forall inputProps. _ -> _ -> Array (HP.IProp (InputProps inputProps) (HookM m Unit))
       inputProps stateId searchDebouncer =
-        [ HE.onFocus \_ -> Just (setVisibility stateId On)
-        , HE.onKeyDown \ev -> Just (key stateId ev)
-        , HE.onValueInput \str -> Just (handleSearch stateId searchDebouncer str)
-        , HE.onMouseDown \_ -> Just (setVisibility stateId On)
-        , HE.onBlur \_ -> Just (setVisibility stateId Off)
+        [ HE.onFocus \_ -> setVisibility stateId On
+        , HE.onKeyDown \ev -> key stateId ev
+        , HE.onValueInput \str -> handleSearch stateId searchDebouncer str
+        , HE.onMouseDown \_ -> setVisibility stateId On
+        , HE.onBlur \_ -> setVisibility stateId Off
         , HP.tabIndex 0
         , HP.ref (H.RefLabel "select-input")
         ]
