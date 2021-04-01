@@ -2,16 +2,16 @@ module Components.Typeahead where
 
 import Prelude
 
+import Affjax (printError)
 import Affjax as AX
 import Affjax.ResponseFormat as AR
 import Components.Dropdown as D
-import Data.Argonaut.Decode ((.:), decodeJson)
+import Data.Argonaut.Decode (decodeJson, printJsonDecodeError, (.:))
 import Data.Array (mapWithIndex, filter, (:), (!!), length, null, difference)
-import Data.Foldable (for_)
 import Data.Bifunctor (lmap)
+import Data.Foldable (for_)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Monoid (guard)
-import Data.Symbol (SProxy(..))
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (traverse)
 import Effect.Aff (Aff)
@@ -23,6 +23,7 @@ import Internal.CSS (class_, classes_, whenElem)
 import Internal.RemoteData as RD
 import Select as S
 import Select.Setters as SS
+import Type.Proxy (Proxy(..))
 
 type Slot =
   S.Slot Query ChildSlots Message
@@ -46,7 +47,7 @@ data Message
 type ChildSlots =
   ( dropdown :: D.Slot Unit )
 
-component :: H.Component HH.HTML (S.Query Query ChildSlots) Unit Message Aff
+component :: H.Component (S.Query Query ChildSlots) Unit Message Aff
 component = S.component (const input) $ S.defaultSpec
   { render = render
   , handleAction = handleAction
@@ -148,7 +149,7 @@ component = S.component (const input) $ S.defaultSpec
       closeButton item =
         HH.span
           [ class_ "Location__closeButton"
-          , HE.onClick \_ -> Just $ S.Action $ Remove item
+          , HE.onClick \_ -> S.Action $ Remove item
           ]
           [ HH.text "×" ]
 
@@ -164,8 +165,8 @@ component = S.component (const input) $ S.defaultSpec
     renderDropdown = whenElem (st.visibility == S.On) \_ ->
       HH.slot _dropdown unit D.component dropdownInput handler
       where
-      _dropdown = SProxy :: SProxy "dropdown"
-      handler msg = Just $ S.Action $ HandleDropdown msg
+      _dropdown = Proxy :: Proxy "dropdown"
+      handler msg = S.Action $ HandleDropdown msg
       dropdownInput = { items: [ "Earth", "Mars" ], buttonLabel: "Human Planets" }
 
     renderContainer = whenElem (st.visibility == S.On) \_ ->
@@ -215,5 +216,8 @@ type Location =
 searchLocations :: String -> Aff (RD.RemoteData String (Array Location))
 searchLocations search = do
   res <- AX.get AR.json ("https://swapi.co/api/planets/?search=" <> search)
-  let body = lmap AR.printResponseFormatError res.body
-  pure $ RD.fromEither $ traverse decodeJson =<< (_ .: "results") =<< decodeJson =<< body
+  pure $ RD.fromEither $ traverse (lmap printJsonDecodeError <<< decodeJson)
+    =<< (lmap printJsonDecodeError <<< (_ .: "results"))
+    =<< (lmap printJsonDecodeError <<< decodeJson)
+    <<< _.body
+    =<< (lmap printError res)

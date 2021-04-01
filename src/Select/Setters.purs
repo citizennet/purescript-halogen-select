@@ -4,7 +4,7 @@
 -- | below.
 module Select.Setters where
 
-import Prelude (append, ($), (<<<))
+import Prelude (append)
 
 import Data.Maybe (Maybe(..))
 import Halogen as H
@@ -41,10 +41,10 @@ setToggleProps
    . Array (HP.IProp (ToggleProps props) (Action act))
   -> Array (HP.IProp (ToggleProps props) (Action act))
 setToggleProps = append
-  [ HE.onFocus \_ -> Just $ SetVisibility On
-  , HE.onMouseDown $ Just <<< ToggleClick
-  , HE.onKeyDown $ Just <<< Key
-  , HE.onBlur \_ -> Just $ SetVisibility Off
+  [ HE.onFocus \_ -> SetVisibility On
+  , HE.onMouseDown ToggleClick
+  , HE.onKeyDown Key
+  , HE.onBlur \_ -> SetVisibility Off
   , HP.tabIndex 0
   , HP.ref (H.RefLabel "select-input")
   ]
@@ -75,11 +75,11 @@ setInputProps
    . Array (HP.IProp (InputProps props) (Action act))
   -> Array (HP.IProp (InputProps props) (Action act))
 setInputProps = append
-  [ HE.onFocus \_ -> Just $ SetVisibility On
-  , HE.onKeyDown $ Just <<< Key
-  , HE.onValueInput $ Just <<< Search
-  , HE.onMouseDown \_ -> Just $ SetVisibility On
-  , HE.onBlur \_ -> Just $ SetVisibility Off
+  [ HE.onFocus \_ -> SetVisibility On
+  , HE.onKeyDown Key
+  , HE.onValueInput Search
+  , HE.onMouseDown \_ -> SetVisibility On
+  , HE.onBlur \_ -> SetVisibility Off
   , HP.tabIndex 0
   , HP.ref (H.RefLabel "select-input")
   ]
@@ -111,8 +111,8 @@ setItemProps
   -> Array (HP.IProp (ItemProps props) (Action act))
   -> Array (HP.IProp (ItemProps props) (Action act))
 setItemProps index = append
-  [ HE.onMouseDown \ev -> Just (Select (Index index) (Just ev))
-  , HE.onMouseOver \_ -> Just $ Highlight (Index index)
+  [ HE.onMouseDown \ev -> Select (Index index) (Just ev)
+  , HE.onMouseOver \_ -> Highlight (Index index)
   ]
 
 -- | A helper function that augments an array of `IProps` with a `MouseDown`
@@ -124,4 +124,4 @@ setContainerProps
    . Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action act))
   -> Array (HP.IProp (onMouseDown :: ME.MouseEvent | props) (Action act))
 setContainerProps = append
-  [ HE.onMouseDown $ Just <<< PreventClick ]
+  [ HE.onMouseDown PreventClick ]

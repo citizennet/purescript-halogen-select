@@ -31,7 +31,7 @@ type Input =
   , buttonLabel :: String
   }
 
-component :: H.Component HH.HTML S.Query' Input Message Aff
+component :: H.Component S.Query' Input Message Aff
 component = S.component input $ S.defaultSpec
   { render = render
   , handleEvent = handleEvent

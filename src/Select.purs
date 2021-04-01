@@ -116,7 +116,7 @@ type Input st =
   }
 
 type Component query slots input msg m =
-  H.Component HH.HTML (Query query slots) input msg m
+  H.Component (Query query slots) input msg m
 
 type ComponentHTML action slots m =
   H.ComponentHTML (Action action) slots m
@@ -184,7 +184,7 @@ component
   => Row.Lacks "highlightedIndex" st
   => (input -> Input st)
   -> Spec st query action slots input msg m
-  -> H.Component HH.HTML (Query query slots) input msg m
+  -> H.Component (Query query slots) input msg m
 component mkInput spec = H.mkComponent
   { initialState: initialState <<< mkInput
   , render: spec.render

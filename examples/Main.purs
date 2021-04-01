@@ -2,15 +2,14 @@ module Main where
 
 import Prelude
 
+import Components.Dropdown as Dropdown
+import Components.Typeahead as Typeahead
 import Data.Array (zipWith)
 import Data.Const (Const)
 import Data.Map as M
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Symbol (SProxy(..))
 import Data.Traversable (for_, sequence, traverse)
 import Data.Tuple (Tuple(..))
-import Components.Typeahead as Typeahead
-import Components.Dropdown as Dropdown
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
@@ -19,6 +18,7 @@ import Halogen.Aff as HA
 import Halogen.HTML as HH
 import Halogen.VDom.Driver (runUI)
 import Internal.Proxy (ProxyS, proxy)
+import Type.Proxy (Proxy(..))
 import Web.DOM.Element (getAttribute)
 import Web.DOM.NodeList (toArray)
 import Web.DOM.ParentNode (QuerySelector(..), querySelectorAll)
@@ -42,7 +42,7 @@ main = HA.runHalogenAff do
 -- Routes
 
 type Components
-  = M.Map String (H.Component HH.HTML (ProxyS (Const Void) Unit) Unit Void Aff)
+  = M.Map String (H.Component (ProxyS (Const Void) Unit) Unit Void Aff)
 
 routes :: Components
 routes = M.fromFoldable
@@ -50,7 +50,7 @@ routes = M.fromFoldable
   , Tuple "dropdown" $ proxy dropdown
   ]
 
-app :: H.Component HH.HTML (Const Void) String Void Aff
+app :: H.Component (Const Void) String Void Aff
 app = H.mkComponent
   { initialState: identity
   , render
@@ -59,7 +59,7 @@ app = H.mkComponent
   where
   render st = M.lookup st routes # case _ of
     Nothing -> HH.div_ []
-    Just component -> HH.slot (SProxy :: SProxy "child") unit component unit absurd
+    Just component -> HH.slot (Proxy :: Proxy "child") unit component unit absurd
 
 ----------
 -- Selection Helpers
@@ -83,7 +83,7 @@ selectElements { query, attr } = do
 ----------
 -- Components
 
-dropdown :: forall t0 t1 t2. H.Component HH.HTML t0 t1 t2 Aff
+dropdown :: forall t0 t1 t2. H.Component t0 t1 t2 Aff
 dropdown = H.mkComponent
   { initialState: const unit
   , render: \_ ->
@@ -91,10 +91,10 @@ dropdown = H.mkComponent
   , eval: H.mkEval H.defaultEval
   }
   where
-  label = SProxy :: SProxy "dropdown"
+  label = Proxy :: Proxy "dropdown"
   input = { items: [ "Chris", "Forest", "Dave" ], buttonLabel: "Choose a character" }
 
-typeahead :: forall t0 t1 t2. H.Component HH.HTML t0 t1 t2 Aff
+typeahead :: forall t0 t1 t2. H.Component t0 t1 t2 Aff
 typeahead = H.mkComponent
   { initialState: const unit
   , render: \_ ->
@@ -102,4 +102,4 @@ typeahead = H.mkComponent
   , eval: H.mkEval H.defaultEval
   }
   where
-  label = SProxy :: SProxy "typeahead"
+  label = Proxy :: Proxy "typeahead"

@@ -9,9 +9,8 @@
     "postinstall": "bower i --silent"
   },
   "devDependencies": {
-    "bower": "^1.8.8",
-    "npm-check-updates": "^3.1.0",
-    "pulp": "12.3.1",
-    "purescript": "0.12.3"
+    "bower": "^1.8.12",
+    "pulp": "15.0.0",
+    "purescript": "0.14.0"
   }
 }
